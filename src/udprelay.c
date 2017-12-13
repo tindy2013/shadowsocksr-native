@@ -991,10 +991,14 @@ CLEAN_UP:
 static void 
 server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags)
 {
+    if (NULL == addr) {
+        return;
+    }
+
     struct udp_server_ctx_t *server_ctx = cork_container_of(handle, struct udp_server_ctx_t, io);
     assert(server_ctx);
 
-    struct sockaddr_storage src_addr = { 0 };
+    struct sockaddr_storage src_addr = *(struct sockaddr_storage *)addr;
 
     struct buffer_t *buf = buffer_alloc(max((size_t)buf_size, (size_t)nread));
 
