@@ -27,6 +27,7 @@
 
 struct ss_host_port;
 struct udp_server_ctx_t;
+struct cipher_env_t;
 
 struct udp_server_ctx_t * init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 #ifdef MODULE_LOCAL

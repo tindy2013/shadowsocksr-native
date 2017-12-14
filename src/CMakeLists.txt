@@ -43,6 +43,10 @@ set(SOURCE_FILES_CLIENT
         ssrbuffer.h
         ssrutils.c
         ssrutils.h
+        netutils.c
+        netutils.h
+        udprelay.c
+        udprelay.h
         client/defs.h
         client/listener.c
         client/main.c

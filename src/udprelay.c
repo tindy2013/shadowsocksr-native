@@ -30,6 +30,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #ifndef __MINGW32__
 #include <arpa/inet.h>
@@ -477,14 +479,16 @@ create_server_socket(const char *host, uint16_t port, uv_loop_t *loop, uv_udp_t 
     struct addrinfo hints = { 0 };
     struct addrinfo *result = NULL, *rp, *ipv4v6bindall;
     int s, server_sock = 0;
-    char tmp[32] = { 0 };
+    char str_port[32] = { 0 };
 
     hints.ai_family   = AF_UNSPEC;               /* Return IPv4 and IPv6 choices */
     hints.ai_socktype = SOCK_DGRAM;              /* We want a UDP socket */
     hints.ai_flags    = AI_PASSIVE | AI_ADDRCONFIG; /* For wildcard IP address */
     hints.ai_protocol = IPPROTO_UDP;
 
-    s = getaddrinfo(host, itoa((int)port, tmp, 10), &hints, &result);
+    sprintf(str_port, "%d", port);
+
+    s = getaddrinfo(host, str_port, &hints, &result);
     if (s != 0) {
         LOGE("[udp] getaddrinfo: %s", gai_strerror(s));
         return -1;
