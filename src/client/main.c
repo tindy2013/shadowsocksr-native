@@ -122,6 +122,7 @@ bool json_iter_extract_int(const char *key, const struct json_object_iter *iter,
         if (key == NULL || iter == NULL || value==NULL) {
             break;
         }
+        *value = 0;
         if (strcmp(iter->key, key) != 0) {
             break;
         }
@@ -130,6 +131,26 @@ bool json_iter_extract_int(const char *key, const struct json_object_iter *iter,
             break;
         }
         *value = json_object_get_int(val);
+        result = true;
+    } while (0);
+    return result;
+}
+
+bool json_iter_extract_bool(const char *key, const struct json_object_iter *iter, bool *value) {
+    bool result = false;
+    do {
+        if (key == NULL || iter == NULL || value == NULL) {
+            break;
+        }
+        *value = false;
+        if (strcmp(iter->key, key) != 0) {
+            break;
+        }
+        struct json_object *val = iter->val;
+        if (json_type_boolean != json_object_get_type(val)) {
+            break;
+        }
+        *value = (bool) json_object_get_boolean(val);
         result = true;
     } while (0);
     return result;
@@ -146,6 +167,7 @@ static bool parse_config_file(const char *file, struct server_config *cf) {
         struct json_object_iter iter;
         json_object_object_foreachC(jso, iter) {
             int obj_int = 0;
+            bool obj_bool = false;
             const char *obj_str = NULL;
             if (json_iter_extract_string("local_address", &iter, &obj_str)) {
                 string_safe_assign(&cf->listen_host, obj_str);
@@ -193,6 +215,10 @@ static bool parse_config_file(const char *file, struct server_config *cf) {
             }
             if (json_iter_extract_int("timeout", &iter, &obj_int)) {
                 cf->idle_timeout = obj_int * SECONDS_PER_MINUTE;
+                continue;
+            }
+            if (json_iter_extract_bool("udp", &iter, &obj_bool)) {
+                cf->udp = obj_bool;
                 continue;
             }
         }

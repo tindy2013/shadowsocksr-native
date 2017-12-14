@@ -394,6 +394,7 @@ config.json
     "obfs_param": "",
     "local_address": "0.0.0.0",
     "local_port": 1080,
+    "udp": true,
     "timeout": 300
 }
 ```

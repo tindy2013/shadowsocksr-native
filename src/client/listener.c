@@ -25,6 +25,7 @@
 #include <string.h>
 #include "util.h"
 #include "ssrcipher.h"
+#include "udprelay.h"
 
 #ifndef INET6_ADDRSTRLEN
 # define INET6_ADDRSTRLEN 63
@@ -67,6 +68,10 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
     /* Start the event loop.  Control continues in getaddrinfo_done_cb(). */
     if (uv_run(loop, UV_RUN_DEFAULT)) {
         abort();
+    }
+
+    if (cf->udp) {
+        free_udprelay();
     }
 
     /* Please Valgrind. */
@@ -133,6 +138,8 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 
     state->listeners = calloc((ipv4_naddrs + ipv6_naddrs), sizeof(state->listeners[0]));
 
+    bool udp_init = false;
+
     n = 0;
     for (ai = addrs; ai != NULL; ai = ai->ai_next) {
         if (ai->ai_family != AF_INET && ai->ai_family != AF_INET6) {
@@ -151,7 +158,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             UNREACHABLE();
         }
 
-        if (uv_inet_ntop(s.addr.sa_family, addrv, addrbuf, sizeof(addrbuf))) {
+        if (uv_inet_ntop(s.addr.sa_family, addrv, addrbuf, sizeof(addrbuf)) != 0) {
             UNREACHABLE();
         }
 
@@ -176,6 +183,19 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
         }
 
         pr_info("listening on %s:%hu", addrbuf, cf->listen_port);
+
+        if (cf->udp && udp_init == false) {
+            pr_info("udprelay enabled");
+            int remote_addr_len = (s.addr.sa_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
+            init_udprelay(loop,
+                cf->listen_host, cf->listen_port,
+                &s.addr, remote_addr_len,
+                NULL, 0, cf->idle_timeout, NULL,
+                state->env->cipher,
+                cf->protocol, cf->protocol_param);
+            udp_init = true;
+        }
+
         n += 1;
     }
 

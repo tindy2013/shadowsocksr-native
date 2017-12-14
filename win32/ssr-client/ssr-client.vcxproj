@@ -27,6 +27,7 @@
     <ClCompile Include="..\..\src\client\tunnel.c" />
     <ClCompile Include="..\..\src\client\util.c" />
     <ClCompile Include="..\..\src\encrypt.c" />
+    <ClCompile Include="..\..\src\netutils.c" />
     <ClCompile Include="..\..\src\obfs\auth.c" />
     <ClCompile Include="..\..\src\obfs\auth_chain.c" />
     <ClCompile Include="..\..\src\obfs\base64.c" />
@@ -38,6 +39,7 @@
     <ClCompile Include="..\..\src\obfs\verify.c" />
     <ClCompile Include="..\..\src\ssrbuffer.c" />
     <ClCompile Include="..\..\src\ssrutils.c" />
+    <ClCompile Include="..\..\src\udprelay.c" />
     <ClCompile Include="src\getopt.c" />
     <ClCompile Include="src\getopt_long.c" />
   </ItemGroup>
@@ -48,6 +50,7 @@
     <ClInclude Include="..\..\src\client\ssrcipher.h" />
     <ClInclude Include="..\..\src\client\util.h" />
     <ClInclude Include="..\..\src\encrypt.h" />
+    <ClInclude Include="..\..\src\netutils.h" />
     <ClInclude Include="..\..\src\obfs\auth.h" />
     <ClInclude Include="..\..\src\obfs\auth_chain.h" />
     <ClInclude Include="..\..\src\obfs\base64.h" />
@@ -60,6 +63,7 @@
     <ClInclude Include="..\..\src\protocol.h" />
     <ClInclude Include="..\..\src\ssrbuffer.h" />
     <ClInclude Include="..\..\src\ssrutils.h" />
+    <ClInclude Include="..\..\src\udprelay.h" />
     <ClInclude Include="include\getopt.h" />
     <ClInclude Include="include\getopt_long.h" />
   </ItemGroup>
@@ -140,7 +144,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ws2_32.lib;libcrypto.lib;libuv.lib;libsodium.lib;json-c.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;libcrypto.lib;libuv.lib;libsodium.lib;json-c.lib;libcork.lib;libudns.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -157,7 +161,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ws2_32.lib;libcrypto.lib;libuv.lib;libsodium.lib;json-c.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;libcrypto.lib;libuv.lib;libsodium.lib;json-c.lib;libcork.lib;libudns.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -178,7 +182,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ws2_32.lib;libcrypto.lib;libuv.lib;libsodium.lib;json-c.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;libcrypto.lib;libuv.lib;libsodium.lib;json-c.lib;libcork.lib;libudns.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -199,7 +203,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ws2_32.lib;libcrypto.lib;libuv.lib;libsodium.lib;json-c.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;libcrypto.lib;libuv.lib;libsodium.lib;json-c.lib;libcork.lib;libudns.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
