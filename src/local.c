@@ -1752,10 +1752,11 @@ main(int argc, char **argv)
         }
     }
 
+    struct udp_server_ctx_t *udp_server = NULL;
     // Setup UDP
     if (mode != TCP_ONLY) {
         LOGI("udprelay enabled");
-        init_udprelay(loop, local_addr, atoi(local_port), (struct sockaddr*)listen_ctx->servers[0].addr_udp,
+        udp_server = init_udprelay(loop, local_addr, atoi(local_port), (struct sockaddr*)listen_ctx->servers[0].addr_udp,
                       listen_ctx->servers[0].addr_udp_len, &tunnel_addr, mtu, listen_ctx->timeout, listener->iface, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
     }
 
@@ -1793,7 +1794,7 @@ main(int argc, char **argv)
 
     // Clean up
     if (mode != TCP_ONLY) {
-        free_udprelay(); // udp relay use some data from listener, so we need to release udp first
+        free_udprelay(udp_server); // udp relay use some data from listener, so we need to release udp first
     }
 
     if (mode != UDP_ONLY) {

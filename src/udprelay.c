@@ -169,8 +169,6 @@ extern uint64_t rx;
 
 static size_t packet_size                            = DEFAULT_PACKET_SIZE;
 static size_t buf_size                               = DEFAULT_PACKET_SIZE * 2;
-static int server_num                                = 0;
-static struct udp_server_ctx_t *server_ctx_list[MAX_REMOTE_NUM] = { NULL };
 
 static void alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
     buf->base = (char *) ss_malloc(suggested_size * sizeof(char));
@@ -1522,7 +1520,7 @@ free_cb(void *key, void *element)
     close_and_free_remote(remote_ctx);
 }
 
-int
+struct udp_server_ctx_t *
 init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 #ifdef MODULE_LOCAL
     const struct sockaddr *remote_addr, const int remote_addr_len,
@@ -1590,9 +1588,7 @@ init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 
     uv_udp_recv_start(&server_ctx->io, alloc_buffer, server_recv_cb);
     
-    server_ctx_list[server_num++] = server_ctx;
-
-    return 0;
+    return server_ctx;
 }
 
 static void server_close_cb(uv_handle_t* handle) {
@@ -1601,11 +1597,11 @@ static void server_close_cb(uv_handle_t* handle) {
 }
 
 void
-free_udprelay(void)
+free_udprelay(struct udp_server_ctx_t *server_ctx)
 {
-    while (server_num-- > 0) {
-        struct udp_server_ctx_t *server_ctx = server_ctx_list[server_num];
-
+    if (server_ctx == NULL) {
+        return;
+    }
 #ifdef MODULE_LOCAL
         //SSR beg
         if (server_ctx->protocol_plugin) {
@@ -1623,7 +1619,5 @@ free_udprelay(void)
         */
         uv_stop(server_ctx->io.loop);
         cache_delete(server_ctx->conn_cache, 0);
-        server_ctx_list[server_num] = NULL;
         uv_close((uv_handle_t *)&server_ctx->io, server_close_cb);
-    }
 }

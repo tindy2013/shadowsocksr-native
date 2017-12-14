@@ -36,6 +36,8 @@ struct server_state {
     uv_tcp_t *listeners;
 };
 
+struct udp_server_ctx_t *udp_server = NULL;
+
 static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
 
@@ -70,8 +72,8 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
         abort();
     }
 
-    if (cf->udp) {
-        free_udprelay();
+    if (udp_server) {
+        free_udprelay(udp_server);
     }
 
     /* Please Valgrind. */
@@ -187,12 +189,13 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
         if (cf->udp && udp_init == false) {
             pr_info("udprelay enabled");
             int remote_addr_len = (s.addr.sa_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
-            init_udprelay(loop,
+            udp_server = init_udprelay(loop,
                 cf->listen_host, cf->listen_port,
                 &s.addr, remote_addr_len,
                 NULL, 0, cf->idle_timeout, NULL,
                 state->env->cipher,
                 cf->protocol, cf->protocol_param);
+            // TODO: we must store it in a linked-list.
             udp_init = true;
         }
 
