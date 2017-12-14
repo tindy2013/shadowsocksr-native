@@ -1544,7 +1544,7 @@ init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     // ////////////////////////////////////////////////
     // Setup server context
 
-    struct udp_server_ctx_t *server_ctx = ss_malloc(sizeof(struct udp_server_ctx_t));
+    struct udp_server_ctx_t *server_ctx = calloc(1, sizeof(struct udp_server_ctx_t));
 
     // Bind to port
     int serverfd = create_server_socket(server_host, server_port, loop, &server_ctx->io);
@@ -1583,7 +1583,9 @@ init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
         server_ctx->protocol_plugin->set_server_info(server_ctx->protocol, &server_info);
     }
     //SSR end
-    server_ctx->tunnel_addr = *tunnel_addr;
+    if (tunnel_addr) {
+        server_ctx->tunnel_addr = *tunnel_addr;
+    }
 #endif
 
     uv_udp_recv_start(&server_ctx->io, alloc_buffer, server_recv_cb);
