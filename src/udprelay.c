@@ -474,18 +474,19 @@ create_remote_socket(bool ipv6, uv_loop_t *loop, uv_udp_t *udp)
 }
 
 int
-create_server_socket(const char *host, const char *port, uv_loop_t *loop, uv_udp_t *udp)
+create_server_socket(const char *host, uint16_t port, uv_loop_t *loop, uv_udp_t *udp)
 {
     struct addrinfo hints = { 0 };
     struct addrinfo *result = NULL, *rp, *ipv4v6bindall;
     int s, server_sock = 0;
+    char tmp[32] = { 0 };
 
     hints.ai_family   = AF_UNSPEC;               /* Return IPv4 and IPv6 choices */
     hints.ai_socktype = SOCK_DGRAM;              /* We want a UDP socket */
     hints.ai_flags    = AI_PASSIVE | AI_ADDRCONFIG; /* For wildcard IP address */
     hints.ai_protocol = IPPROTO_UDP;
 
-    s = getaddrinfo(host, port, &hints, &result);
+    s = getaddrinfo(host, itoa((int)port, tmp, 10), &hints, &result);
     if (s != 0) {
         LOGE("[udp] getaddrinfo: %s", gai_strerror(s));
         return -1;
@@ -1522,7 +1523,7 @@ free_cb(void *key, void *element)
 }
 
 int
-init_udprelay(uv_loop_t *loop, const char *server_host, const char *server_port,
+init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 #ifdef MODULE_LOCAL
     const struct sockaddr *remote_addr, const int remote_addr_len,
     const struct ss_host_port *tunnel_addr,
@@ -1572,7 +1573,7 @@ init_udprelay(uv_loop_t *loop, const char *server_host, const char *server_port,
     struct server_info_t server_info = { 0 };
 
     strcpy(server_info.host, server_host);
-    server_info.port = (uint16_t) atoi(server_port);
+    server_info.port = server_port;
     server_info.g_data = server_ctx->protocol_global;
     server_info.param = (char *)protocol_param;
     server_info.key = enc_get_key(cipher_env);

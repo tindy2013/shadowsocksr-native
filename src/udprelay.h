@@ -27,7 +27,7 @@
 
 struct ss_host_port;
 
-int init_udprelay(uv_loop_t *loop, const char *server_host, const char *server_port,
+int init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 #ifdef MODULE_LOCAL
     const struct sockaddr *remote_addr, const int remote_addr_len,
     const struct ss_host_port *tunnel_addr,

@@ -1324,7 +1324,7 @@ main(int argc, char **argv)
     char *iface = NULL;
     int remote_num = 0;
     char *hostnames[MAX_REMOTE_NUM] = {NULL};
-    struct ss_host_port remote_addr[MAX_REMOTE_NUM];
+    struct ss_host_port remote_addr[MAX_REMOTE_NUM] = { {NULL} };
     char *remote_port = NULL;
     int use_new_listener = 0;
     jconf_t *conf = NULL;
@@ -1755,8 +1755,8 @@ main(int argc, char **argv)
     // Setup UDP
     if (mode != TCP_ONLY) {
         LOGI("udprelay enabled");
-        init_udprelay(loop, local_addr, local_port, (struct sockaddr*)listen_ctx->servers[0].addr_udp,
-                      listen_ctx->servers[0].addr_udp_len, tunnel_addr, mtu, listen_ctx->timeout, listener->iface, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
+        init_udprelay(loop, local_addr, atoi(local_port), (struct sockaddr*)listen_ctx->servers[0].addr_udp,
+                      listen_ctx->servers[0].addr_udp_len, &tunnel_addr, mtu, listen_ctx->timeout, listener->iface, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
     }
 
 #ifdef HAVE_LAUNCHD
