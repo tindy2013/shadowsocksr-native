@@ -63,6 +63,15 @@
 #include "encrypt.h"
 #include "socks5.h"
 #include "ssrbuffer.h"
+#include "jconf.h"
+
+#include "obfs/obfs.h"
+
+#ifdef MODULE_REMOTE
+#include "resolv.h"
+#endif
+
+#include "common.h"
 
 #ifdef MODULE_REMOTE
 #define MAX_UDP_CONN_NUM 512
@@ -152,7 +161,7 @@ extern uint64_t rx;
 extern int vpn;
 #endif
 
-extern int verbose;
+//extern int verbose;
 #ifdef MODULE_REMOTE
 extern uint64_t tx;
 extern uint64_t rx;
@@ -670,9 +679,11 @@ remote_timeout_cb(uv_timer_t* handle)
     struct udp_remote_ctx_t *remote_ctx
         = cork_container_of(handle, struct udp_remote_ctx_t, watcher);
 
+    /*
     if (verbose) {
         LOGI("[udp] connection timeout");
     }
+    */
 
     char *key = hash_key(remote_ctx->af, &remote_ctx->src_addr);
     cache_remove(remote_ctx->server_ctx->conn_cache, key, HASH_KEY_LEN);
@@ -799,7 +810,7 @@ remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
     if (nread == -1) {
         // error on recv
         // simply drop that packet
-        ERROR("[udp] remote_recv_recvfrom");
+        LOGE("[udp] remote_recv_recvfrom");
         goto CLEAN_UP;
     } else if (nread > (ssize_t) packet_size) {
         LOGE("[udp] remote_recv_recvfrom fragmentation");
@@ -1051,10 +1062,10 @@ server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
     if (nread <= 0) {
         // error on recv
         // simply drop that packet
-        ERROR("[udp] server_recv_recvfrom");
+        LOGE("[udp] server_recv_recvfrom");
         goto CLEAN_UP;
     } else if (nread > (ssize_t) packet_size) {
-        ERROR("[udp] server_recv_recvfrom fragmentation");
+        LOGE("[udp] server_recv_recvfrom fragmentation");
         goto CLEAN_UP;
     }
 
@@ -1237,6 +1248,7 @@ server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
         uv_timer_start(&remote_ctx->watcher, remote_timeout_cb, (uint64_t)server_ctx->timeout * 1000, 0);
     }
 
+    /*
     if (remote_ctx == NULL) {
         if (verbose) {
 #ifdef MODULE_REDIR
@@ -1264,6 +1276,7 @@ server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
 #endif
         }
     }
+    */
 
 #ifdef MODULE_LOCAL
 
@@ -1285,7 +1298,7 @@ server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
         bool ipv6 = (remote_addr->sa_family == AF_INET6);
         int remotefd = create_remote_socket(ipv6, server_ctx->io.loop, &remote_ctx->io);
         if (remotefd < 0) {
-            ERROR("[udp] udprelay bind() error");
+            LOGE("[udp] udprelay bind() error");
             goto CLEAN_UP;
         }
         /*
@@ -1499,9 +1512,11 @@ free_cb(void *key, void *element)
 {
     struct udp_remote_ctx_t *remote_ctx = (struct udp_remote_ctx_t *)element;
 
+    /*
     if (verbose) {
         LOGI("[udp] one connection freed");
     }
+    */
 
     close_and_free_remote(remote_ctx);
 }
@@ -1510,7 +1525,7 @@ int
 init_udprelay(uv_loop_t *loop, const char *server_host, const char *server_port,
 #ifdef MODULE_LOCAL
     const struct sockaddr *remote_addr, const int remote_addr_len,
-    const struct ss_host_port tunnel_addr,
+    const struct ss_host_port *tunnel_addr,
 #endif
     int mtu, int timeout, const char *iface, struct cipher_env_t *cipher_env,
     const char *protocol, const char *protocol_param)
@@ -1567,7 +1582,7 @@ init_udprelay(uv_loop_t *loop, const char *server_host, const char *server_port,
         server_ctx->protocol_plugin->set_server_info(server_ctx->protocol, &server_info);
     }
     //SSR end
-    server_ctx->tunnel_addr = tunnel_addr;
+    server_ctx->tunnel_addr = *tunnel_addr;
 #endif
 
     uv_udp_recv_start(&server_ctx->io, alloc_buffer, server_recv_cb);

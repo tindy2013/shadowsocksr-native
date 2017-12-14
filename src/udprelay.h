@@ -24,23 +24,13 @@
 #define _UDPRELAY_H
 
 #include <uv.h>
-#include <time.h>
 
-#include "encrypt.h"
-#include "jconf.h"
-#include "obfs/obfs.h"
-
-#ifdef MODULE_REMOTE
-#include "resolv.h"
-#endif
-
-#include "cache.h"
-#include "common.h"
+struct ss_host_port;
 
 int init_udprelay(uv_loop_t *loop, const char *server_host, const char *server_port,
 #ifdef MODULE_LOCAL
     const struct sockaddr *remote_addr, const int remote_addr_len,
-    const struct ss_host_port tunnel_addr,
+    const struct ss_host_port *tunnel_addr,
 #endif
     int mtu, int timeout, const char *iface, struct cipher_env_t *cipher_env,
     const char *protocol, const char *protocol_param);
