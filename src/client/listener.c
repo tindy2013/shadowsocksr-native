@@ -83,14 +83,14 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
     /* Start the event loop.  Control continues in getaddrinfo_done_cb(). */
     err = uv_run(loop, UV_RUN_DEFAULT);
     if (err != 0) {
-        pr_err("getaddrinfo: %s", uv_strerror(err));
+        pr_err("uv_run: %s", uv_strerror(err));
     }
 
     ssr_cipher_env_release(state->env);
 
     if (state->listeners && state->listener_count) {
-        for (size_t i = 0; i < state->listener_count; ++i) {
-            struct listener_t *listener = state->listeners + i;
+        for (size_t n = 0; n < state->listener_count; ++n) {
+            struct listener_t *listener = state->listeners + n;
 
             uv_tcp_t *tcp_server = listener->tcp_server;
             if (tcp_server) {

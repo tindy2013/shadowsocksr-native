@@ -68,10 +68,10 @@ int main(int argc, char **argv) {
         }
 
         uv_loop_t *loop = uv_loop_new(); // uv_default_loop();
-        err = listener_run(config, loop);
-
+        listener_run(config, loop);
         //uv_loop_delete(loop);
 
+        err = 0;
     } while(0);
 
     config_release(config);
