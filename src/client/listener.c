@@ -31,12 +31,16 @@
 # define INET6_ADDRSTRLEN 63
 #endif
 
-struct server_state {
-    struct server_env_t *env;
-    uv_tcp_t *listeners;
+struct listener_t {
+    uv_tcp_t *tcp_server;
+    struct udp_server_ctx_t *udp_server;
 };
 
-struct udp_server_ctx_t *udp_server = NULL;
+struct server_state {
+    struct server_env_t *env;
+    int listener_count;
+    struct listener_t *listeners;
+};
 
 static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
@@ -72,15 +76,30 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
         abort();
     }
 
-    if (udp_server) {
-        free_udprelay(udp_server);
-    }
-
     /* Please Valgrind. */
     uv_loop_delete(loop);
 
     ssr_cipher_env_release(state->env);
+
+    if (state->listeners && state->listener_count) {
+        for (size_t i = 0; i < state->listener_count; ++i) {
+            struct listener_t *listener = state->listeners + i;
+
+            uv_tcp_t *tcp_server = listener->tcp_server;
+            if (tcp_server) {
+                free(tcp_server);
+            }
+
+            struct udp_server_ctx_t *udp_server = listener->udp_server;
+            if (udp_server) {
+                free_udprelay(udp_server);
+            }
+        }
+    }
+    if (state->listeners) {
     free(state->listeners);
+    }
+
     free(state);
 
     return 0;
@@ -98,7 +117,6 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
     const void *addrv = NULL;
     const char *what;
     uv_loop_t *loop;
-    uv_tcp_t *listener;
     unsigned int n;
     int err;
     union {
@@ -138,9 +156,8 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
         return;
     }
 
-    state->listeners = calloc((ipv4_naddrs + ipv6_naddrs), sizeof(state->listeners[0]));
-
-    bool udp_init = false;
+    state->listener_count = (ipv4_naddrs + ipv6_naddrs);
+    state->listeners = calloc(state->listener_count, sizeof(state->listeners[0]));
 
     n = 0;
     for (ai = addrs; ai != NULL; ai = ai->ai_next) {
@@ -164,42 +181,46 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             UNREACHABLE();
         }
 
-        listener = state->listeners + n;
-        CHECK(0 == uv_tcp_init(loop, listener));
+        struct listener_t *listener = state->listeners + n;
+
+        listener->tcp_server = (uv_tcp_t *)calloc(1, sizeof(listener->tcp_server[0]));
+        uv_tcp_t *tcp_server = listener->tcp_server;
+        CHECK(0 == uv_tcp_init(loop, tcp_server));
 
         what = "uv_tcp_bind";
-        err = uv_tcp_bind(listener, &s.addr, 0);
+        err = uv_tcp_bind(tcp_server, &s.addr, 0);
         if (err == 0) {
             what = "uv_listen";
-            listener->data = env;
-            err = uv_listen((uv_stream_t *)listener, 128, listen_incoming_connection_cb);
+            tcp_server->data = env;
+            err = uv_listen((uv_stream_t *)tcp_server, 128, listen_incoming_connection_cb);
         }
 
         if (err != 0) {
             pr_err("%s(\"%s:%hu\"): %s", what, addrbuf, cf->listen_port, uv_strerror(err));
             while (n > 0) {
                 n -= 1;
-                uv_close((uv_handle_t *)(listener), NULL);
+                uv_close((uv_handle_t *)tcp_server, NULL);
             }
             break;
         }
 
         pr_info("listening on %s:%hu", addrbuf, cf->listen_port);
 
-        if (cf->udp && udp_init == false) {
-            pr_info("udprelay enabled");
+        if (cf->udp) {
             int remote_addr_len = (s.addr.sa_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
-            udp_server = init_udprelay(loop,
+            listener->udp_server = init_udprelay(loop,
                 cf->listen_host, cf->listen_port,
                 &s.addr, remote_addr_len,
                 NULL, 0, cf->idle_timeout, NULL,
                 state->env->cipher,
                 cf->protocol, cf->protocol_param);
-            // TODO: we must store it in a linked-list.
-            udp_init = true;
         }
 
         n += 1;
+    }
+
+    if (cf->udp) {
+        pr_info("udprelay enabled");
     }
 
     uv_freeaddrinfo(addrs);
