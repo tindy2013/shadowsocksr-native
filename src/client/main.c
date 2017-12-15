@@ -67,7 +67,10 @@ int main(int argc, char **argv) {
             break;
         }
 
-        err = listener_run(config, uv_default_loop());
+        uv_loop_t *loop = uv_loop_new(); // uv_default_loop();
+        err = listener_run(config, loop);
+
+        //uv_loop_delete(loop);
 
     } while(0);
 

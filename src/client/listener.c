@@ -44,6 +44,7 @@ struct server_state {
 
 static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
+static void signal_quit(uv_signal_t* handle, int signum);
 
 int listener_run(struct server_config *cf, uv_loop_t *loop) {
     struct addrinfo hints;
@@ -71,13 +72,19 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
         return err;
     }
 
-    /* Start the event loop.  Control continues in getaddrinfo_done_cb(). */
-    if (uv_run(loop, UV_RUN_DEFAULT)) {
-        abort();
-    }
+    // Setup signal handler
+    uv_signal_t sigint_watcher;
+    uv_signal_t sigterm_watcher;
+    uv_signal_init(loop, &sigint_watcher);
+    uv_signal_init(loop, &sigterm_watcher);
+    uv_signal_start(&sigint_watcher, signal_quit, SIGINT);
+    uv_signal_start(&sigterm_watcher, signal_quit, SIGTERM);
 
-    /* Please Valgrind. */
-    uv_loop_delete(loop);
+    /* Start the event loop.  Control continues in getaddrinfo_done_cb(). */
+    err = uv_run(loop, UV_RUN_DEFAULT);
+    if (err != 0) {
+        pr_err("getaddrinfo: %s", uv_strerror(err));
+    }
 
     ssr_cipher_env_release(state->env);
 
@@ -97,12 +104,12 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
         }
     }
     if (state->listeners) {
-    free(state->listeners);
+        free(state->listeners);
     }
 
     free(state);
 
-    return 0;
+    return err;
 }
 
 /* Bind a server to each address that getaddrinfo() reported. */
@@ -271,4 +278,19 @@ bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct so
     }
 
     return false;
+}
+
+static void signal_quit(uv_signal_t* handle, int signum) {
+    switch (signum) {
+    case SIGINT:
+    case SIGTERM:
+#ifndef __MINGW32__
+    case SIGUSR1:
+#endif
+        uv_stop(handle->loop);
+        break;
+    default:
+        assert(0);
+        break;
+    }
 }
