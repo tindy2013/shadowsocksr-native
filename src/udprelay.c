@@ -145,16 +145,16 @@ struct udp_remote_ctx_t {
     int ref_count;
 };
 
-static void server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags);
-static void remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags);
-static void remote_timeout_cb(uv_timer_t* handle);
+static void udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags);
+static void udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags);
+static void udp_remote_timeout_cb(uv_timer_t* handle);
 
 static char *hash_key(int af, const struct sockaddr_storage *addr);
 #ifdef MODULE_REMOTE
 static void query_resolve_cb(struct sockaddr *addr, void *data);
 #endif
-static void close_and_free_remote(struct udp_remote_ctx_t *ctx);
-static struct udp_remote_ctx_t *new_remote(struct udp_remote_ctx_t *ctx, struct udp_server_ctx_t *server_ctx);
+static void udp_close_and_free_remote(struct udp_remote_ctx_t *ctx);
+// static struct udp_remote_ctx_t * new_udp_remote(struct udp_remote_ctx_t *ctx, struct udp_server_ctx_t *server_ctx);
 
 #ifdef ANDROID
 extern int log_tx_rx;
@@ -588,24 +588,24 @@ create_server_socket(const char *host, uint16_t port, uv_loop_t *loop, uv_udp_t 
     return server_sock;
 }
 
+/*
 struct udp_remote_ctx_t *
-new_remote(struct udp_remote_ctx_t *ctx, struct udp_server_ctx_t *server_ctx)
+new_udp_remote(struct udp_remote_ctx_t *ctx, struct udp_server_ctx_t *server_ctx)
 {
-    /*
     struct udp_remote_ctx_t *ctx = ss_malloc(sizeof(struct udp_remote_ctx_t));
     memset(ctx, 0, sizeof(struct udp_remote_ctx_t));
 
     ctx->fd         = fd;
     ctx->server_ctx = server_ctx;
 
-    ev_io_init(&ctx->io, remote_recv_cb, fd, EV_READ);
-    ev_timer_init(&ctx->watcher, remote_timeout_cb, server_ctx->timeout,
+    ev_io_init(&ctx->io, udp_remote_recv_cb, fd, EV_READ);
+    ev_timer_init(&ctx->watcher, udp_remote_timeout_cb, server_ctx->timeout,
                   server_ctx->timeout);
-     */
 
     ctx->server_ctx = server_ctx;
     return ctx;
 }
+*/
 
 /*
 struct udp_server_ctx_t *
@@ -616,7 +616,7 @@ new_server_ctx(int fd)
 
     ctx->fd = fd;
 
-    ev_io_init(&ctx->io, server_recv_cb, fd, EV_READ);
+    ev_io_init(&ctx->io, udp_listener_recv_cb, fd, EV_READ);
 
     return ctx;
 }
@@ -652,32 +652,33 @@ close_and_free_query(EV_P_ struct query_ctx *ctx)
 #endif
 
 static void
-remote_close_done_cb(uv_handle_t* handle)
+udp_remote_close_done_cb(uv_handle_t* handle)
 {
-    struct udp_remote_ctx_t *ctx = cork_container_of(handle, struct udp_remote_ctx_t, io);
+    struct udp_remote_ctx_t *ctx = (struct udp_remote_ctx_t *)handle->data;
     --ctx->ref_count;
-    LOGI("ctx->release_count %d", ctx->ref_count);
     if (ctx->ref_count <= 0) {
-        //ss_free(ctx);
+        ss_free(ctx);
     }
 }
 
 
 void
-close_and_free_remote(struct udp_remote_ctx_t *ctx)
+udp_close_and_free_remote(struct udp_remote_ctx_t *ctx)
 {
     if (ctx != NULL) {
-        uv_close((uv_handle_t *)&ctx->watcher, remote_close_done_cb);
+        ctx->watcher.data = ctx;
+        uv_close((uv_handle_t *)&ctx->watcher, udp_remote_close_done_cb);
         ++ctx->ref_count;
 
         uv_udp_recv_stop(&ctx->io);
-        uv_close((uv_handle_t *)&ctx->io, remote_close_done_cb);
+        ctx->io.data = ctx;
+        uv_close((uv_handle_t *)&ctx->io, udp_remote_close_done_cb);
         ++ctx->ref_count;
     }
 }
 
 static void
-remote_timeout_cb(uv_timer_t* handle)
+udp_remote_timeout_cb(uv_timer_t* handle)
 {
     struct udp_remote_ctx_t *remote_ctx
         = cork_container_of(handle, struct udp_remote_ctx_t, watcher);
@@ -738,7 +739,7 @@ query_resolve_cb(struct sockaddr *addr, void *data)
                         ERROR("setinterface");
                 }
 #endif
-                remote_ctx                  = new_remote(remotefd, query_ctx->server_ctx);
+                remote_ctx                  = new_udp_remote(remotefd, query_ctx->server_ctx);
                 remote_ctx->src_addr        = query_ctx->src_addr;
                 remote_ctx->server_ctx      = query_ctx->server_ctx;
                 remote_ctx->addr_header_len = query_ctx->addr_header_len;
@@ -761,7 +762,7 @@ query_resolve_cb(struct sockaddr *addr, void *data)
             if (s == -1) {
                 ERROR("[udp] sendto_remote");
                 if (!cache_hit) {
-                    close_and_free_remote(EV_A_ remote_ctx);
+                    udp_close_and_free_remote(EV_A_ remote_ctx);
                 }
             } else {
                 if (!cache_hit) {
@@ -787,7 +788,7 @@ static void on_send(uv_udp_send_t* req, int status) {
 }
 
 static void
-remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags)
+udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags)
 {
     struct udp_remote_ctx_t *remote_ctx = cork_container_of(handle, struct udp_remote_ctx_t, io);
     struct udp_server_ctx_t *server_ctx = remote_ctx->server_ctx;
@@ -796,7 +797,7 @@ remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
     // server has been closed
     if (server_ctx == NULL) {
         LOGE("[udp] invalid server");
-        close_and_free_remote(remote_ctx);
+        udp_close_and_free_remote(remote_ctx);
         return;
     }
 
@@ -840,7 +841,7 @@ remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
             buf->len = (size_t) protocol_plugin->client_udp_post_decrypt(server_ctx->protocol, &buf->buffer, (int)buf->len, &buf->capacity);
             if ((int)buf->len < 0) {
                 LOGE("client_udp_post_decrypt");
-                close_and_free_remote(remote_ctx);
+                udp_close_and_free_remote(remote_ctx);
                 return;
             }
             if ( buf->len == 0 )
@@ -995,7 +996,7 @@ remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
 
     // handle the UDP packet successfully,
     // triger the timer
-    uv_timer_start(&remote_ctx->watcher, remote_timeout_cb, (uint64_t)server_ctx->timeout * 1000, 0);
+    uv_timer_start(&remote_ctx->watcher, udp_remote_timeout_cb, (uint64_t)server_ctx->timeout * 1000, 0);
 
 CLEAN_UP:
 
@@ -1003,7 +1004,7 @@ CLEAN_UP:
 }
 
 static void 
-server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags)
+udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags)
 {
     if (NULL == addr) {
         return;
@@ -1248,7 +1249,7 @@ server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
 
     // reset the timer
     if (remote_ctx != NULL) {
-        uv_timer_start(&remote_ctx->watcher, remote_timeout_cb, (uint64_t)server_ctx->timeout * 1000, 0);
+        uv_timer_start(&remote_ctx->watcher, udp_remote_timeout_cb, (uint64_t)server_ctx->timeout * 1000, 0);
     }
 
     /*
@@ -1334,7 +1335,7 @@ server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
          */
 
         // Init remote_ctx
-        remote_ctx                  = new_remote(remote_ctx, server_ctx);
+        remote_ctx->server_ctx = server_ctx;
         remote_ctx->src_addr        = src_addr;
         remote_ctx->af              = remote_addr->sa_family;
         remote_ctx->addr_header_len = addr_header_len;
@@ -1350,8 +1351,8 @@ server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
         ev_io_start(EV_A_ & remote_ctx->io);
         ev_timer_start(EV_A_ & remote_ctx->watcher);
         */
-        uv_udp_recv_start(&remote_ctx->io, alloc_buffer, remote_recv_cb);
-        uv_timer_start(&remote_ctx->watcher, remote_timeout_cb, (uint64_t)server_ctx->timeout * 1000, 0);
+        uv_udp_recv_start(&remote_ctx->io, alloc_buffer, udp_remote_recv_cb);
+        uv_timer_start(&remote_ctx->watcher, udp_remote_timeout_cb, (uint64_t)server_ctx->timeout * 1000, 0);
     }
 
     if (offset > 0) {
@@ -1442,7 +1443,7 @@ server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
                         ERROR("setinterface");
                 }
 #endif
-                remote_ctx                  = new_remote(remotefd, server_ctx);
+                remote_ctx                  = new_udp_remote(remotefd, server_ctx);
                 remote_ctx->src_addr        = src_addr;
                 remote_ctx->server_ctx      = server_ctx;
                 remote_ctx->addr_header_len = addr_header_len;
@@ -1464,7 +1465,7 @@ server_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const stru
         if (s == -1) {
             ERROR("[udp] sendto_remote");
             if (!cache_hit) {
-                close_and_free_remote(EV_A_ remote_ctx);
+                udp_close_and_free_remote(EV_A_ remote_ctx);
             }
         } else {
             if (!cache_hit) {
@@ -1511,7 +1512,7 @@ CLEAN_UP:
 }
 
 void
-free_cb(void *key, void *element)
+cache_free_cb(void *key, void *element)
 {
     struct udp_remote_ctx_t *remote_ctx = (struct udp_remote_ctx_t *)element;
 
@@ -1521,7 +1522,7 @@ free_cb(void *key, void *element)
     }
     */
 
-    close_and_free_remote(remote_ctx);
+    udp_close_and_free_remote(remote_ctx);
 }
 
 struct udp_server_ctx_t *
@@ -1541,7 +1542,7 @@ init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 
     // Initialize cache
     struct cache *conn_cache;
-    cache_create(&conn_cache, MAX_UDP_CONN_NUM, free_cb);
+    cache_create(&conn_cache, MAX_UDP_CONN_NUM, cache_free_cb);
 
     // ////////////////////////////////////////////////
     // Setup server context
@@ -1590,7 +1591,7 @@ init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     }
 #endif
 
-    uv_udp_recv_start(&server_ctx->io, alloc_buffer, server_recv_cb);
+    uv_udp_recv_start(&server_ctx->io, alloc_buffer, udp_listener_recv_cb);
     
     return server_ctx;
 }
