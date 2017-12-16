@@ -344,7 +344,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 {
     struct local_t *local = cork_container_of(stream, struct local_t, socket);
     struct remote_t *remote = local->remote;
-    struct buffer_t *buf;
+    struct buffer_t *buf = NULL;
 
     if (local->dying || (remote && remote->dying) ) {
         do_dealloc_uv_buffer((uv_buf_t *)buf0);

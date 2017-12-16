@@ -54,9 +54,9 @@ typedef enum s5_atyp {
 } s5_atyp;
 
 typedef enum s5_cmd {
-    s5_cmd_tcp_connect,
-    s5_cmd_tcp_bind,
-    s5_cmd_udp_assoc
+    s5_cmd_tcp_connect = 1,
+    s5_cmd_tcp_bind = 2,
+    s5_cmd_udp_assoc = 3,
 } s5_cmd;
 
 enum s5_state {
