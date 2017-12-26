@@ -46,35 +46,7 @@ typedef EVP_MD digest_type_t;
 #define MAX_IV_LENGTH EVP_MAX_IV_LENGTH
 #define MAX_MD_SIZE EVP_MAX_MD_SIZE
 
-enum cipher_index {
-    NONE,
-    TABLE,
-    RC4,
-    RC4_MD5_6,
-    RC4_MD5,
-    AES_128_CFB,
-    AES_192_CFB,
-    AES_256_CFB,
-    AES_128_CTR,
-    AES_192_CTR,
-    AES_256_CTR,
-    BF_CFB,
-    CAMELLIA_128_CFB,
-    CAMELLIA_192_CFB,
-    CAMELLIA_256_CFB,
-    CAST5_CFB,
-    DES_CFB,
-    IDEA_CFB,
-    RC2_CFB,
-    SEED_CFB,
-    SALSA20,
-    CHACHA20,
-    CHACHA20IETF,
-    CIPHER_NUM,
-};
-
-const char * cipher_name_from_index(enum cipher_index index);
-enum cipher_index cipher_index_from_name(const char *name);
+#include "ssr_cipher_names.h"
 
 struct cipher_env_t {
     uint8_t *enc_table;
@@ -82,7 +54,7 @@ struct cipher_env_t {
     uint8_t enc_key[MAX_KEY_LENGTH];
     int enc_key_len;
     int enc_iv_len;
-    enum cipher_index enc_method;
+    enum ss_cipher_index enc_method;
 
     struct cache *iv_cache;
 };
@@ -138,7 +110,7 @@ int ss_decrypt_all(struct cipher_env_t* env, struct buffer_t *ciphertext, size_t
 int ss_encrypt(struct cipher_env_t* env, struct buffer_t *plaintext, struct enc_ctx *ctx, size_t capacity);
 int ss_decrypt(struct cipher_env_t* env, struct buffer_t *ciphertext, struct enc_ctx *ctx, size_t capacity);
 
-enum cipher_index enc_init(struct cipher_env_t *env, const char *pass, const char *method);
+enum ss_cipher_index enc_init(struct cipher_env_t *env, const char *pass, const char *method);
 void enc_release(struct cipher_env_t *env);
 void enc_ctx_init(struct cipher_env_t *env, struct enc_ctx *ctx, int enc);
 void enc_ctx_release(struct cipher_env_t* env, struct enc_ctx *ctx);

@@ -14,6 +14,7 @@ int rand_bytes(uint8_t *output, int len);
 #include "auth_chain.h"
 
 #include "../encrypt.h"
+#include "ssr_cipher_names.h"
 
 void *
 init_data(void)
@@ -59,10 +60,10 @@ new_obfs_manager(const char *plugin_name)
     if (plugin_name == NULL) {
         return NULL;
     }
-    if (strcmp(plugin_name, "origin") == 0) {
+    if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_origin)) == 0) {
         return NULL;
     }
-    if (strcmp(plugin_name, "plain") == 0) {
+    if (strcmp(plugin_name, ssr_obfs_name_from_index(ssr_obfs_plain)) == 0) {
         return NULL;
     }
     init_crc32_table();
