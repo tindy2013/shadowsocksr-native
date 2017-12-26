@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "obfs.h"
 
@@ -24,7 +23,6 @@ struct server_config {
     char *obfs;
     char *obfs_param;
     unsigned int idle_timeout; /* Connection idle timeout in ms. */
-    bool udp;
 };
 
 struct server_env_t {
@@ -49,18 +47,18 @@ struct tunnel_cipher_ctx {
 
 #define SSR_ERR_MAP(V)                                                         \
   V( 0, ssr_ok,                 "All is OK.")                                  \
-  V(-1, ssr_client_decode,      "client decode error.")                        \
-  V(-2, ssr_invalid_password,   "invalid password or cipher.")                 \
-  V(-3, ssr_client_post_decrypt,"client post decrypt error.")                  \
+  V(-1, ssr_error_client_decode,      "client decode error.")                  \
+  V(-2, ssr_error_invalid_password,   "invalid password or cipher.")           \
+  V(-3, ssr_error_client_post_decrypt,"client post decrypt error.")            \
 
-typedef enum ssr_err {
+typedef enum ssr_error {
 #define SSR_ERR_GEN(code, name, _) name = code,
     SSR_ERR_MAP(SSR_ERR_GEN)
 #undef SSR_ERR_GEN
     ssr_max_errors,
-} ssr_err;
+} ssr_error;
 
-const char *ssr_strerror(enum ssr_err err);
+const char *ssr_strerror(enum ssr_error err);
 
 struct tunnel_cipher_ctx;
 struct buffer_t;
@@ -82,7 +80,7 @@ struct server_env_t * ssr_cipher_env_create(struct server_config *config);
 void ssr_cipher_env_release(struct server_env_t *env);
 struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const struct buffer_t *init_pkg);
 void tunnel_cipher_release(struct tunnel_cipher_ctx *tc);
-enum ssr_err tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf);
-enum ssr_err tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback);
+enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf);
+enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback);
 
 #endif // defined(__SSR_CIPHER__)

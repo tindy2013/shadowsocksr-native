@@ -29,7 +29,7 @@
 #include "obfsutil.h"
 #include "ssrbuffer.h"
 
-const char * ssr_strerror(enum ssr_err err) {
+const char * ssr_strerror(enum ssr_error err) {
 #define SSR_ERR_GEN(_, name, errmsg) case (name): return errmsg;
     switch (err) {
         SSR_ERR_MAP(SSR_ERR_GEN)
@@ -135,7 +135,7 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
     tc->env = env;
 
     // init server cipher
-    if (env->cipher->enc_method > TABLE) {
+    if (env->cipher->enc_method > SS_TABLE) {
         tc->e_ctx = calloc(1, sizeof(struct enc_ctx));
         tc->d_ctx = calloc(1, sizeof(struct enc_ctx));
         enc_ctx_init(env->cipher, tc->e_ctx, 1);
@@ -204,7 +204,7 @@ void tunnel_cipher_release(struct tunnel_cipher_ctx *tc) {
 }
 
 // insert shadowsocks header
-enum ssr_err tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) {
+enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) {
     assert(buf->capacity >= SSR_BUFF_SIZE);
 
     struct server_env_t *env = tc->env;
@@ -217,7 +217,7 @@ enum ssr_err tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) 
     }
     int err = ss_encrypt(env->cipher, buf, tc->e_ctx, SSR_BUFF_SIZE);
     if (err != 0) {
-        return ssr_invalid_password;
+        return ssr_error_invalid_password;
     }
 
     struct obfs_manager *obfs_plugin = env->obfs_plugin;
@@ -229,7 +229,7 @@ enum ssr_err tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) 
     return ssr_ok;
 }
 
-enum ssr_err tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback)
+enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback)
 {
     assert(buf->len <= SSR_BUFF_SIZE);
 
@@ -241,7 +241,7 @@ enum ssr_err tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, 
         int needsendback = 0;
         ssize_t len = obfs_plugin->client_decode(tc->obfs, &buf->buffer, buf->len, &buf->capacity, &needsendback);
         if (len < 0) {
-            return ssr_client_decode;
+            return ssr_error_client_decode;
         }
         buf->len = (size_t)len;
         if (needsendback && obfs_plugin->client_encode) {
@@ -254,7 +254,7 @@ enum ssr_err tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, 
     if (buf->len > 0) {
         int err = ss_decrypt(env->cipher, buf, tc->d_ctx, SSR_BUFF_SIZE);
         if (err != 0) {
-            return ssr_invalid_password;
+            return ssr_error_invalid_password;
         }
     }
     struct obfs_manager *protocol_plugin = env->protocol_plugin;
@@ -262,7 +262,7 @@ enum ssr_err tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, 
         ssize_t len = protocol_plugin->client_post_decrypt(
             tc->protocol, &buf->buffer, (int)buf->len, &buf->capacity);
         if (len < 0) {
-            return ssr_client_post_decrypt;
+            return ssr_error_client_post_decrypt;
         }
         buf->len = (size_t)len;
     }
