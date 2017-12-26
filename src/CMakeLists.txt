@@ -7,6 +7,7 @@ set(SOURCE_FILES_SNI
         rule.c)
 
 set(SOURCE_FILES_OBFS
+        ssr_cipher_names.c
         obfs/auth.c
         obfs/auth_chain.c
         obfs/base64.c

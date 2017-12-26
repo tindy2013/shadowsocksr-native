@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "obfs.h"
 
@@ -22,6 +23,7 @@ struct server_config {
     char *protocol_param;
     char *obfs;
     char *obfs_param;
+    bool udp;
     unsigned int idle_timeout; /* Connection idle timeout in ms. */
 };
 

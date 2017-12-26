@@ -751,7 +751,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 struct server_env_t *server_env = local->server_env;
 
                 // init server cipher
-                if (server_env->cipher->enc_method > TABLE) {
+                if (server_env->cipher->enc_method > SS_TABLE) {
                     local->e_ctx = ss_malloc(sizeof(struct enc_ctx));
                     local->d_ctx = ss_malloc(sizeof(struct enc_ctx));
                     enc_ctx_init(server_env->cipher, local->e_ctx, 1);
