@@ -219,7 +219,7 @@ auth_simple_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int data
         if (length > local->recv_buffer_size) {
             break;
         }
-        int crc = (int) crc32((unsigned char*)recv_buffer, (unsigned int)length);
+        int crc = (int) crc32_imp((unsigned char*)recv_buffer, (unsigned int)length);
         if (crc != -1) {
             free(out_buffer);
             local->recv_buffer_size = 0;
@@ -527,7 +527,7 @@ auth_sha1_v4_pack_data(char *data, int datalength, char *outdata)
     int out_size = (int)rand_len + datalength + 8;
     outdata[0] = (char)(out_size >> 8);
     outdata[1] = (char)out_size;
-    uint32_t crc_val = crc32((unsigned char*)outdata, 2);
+    uint32_t crc_val = crc32_imp((unsigned char*)outdata, 2);
     outdata[2] = (char)crc_val;
     outdata[3] = (char)(crc_val >> 8);
     if (rand_len < 128) {
@@ -639,7 +639,7 @@ auth_sha1_v4_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int dat
     char * buffer = out_buffer;
     char error = 0;
     while (local->recv_buffer_size > 4) {
-        uint32_t crc_val = crc32((unsigned char*)recv_buffer, 2);
+        uint32_t crc_val = crc32_imp((unsigned char*)recv_buffer, 2);
         if ((((uint32_t)recv_buffer[3] << 8) | recv_buffer[2]) != (crc_val & 0xffff)) {
             local->recv_buffer_size = 0;
             error = 1;

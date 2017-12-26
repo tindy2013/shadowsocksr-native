@@ -5,7 +5,7 @@
 
 void init_crc32_table(void);
 
-uint32_t crc32(unsigned char *buffer, unsigned int size);
+uint32_t crc32_imp(unsigned char *buffer, unsigned int size);
 
 void fillcrc32to(unsigned char *buffer, unsigned int size, unsigned char *outbuffer);
 
