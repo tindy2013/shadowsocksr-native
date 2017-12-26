@@ -40,6 +40,7 @@
     <ClCompile Include="..\..\src\socks5.c" />
     <ClCompile Include="..\..\src\ssrbuffer.c" />
     <ClCompile Include="..\..\src\ssrutils.c" />
+    <ClCompile Include="..\..\src\ssr_cipher_names.c" />
     <ClCompile Include="..\..\src\tls.c" />
     <ClCompile Include="..\..\src\udprelay.c" />
     <ClCompile Include="..\..\src\win32.c" />
@@ -72,6 +73,7 @@
     <ClInclude Include="..\..\src\socks5.h" />
     <ClInclude Include="..\..\src\ssrbuffer.h" />
     <ClInclude Include="..\..\src\ssrutils.h" />
+    <ClInclude Include="..\..\src\ssr_cipher_names.h" />
     <ClInclude Include="..\..\src\tls.h" />
     <ClInclude Include="..\..\src\udprelay.h" />
     <ClInclude Include="..\..\src\win32.h" />
