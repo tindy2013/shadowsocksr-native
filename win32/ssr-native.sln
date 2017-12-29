@@ -24,8 +24,13 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libuv", "..\depends\libuv\win32\libuv.vcxproj", "{44EA013F-AD0F-4D53-8E06-0B4EF26F4B65}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcork", "libcork\libcork.vcxproj", "{86BF073F-D15A-4952-A7DF-0F4C29C93EB4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34} = {2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libudns", "libudns\libudns.vcxproj", "{C9840117-C1B9-43F1-9D18-A91AEB56F4C9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pthreads", "..\depends\pthreads4w\win32\pthreads.vcxproj", "{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -91,6 +96,14 @@ Global
 		{C9840117-C1B9-43F1-9D18-A91AEB56F4C9}.Release|x64.Build.0 = Release|x64
 		{C9840117-C1B9-43F1-9D18-A91AEB56F4C9}.Release|x86.ActiveCfg = Release|Win32
 		{C9840117-C1B9-43F1-9D18-A91AEB56F4C9}.Release|x86.Build.0 = Release|Win32
+		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Debug|x64.ActiveCfg = Debug|x64
+		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Debug|x64.Build.0 = Debug|x64
+		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Debug|x86.ActiveCfg = Debug|Win32
+		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Debug|x86.Build.0 = Debug|Win32
+		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Release|x64.ActiveCfg = Release|x64
+		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Release|x64.Build.0 = Release|x64
+		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Release|x86.ActiveCfg = Release|Win32
+		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

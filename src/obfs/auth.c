@@ -195,7 +195,7 @@ auth_simple_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datal
     return len;
 }
 
-int
+ssize_t
 auth_simple_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity)
 {
     char *plaindata = *pplaindata;

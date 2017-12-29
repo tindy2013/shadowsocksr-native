@@ -74,7 +74,7 @@ int verify_simple_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int
     return len;
 }
 
-int verify_simple_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t *capacity) {
+ssize_t verify_simple_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t *capacity) {
     char *plaindata = *pplaindata;
     verify_simple_local_data *local = (verify_simple_local_data*)obfs->l_data;
     uint8_t * recv_buffer = (uint8_t *)local->recv_buffer;

@@ -13,8 +13,8 @@ struct obfs_t * auth_aes128_md5_new_obfs(void);
 struct obfs_t * auth_aes128_sha1_new_obfs(void);
 void auth_simple_dispose(struct obfs_t *obfs);
 
-//int auth_simple_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);
-//int auth_simple_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);
+int auth_simple_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);
+ssize_t auth_simple_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);
 
 int auth_sha1_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);
 ssize_t auth_sha1_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);
