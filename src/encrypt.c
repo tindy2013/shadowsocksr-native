@@ -189,7 +189,7 @@ merge_sort(uint8_t array[], int length, uint32_t salt, uint64_t key)
         return;
     }
 
-    middle = (uint8_t)length / 2;
+    middle = (uint8_t)(length / 2);
 
     llength = length - middle;
 
