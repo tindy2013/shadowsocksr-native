@@ -149,7 +149,7 @@ set (ss_lib_common
 
 set (ss_lib_net
         ${ss_lib_common}
-        libcrypto.a # ${LIBCRYPTO} # OpenSSL library
+        /usr/local/lib/libcrypto.a # libcrypto.a # ${LIBCRYPTO} # OpenSSL library
         libipset
         pcre #${PCRE_LIBRARIES}
         udns
