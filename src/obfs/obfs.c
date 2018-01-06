@@ -57,7 +57,7 @@ dispose_obfs(struct obfs_t *obfs)
 struct obfs_manager *
 new_obfs_manager(const char *plugin_name)
 {
-    if (plugin_name == NULL) {
+    if (plugin_name == NULL || strlen(plugin_name)==0) {
         return NULL;
     }
     if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_origin)) == 0) {

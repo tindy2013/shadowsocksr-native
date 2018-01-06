@@ -36,39 +36,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include <openssl/evp.h>
-#include <openssl/sha.h>
-#include <openssl/md5.h>
-typedef EVP_CIPHER cipher_core_t;
-typedef EVP_CIPHER_CTX cipher_core_ctx_t;
-typedef EVP_MD digest_type_t;
-#define MAX_KEY_LENGTH EVP_MAX_KEY_LENGTH
-#define MAX_IV_LENGTH EVP_MAX_IV_LENGTH
-#define MAX_MD_SIZE EVP_MAX_MD_SIZE
-
 #include "ssr_cipher_names.h"
-
-struct cipher_env_t {
-    uint8_t *enc_table;
-    uint8_t *dec_table;
-    uint8_t enc_key[MAX_KEY_LENGTH];
-    int enc_key_len;
-    int enc_iv_len;
-    enum ss_cipher_index enc_method;
-
-    struct cache *iv_cache;
-};
-
-struct cipher_ctx_t {
-    cipher_core_ctx_t *core_ctx;
-    uint8_t iv[MAX_IV_LENGTH];
-};
-
-struct cipher_wrapper {
-    cipher_core_t *core;
-    size_t iv_len;
-    size_t key_len;
-};
 
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
@@ -88,18 +56,13 @@ struct cipher_wrapper {
 #undef max
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
-struct chunk_t {
-    uint32_t idx;
-    uint32_t len;
-    uint32_t counter;
-    struct buffer_t *buf;
-};
+struct buffer_t;
 
-struct enc_ctx {
-    uint8_t init;
-    uint64_t counter;
-    struct cipher_ctx_t cipher_ctx;
-};
+struct cipher_env_t;
+struct enc_ctx;
+
+size_t ss_max_iv_length(void);
+size_t ss_max_key_length(void);
 
 void bytes_to_key_with_size(const char *pass, size_t len, uint8_t *md, size_t md_size);
 
@@ -110,14 +73,17 @@ int ss_decrypt_all(struct cipher_env_t* env, struct buffer_t *ciphertext, size_t
 int ss_encrypt(struct cipher_env_t* env, struct buffer_t *plaintext, struct enc_ctx *ctx, size_t capacity);
 int ss_decrypt(struct cipher_env_t* env, struct buffer_t *ciphertext, struct enc_ctx *ctx, size_t capacity);
 
-enum ss_cipher_index enc_init(struct cipher_env_t *env, const char *pass, const char *method);
-void enc_release(struct cipher_env_t *env);
-void enc_ctx_init(struct cipher_env_t *env, struct enc_ctx *ctx, int enc);
-void enc_ctx_release(struct cipher_env_t* env, struct enc_ctx *ctx);
+struct cipher_env_t * cipher_env_new_instance(const char *pass, const char *method);
+enum ss_cipher_type cipher_env_enc_method(const struct cipher_env_t *env);
+void cipher_env_release(struct cipher_env_t *env);
+
+const uint8_t * enc_ctx_get_iv(const struct enc_ctx *ctx);
+
+struct enc_ctx * enc_ctx_new_instance(struct cipher_env_t *env, int enc);
+void enc_ctx_release_instance(struct cipher_env_t* env, struct enc_ctx *ctx);
 int enc_get_iv_len(struct cipher_env_t* env);
 uint8_t* enc_get_key(struct cipher_env_t* env);
 int enc_get_key_len(struct cipher_env_t* env);
-void cipher_context_release(struct cipher_env_t *env, struct cipher_ctx_t *ctx);
 unsigned char *enc_md5(const unsigned char *d, size_t n, unsigned char *md);
 
 int ss_md5_hmac_with_key(char *auth, char *msg, int msg_len, uint8_t *auth_key, int key_len);

@@ -14,40 +14,36 @@
 #define SIZEOF_ARRAY(a) (sizeof(a)/sizeof((a)[0]))
 #endif
 
-static const char *supported_ciphers[SS_CIPHER_NUM] = {
-    "none",
-    "table",
-    "rc4",
-    "rc4-md5-6",
-    "rc4-md5",
-    "aes-128-cfb",
-    "aes-192-cfb",
-    "aes-256-cfb",
-    "aes-128-ctr",
-    "aes-192-ctr",
-    "aes-256-ctr",
-    "bf-cfb",
-    "camellia-128-cfb",
-    "camellia-192-cfb",
-    "camellia-256-cfb",
-    "cast5-cfb",
-    "des-cfb",
-    "idea-cfb",
-    "rc2-cfb",
-    "seed-cfb",
-    "salsa20",
-    "chacha20",
-    "chacha20-ietf"
-};
+int ss_cipher_key_size(enum ss_cipher_type index) {
+#define SS_CIPHER_KEY_GEN(_, name, text, iv_size, key_size) case (name): return (key_size);
+    switch (index) {
+            SS_CIPHER_MAP(SS_CIPHER_KEY_GEN)
+        default:;  // Silence ss_cipher_max -Wswitch warning.
+    }
+#undef SS_CIPHER_KEY_GEN
+    return 0; // "Invalid index";
+}
+
+int ss_cipher_iv_size(enum ss_cipher_type index) {
+#define SS_CIPHER_IV_GEN(_, name, text, iv_size, key_size) case (name): return (iv_size);
+    switch (index) {
+            SS_CIPHER_MAP(SS_CIPHER_IV_GEN)
+        default:;  // Silence ss_cipher_max -Wswitch warning.
+    }
+#undef SS_CIPHER_IV_GEN
+    return 0; // "Invalid index";
+}
 
 const char *
-ss_cipher_name_from_index(enum ss_cipher_index index)
+ss_cipher_name_from_index(enum ss_cipher_type index)
 {
-    if (index < SS_NONE || index >= SS_CIPHER_NUM) {
-        //LOGE("ss_cipher_name_from_index(): Illegal method");
-        return NULL;
+#define SS_CIPHER_GEN(_, name, text, iv_size, key_size) case (name): return (text);
+    switch (index) {
+            SS_CIPHER_MAP(SS_CIPHER_GEN)
+        default:;  // Silence ss_cipher_max -Wswitch warning.
     }
-    return supported_ciphers[index];
+#undef SS_CIPHER_GEN
+    return NULL; // "Invalid index";
 }
 
 static int strcicmp(char const *a, char const *b) {
@@ -59,19 +55,19 @@ static int strcicmp(char const *a, char const *b) {
     }
 }
 
-enum ss_cipher_index
+enum ss_cipher_type
 ss_cipher_index_from_name(const char *name)
 {
-    enum ss_cipher_index m = SS_NONE;
+    enum ss_cipher_type m = ss_cipher_none;
     if (name != NULL) {
-        for (m = SS_NONE; m < SS_CIPHER_NUM; ++m) {
-            if (strcicmp(name, supported_ciphers[m]) == 0) {
+        for (m = ss_cipher_none; m < ss_cipher_max; ++m) {
+            if (strcicmp(name, ss_cipher_name_from_index(m)) == 0) {
                 break;
             }
         }
-        if (m >= SS_CIPHER_NUM) {
+        if (m >= ss_cipher_max) {
             //LOGE("Invalid cipher name: %s, use rc4-md5 instead", name);
-            // m = SS_RC4_MD5;
+            // m = ss_cipher_rc4_md5;
         }
     }
     return m;

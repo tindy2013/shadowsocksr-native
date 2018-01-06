@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <assert.h>
 #include "ssrcipher.h"
 #include "encrypt.h"
@@ -87,10 +88,8 @@ struct server_env_t * ssr_cipher_env_create(struct server_config *config) {
     srand((unsigned int)time(NULL));
 
     struct server_env_t *env = calloc(1, sizeof(struct server_env_t));
-    env->cipher = calloc(1, sizeof(struct cipher_env_t));
+    env->cipher = cipher_env_new_instance(config->password, config->method);
     env->config = config;
-
-    enc_init(env->cipher, config->password, config->method);
 
     // init obfs
     init_obfs(env, config->protocol, config->obfs);
@@ -109,8 +108,7 @@ void ssr_cipher_env_release(struct server_env_t *env) {
         free_obfs_manager(env->obfs_plugin);
         env->obfs_plugin = NULL;
     }
-    enc_release(env->cipher);
-    object_safe_free((void **)&env->cipher);
+    cipher_env_release(env->cipher);
 
     object_safe_free((void **)&env);
 }
@@ -135,11 +133,9 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
     tc->env = env;
 
     // init server cipher
-    if (env->cipher->enc_method > SS_TABLE) {
-        tc->e_ctx = calloc(1, sizeof(struct enc_ctx));
-        tc->d_ctx = calloc(1, sizeof(struct enc_ctx));
-        enc_ctx_init(env->cipher, tc->e_ctx, 1);
-        enc_ctx_init(env->cipher, tc->d_ctx, 0);
+    if (cipher_env_enc_method(env->cipher) > ss_cipher_table) {
+        tc->e_ctx = enc_ctx_new_instance(env->cipher, 1);
+        tc->d_ctx = enc_ctx_new_instance(env->cipher, 0);
     }
     // SSR beg
 
@@ -150,7 +146,7 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
     server_info.param = config->obfs_param;
     server_info.g_data = env->obfs_global;
     server_info.head_len = get_head_size(init_pkg->buffer, (int)init_pkg->len, 30);
-    server_info.iv = tc->e_ctx->cipher_ctx.iv;
+    server_info.iv = enc_ctx_get_iv(tc->e_ctx);
     server_info.iv_len = (uint16_t) enc_get_iv_len(env->cipher);
     server_info.key = enc_get_key(env->cipher);
     server_info.key_len = (uint16_t) enc_get_key_len(env->cipher);
@@ -182,12 +178,10 @@ void tunnel_cipher_release(struct tunnel_cipher_ctx *tc) {
     assert(tc);
     struct server_env_t *env = tc->env;
     if (tc->e_ctx != NULL) {
-        enc_ctx_release(env->cipher, tc->e_ctx);
-        object_safe_free((void **)&tc->e_ctx);
+        enc_ctx_release_instance(env->cipher, tc->e_ctx);
     }
     if (tc->d_ctx != NULL) {
-        enc_ctx_release(env->cipher, tc->d_ctx);
-        object_safe_free((void **)&tc->d_ctx);
+        enc_ctx_release_instance(env->cipher, tc->d_ctx);
     }
     // SSR beg
     if (env->obfs_plugin) {

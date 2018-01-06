@@ -27,6 +27,16 @@
 #include "config.h"
 #endif
 
+#include <openssl/evp.h>
+#include <openssl/sha.h>
+#include <openssl/md5.h>
+typedef EVP_CIPHER cipher_core_t;
+typedef EVP_CIPHER_CTX cipher_core_ctx_t;
+typedef EVP_MD digest_type_t;
+#define MAX_KEY_LENGTH EVP_MAX_KEY_LENGTH
+#define MAX_IV_LENGTH EVP_MAX_IV_LENGTH
+#define MAX_MD_SIZE EVP_MAX_MD_SIZE
+
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
@@ -45,6 +55,33 @@
 
 #define OFFSET_ROL(p, o) ((uint64_t)(*(p + o)) << (8 * o))
 
+struct cipher_env_t {
+    uint8_t *enc_table;
+    uint8_t *dec_table;
+    uint8_t enc_key[MAX_KEY_LENGTH];
+    int enc_key_len;
+    int enc_iv_len;
+    enum ss_cipher_type enc_method;
+    struct cache *iv_cache;
+};
+
+struct cipher_wrapper {
+    const cipher_core_t *core;
+    size_t iv_len;
+    size_t key_len;
+};
+
+struct cipher_ctx_t {
+    cipher_core_ctx_t *core_ctx;
+    uint8_t iv[MAX_IV_LENGTH];
+};
+
+struct enc_ctx {
+    uint8_t init;
+    uint64_t counter;
+    struct cipher_ctx_t cipher_ctx;
+};
+
 #ifdef DEBUG
 static void
 dump(char *tag, char *text, int len)
@@ -58,25 +95,25 @@ dump(char *tag, char *text, int len)
 
 #endif
 
-static int supported_ciphers_iv_size[SS_CIPHER_NUM] = {
-    0 ,  0,  0,  6, 16, 16, 16, 16, 16, 16, 16,  8, 16, 16, 16,  8,  8,  8,  8, 16,  8,  8, 12
-};
+size_t ss_max_iv_length(void) {
+    return MAX_IV_LENGTH;
+}
 
-static int supported_ciphers_key_size[SS_CIPHER_NUM] = {
-    16, 16, 16, 16, 16, 16, 24, 32, 16, 24, 32, 16, 16, 24, 32, 16,  8, 16, 16, 16, 32, 32, 32
-};
+size_t ss_max_key_length(void) {
+    return MAX_KEY_LENGTH;
+}
 
 static int
 crypto_stream_xor_ic(uint8_t *c, const uint8_t *m, uint64_t mlen,
                      const uint8_t *n, uint64_t ic, const uint8_t *k,
-                     enum ss_cipher_index method)
+                     enum ss_cipher_type method)
 {
     switch (method) {
-    case SS_SALSA20:
+    case ss_cipher_salsa20:
         return crypto_stream_salsa20_xor_ic(c, m, mlen, n, ic, k);
-    case SS_CHACHA20:
+    case ss_cipher_chacha20:
         return crypto_stream_chacha20_xor_ic(c, m, mlen, n, ic, k);
-    case SS_CHACHA20IETF:
+    case ss_cipher_chacha20ietf:
         return crypto_stream_chacha20_ietf_xor_ic(c, m, mlen, n, (uint32_t)ic, k);
     default:
         break;
@@ -272,14 +309,14 @@ rand_bytes(uint8_t *output, int len)
 }
 
 const cipher_core_t *
-get_cipher_of_type(enum ss_cipher_index method)
+get_cipher_of_type(enum ss_cipher_type method)
 {
-    if (method >= SS_SALSA20) {
+    if (method >= ss_cipher_salsa20) {
         return NULL;
     }
 
-    if (method == SS_RC4_MD5 || method == SS_RC4_MD5_6) {
-        method = SS_RC4;
+    if (method == ss_cipher_rc4_md5 || method == ss_cipher_rc4_md5_6) {
+        method = ss_cipher_rc4;
     }
 
     const char *cipherName = ss_cipher_name_from_index(method);
@@ -303,10 +340,10 @@ get_digest_type(const char *digest)
 void
 cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, int enc)
 {
-    enum ss_cipher_index method = env->enc_method;
+    enum ss_cipher_type method = env->enc_method;
 
-    if (method >= SS_SALSA20) {
-//        enc_iv_len = supported_ciphers_iv_size[method];
+    if (method >= ss_cipher_salsa20) {
+//        enc_iv_len = ss_cipher_iv_size(method);
         return;
     }
 
@@ -333,7 +370,7 @@ cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, int enc)
         LOGE("Invalid key length: %d", env->enc_key_len);
         exit(EXIT_FAILURE);
     }
-    if (method > SS_RC4_MD5) {
+    if (method > ss_cipher_rc4_md5) {
         EVP_CIPHER_CTX_set_padding(core_ctx, 1);
     }
 }
@@ -353,11 +390,11 @@ cipher_context_set_iv(struct cipher_env_t *env, struct cipher_ctx_t *ctx, uint8_
         memcpy(ctx->iv, iv, iv_len);
     }
 
-    if (env->enc_method >= SS_SALSA20) {
+    if (env->enc_method >= ss_cipher_salsa20) {
         return;
     }
 
-    if (env->enc_method == SS_RC4_MD5 || env->enc_method == SS_RC4_MD5_6) {
+    if (env->enc_method == ss_cipher_rc4_md5 || env->enc_method == ss_cipher_rc4_md5_6) {
         unsigned char key_iv[32];
         memcpy(key_iv, env->enc_key, 16);
         memcpy(key_iv + 16, iv, iv_len);
@@ -383,7 +420,7 @@ cipher_context_set_iv(struct cipher_env_t *env, struct cipher_ctx_t *ctx, uint8_
 void
 cipher_context_release(struct cipher_env_t *env, struct cipher_ctx_t *ctx)
 {
-    if (env->enc_method >= SS_SALSA20) {
+    if (env->enc_method >= ss_cipher_salsa20) {
         return;
     }
     EVP_CIPHER_CTX_free(ctx->core_ctx);
@@ -455,8 +492,8 @@ ss_aes_128_cbc(char *encrypt, char *out_data, char *key)
 int
 ss_encrypt_all(struct cipher_env_t *env, struct buffer_t *plain, size_t capacity)
 {
-    enum ss_cipher_index method = env->enc_method;
-    if (method > SS_TABLE) {
+    enum ss_cipher_type method = env->enc_method;
+    if (method > ss_cipher_table) {
         struct cipher_ctx_t cipher_ctx;
         cipher_context_init(env, &cipher_ctx, 1);
 
@@ -472,7 +509,7 @@ ss_encrypt_all(struct cipher_env_t *env, struct buffer_t *plain, size_t capacity
         cipher_context_set_iv(env, &cipher_ctx, iv, iv_len, 1);
         memcpy(cipher->buffer, iv, iv_len);
 
-        if (method >= SS_SALSA20) {
+        if (method >= ss_cipher_salsa20) {
             crypto_stream_xor_ic((uint8_t *)(cipher->buffer + iv_len),
                                  (const uint8_t *)plain->buffer, (uint64_t)(plain->len),
                                  (const uint8_t *)iv,
@@ -503,7 +540,7 @@ ss_encrypt_all(struct cipher_env_t *env, struct buffer_t *plain, size_t capacity
         buffer_free(cipher);
         return 0;
     } else {
-        if (env->enc_method == SS_TABLE) {
+        if (env->enc_method == ss_cipher_table) {
             char *begin = plain->buffer;
             char *ptr   = plain->buffer;
             while (ptr < begin + plain->len) {
@@ -536,7 +573,7 @@ ss_encrypt(struct cipher_env_t *env, struct buffer_t *plain, struct enc_ctx *ctx
             ctx->init    = 1;
         }
 
-        if (env->enc_method >= SS_SALSA20) {
+        if (env->enc_method >= ss_cipher_salsa20) {
             size_t padding = (size_t)(ctx->counter % SODIUM_BLOCK_SIZE);
             buffer_realloc(cipher, max(iv_len + (padding + cipher->len) * 2, capacity));
             if (padding) {
@@ -546,7 +583,7 @@ ss_encrypt(struct cipher_env_t *env, struct buffer_t *plain, struct enc_ctx *ctx
             }
             crypto_stream_xor_ic((uint8_t *)(cipher->buffer + iv_len),
                                  (const uint8_t *)plain->buffer,
-                                 (uint64_t)(plain->len + padding),
+                                 ((uint64_t)plain->len + padding),
                                  (const uint8_t *)ctx->cipher_ctx.iv,
                                  ctx->counter / SODIUM_BLOCK_SIZE, env->enc_key,
                                  env->enc_method);
@@ -579,7 +616,7 @@ ss_encrypt(struct cipher_env_t *env, struct buffer_t *plain, struct enc_ctx *ctx
         buffer_free(cipher);
         return 0;
     } else {
-        if (env->enc_method == SS_TABLE) {
+        if (env->enc_method == ss_cipher_table) {
             char *begin = plain->buffer;
             char *ptr   = plain->buffer;
             while (ptr < begin + plain->len) {
@@ -594,8 +631,8 @@ ss_encrypt(struct cipher_env_t *env, struct buffer_t *plain, struct enc_ctx *ctx
 int
 ss_decrypt_all(struct cipher_env_t *env, struct buffer_t *cipher, size_t capacity)
 {
-    enum ss_cipher_index method = env->enc_method;
-    if (method > SS_TABLE) {
+    enum ss_cipher_type method = env->enc_method;
+    if (method > ss_cipher_table) {
         size_t iv_len = (size_t)env->enc_iv_len;
         int ret       = 1;
 
@@ -613,7 +650,7 @@ ss_decrypt_all(struct cipher_env_t *env, struct buffer_t *cipher, size_t capacit
         memcpy(iv, cipher->buffer, iv_len);
         cipher_context_set_iv(env, &cipher_ctx, iv, iv_len, 0);
 
-        if (method >= SS_SALSA20) {
+        if (method >= ss_cipher_salsa20) {
             crypto_stream_xor_ic((uint8_t *)plain->buffer,
                                  (const uint8_t *)(cipher->buffer + iv_len),
                                  (uint64_t)(cipher->len - iv_len),
@@ -644,7 +681,7 @@ ss_decrypt_all(struct cipher_env_t *env, struct buffer_t *cipher, size_t capacit
         buffer_free(plain);
         return 0;
     } else {
-        if (method == SS_TABLE) {
+        if (method == ss_cipher_table) {
             char *begin = cipher->buffer;
             char *ptr   = cipher->buffer;
             while (ptr < begin + cipher->len) {
@@ -677,7 +714,7 @@ ss_decrypt(struct cipher_env_t *env, struct buffer_t *cipher, struct enc_ctx *ct
             ctx->counter = 0;
             ctx->init    = 1;
 
-            if (env->enc_method > SS_RC4) {
+            if (env->enc_method > ss_cipher_rc4) {
                 if (cache_key_exist(env->iv_cache, (char *)iv, iv_len)) {
                     return -1;
                 } else {
@@ -686,7 +723,7 @@ ss_decrypt(struct cipher_env_t *env, struct buffer_t *cipher, struct enc_ctx *ct
             }
         }
 
-        if (env->enc_method >= SS_SALSA20) {
+        if (env->enc_method >= ss_cipher_salsa20) {
             size_t padding = (size_t)(ctx->counter % SODIUM_BLOCK_SIZE);
             buffer_realloc(plain, max((plain->len + padding) * 2, capacity));
 
@@ -698,7 +735,7 @@ ss_decrypt(struct cipher_env_t *env, struct buffer_t *cipher, struct enc_ctx *ct
             }
             crypto_stream_xor_ic((uint8_t *)plain->buffer,
                                  (const uint8_t *)(cipher->buffer + iv_len),
-                                 (uint64_t)(cipher->len - iv_len + padding),
+                                 ((uint64_t)cipher->len - iv_len + padding),
                                  (const uint8_t *)ctx->cipher_ctx.iv,
                                  ctx->counter / SODIUM_BLOCK_SIZE, env->enc_key,
                                  env->enc_method);
@@ -729,7 +766,7 @@ ss_decrypt(struct cipher_env_t *env, struct buffer_t *cipher, struct enc_ctx *ct
         buffer_free(plain);
         return 0;
     } else {
-        if(env->enc_method == SS_TABLE) {
+        if(env->enc_method == ss_cipher_table) {
             char *begin = cipher->buffer;
             char *ptr   = cipher->buffer;
             while (ptr < begin + cipher->len) {
@@ -771,25 +808,32 @@ ss_decrypt_buffer(struct cipher_env_t *env, struct enc_ctx *ctx, char *in, size_
     return s;
 }
 
-void
-enc_ctx_init(struct cipher_env_t *env, struct enc_ctx *ctx, int enc)
+const uint8_t * enc_ctx_get_iv(const struct enc_ctx *ctx) {
+    return ctx->cipher_ctx.iv;
+}
+
+struct enc_ctx *
+enc_ctx_new_instance(struct cipher_env_t *env, int enc)
 {
+    struct enc_ctx *ctx = (struct enc_ctx *)calloc(1, sizeof(struct enc_ctx));
     sodium_memzero(ctx, sizeof(struct enc_ctx));
     cipher_context_init(env, &ctx->cipher_ctx, enc);
 
     if (enc) {
         rand_bytes(ctx->cipher_ctx.iv, env->enc_iv_len);
     }
+    return ctx;
 }
 
 void
-enc_ctx_release(struct cipher_env_t *env, struct enc_ctx *ctx)
+enc_ctx_release_instance(struct cipher_env_t *env, struct enc_ctx *ctx)
 {
     cipher_context_release(env, &ctx->cipher_ctx);
+    free(ctx);
 }
 
 void
-enc_table_init(struct cipher_env_t * env, enum ss_cipher_index method, const char *pass)
+enc_table_init(struct cipher_env_t * env, enum ss_cipher_type method, const char *pass)
 {
     uint32_t i;
     uint64_t key = 0;
@@ -814,7 +858,7 @@ enc_table_init(struct cipher_env_t * env, enum ss_cipher_index method, const cha
         env->dec_table[env->enc_table[i]] = (uint8_t)i;
     }
 
-    if (method == SS_TABLE) {
+    if (method == ss_cipher_table) {
         env->enc_key_len = (int) strlen(pass);
         memcpy(&env->enc_key, pass, env->enc_key_len);
     } else {
@@ -833,9 +877,9 @@ enc_table_init(struct cipher_env_t * env, enum ss_cipher_index method, const cha
 }
 
 void
-enc_key_init(struct cipher_env_t *env, enum ss_cipher_index method, const char *pass)
+enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *pass)
 {
-    if (method < SS_NONE || method >= SS_CIPHER_NUM) {
+    if (method < ss_cipher_none || method >= ss_cipher_max) {
         LOGE("enc_key_init(): Illegal method");
         return;
     }
@@ -845,26 +889,24 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_index method, const char *
 
     OpenSSL_add_all_algorithms();
 
-    struct cipher_wrapper cipher = { NULL, 0, 0 };
+    struct cipher_wrapper *cipher = (struct cipher_wrapper *)calloc(1, sizeof(struct cipher_wrapper));
 
     // Initialize sodium for random generator
     if (sodium_init() == -1) {
         FATAL("Failed to initialize sodium");
     }
 
-    if (method == SS_SALSA20 || method == SS_CHACHA20 || method == SS_CHACHA20IETF) {
-        cipher.core    = NULL;
-        cipher.key_len = (size_t) supported_ciphers_key_size[method];
-        cipher.iv_len  = (size_t) supported_ciphers_iv_size[method];
+    if (method == ss_cipher_salsa20 || method == ss_cipher_chacha20 || method == ss_cipher_chacha20ietf) {
+        cipher->core    = NULL;
+        cipher->key_len = (size_t) ss_cipher_key_size(method);
+        cipher->iv_len  = (size_t) ss_cipher_iv_size(method);
     } else {
-        cipher.core = (cipher_core_t *)get_cipher_of_type(method);
+        cipher->core = get_cipher_of_type(method);
     }
 
-    if (cipher.core == NULL && cipher.key_len == 0) {
-        do {
-            LOGE("Cipher %s not found in crypto library", ss_cipher_name_from_index(method));
-            FATAL("Cannot initialize cipher");
-        } while (0);
+    if (cipher->core == NULL && cipher->key_len == 0) {
+        LOGE("Cipher %s not found in crypto library", ss_cipher_name_from_index(method));
+        FATAL("Cannot initialize cipher");
     }
 
     const digest_type_t *md = get_digest_type("MD5");
@@ -872,39 +914,46 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_index method, const char *
         FATAL("MD5 Digest not found in crypto library");
     }
 
-    env->enc_key_len = bytes_to_key(&cipher, md, (const uint8_t *)pass, env->enc_key);
+    env->enc_key_len = bytes_to_key(cipher, md, (const uint8_t *)pass, env->enc_key);
 
     if (env->enc_key_len == 0) {
         FATAL("Cannot generate key and IV");
     }
-    if (method == SS_RC4_MD5 || method == SS_RC4_MD5_6) {
-        env->enc_iv_len = supported_ciphers_iv_size[method];
+    if (method == ss_cipher_rc4_md5 || method == ss_cipher_rc4_md5_6) {
+        env->enc_iv_len = ss_cipher_iv_size(method);
     } else {
-        env->enc_iv_len = cipher_iv_size(&cipher);
+        env->enc_iv_len = cipher_iv_size(cipher);
     }
     env->enc_method = method;
+    free(cipher);
 }
 
-enum ss_cipher_index
-enc_init(struct cipher_env_t *env, const char *pass, const char *method)
+struct cipher_env_t *
+cipher_env_new_instance(const char *pass, const char *method)
 {
-    enum ss_cipher_index m = ss_cipher_index_from_name(method);
-    if (m <= SS_TABLE) {
+    struct cipher_env_t *env = (struct cipher_env_t *)calloc(1, sizeof(struct cipher_env_t));
+    enum ss_cipher_type m = ss_cipher_index_from_name(method);
+    if (m <= ss_cipher_table) {
         enc_table_init(env, m, pass);
     } else {
         enc_key_init(env, m, pass);
     }
     env->enc_method = m;
-    return m;
+    return env;
+}
+
+enum ss_cipher_type cipher_env_enc_method(const struct cipher_env_t *env) {
+    return env->enc_method;
 }
 
 void
-enc_release(struct cipher_env_t *env)
+cipher_env_release(struct cipher_env_t *env)
 {
-    if (env->enc_method == SS_TABLE) {
+    if (env->enc_method == ss_cipher_table) {
         ss_free(env->enc_table);
         ss_free(env->dec_table);
     } else {
         cache_delete(env->iv_cache, 0);
     }
+    free(env);
 }

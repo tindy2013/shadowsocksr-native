@@ -11,39 +11,51 @@
 
 #include <stdio.h>
 
-enum ss_cipher_index {
-    SS_NONE,
-    SS_TABLE,
-    SS_RC4,
-    SS_RC4_MD5_6,
-    SS_RC4_MD5,
-    SS_AES_128_CFB,
-    SS_AES_192_CFB,
-    SS_AES_256_CFB,
-    SS_AES_128_CTR,
-    SS_AES_192_CTR,
-    SS_AES_256_CTR,
-    SS_BF_CFB,
-    SS_CAMELLIA_128_CFB,
-    SS_CAMELLIA_192_CFB,
-    SS_CAMELLIA_256_CFB,
-    SS_CAST5_CFB,
-    SS_DES_CFB,
-    SS_IDEA_CFB,
-    SS_RC2_CFB,
-    SS_SEED_CFB,
-    SS_SALSA20,
-    SS_CHACHA20,
-    SS_CHACHA20IETF,
-    SS_CIPHER_NUM,
-};
+//
+// enum ss_cipher_type
+//
+// code, name, text, iv_size, key_size
+//
+#define SS_CIPHER_MAP(V)                                                       \
+    V( 0, ss_cipher_none,              "none",              0, 16)             \
+    V( 1, ss_cipher_table,             "table",             0, 16)             \
+    V( 2, ss_cipher_rc4,               "rc4",               0, 16)             \
+    V( 3, ss_cipher_rc4_md5_6,         "rc4-md5-6",         6, 16)             \
+    V( 4, ss_cipher_rc4_md5,           "rc4-md5",          16, 16)             \
+    V( 5, ss_cipher_aes_128_cfb,       "aes-128-cfb",      16, 16)             \
+    V( 6, ss_cipher_aes_192_cfb,       "aes-192-cfb",      16, 24)             \
+    V( 7, ss_cipher_aes_256_cfb,       "aes-256-cfb",      16, 32)             \
+    V( 8, ss_cipher_aes_128_ctr,       "aes-128-ctr",      16, 16)             \
+    V( 9, ss_cipher_aes_192_ctr,       "aes-192-ctr",      16, 24)             \
+    V(10, ss_cipher_aes_256_ctr,       "aes-256-ctr",      16, 32)             \
+    V(11, ss_cipher_bf_cfb,            "bf-cfb",            8, 16)             \
+    V(12, ss_cipher_camellia_128_cfb,  "camellia-128-cfb", 16, 16)             \
+    V(13, ss_cipher_camellia_192_cfb,  "camellia-192-cfb", 16, 24)             \
+    V(14, ss_cipher_camellia_256_cfb,  "camellia-256-cfb", 16, 32)             \
+    V(15, ss_cipher_cast5_cfb,         "cast5-cfb",         8, 16)             \
+    V(16, ss_cipher_des_cfb,           "des-cfb",           8,  8)             \
+    V(17, ss_cipher_idea_cfb,          "idea-cfb",          8, 16)             \
+    V(18, ss_cipher_rc2_cfb,           "rc2-cfb",           8, 16)             \
+    V(19, ss_cipher_seed_cfb,          "seed-cfb",         16, 16)             \
+    V(20, ss_cipher_salsa20,           "salsa20",           8, 32)             \
+    V(21, ss_cipher_chacha20,          "chacha20",          8, 32)             \
+    V(22, ss_cipher_chacha20ietf,      "chacha20-ietf",    12, 32)             \
 
-const char * ss_cipher_name_from_index(enum ss_cipher_index index);
-enum ss_cipher_index ss_cipher_index_from_name(const char *name);
+typedef enum ss_cipher_type {
+#define SS_CIPHER_GEN(code, name, text, iv_size, key_size) name = (code),
+    SS_CIPHER_MAP(SS_CIPHER_GEN)
+#undef SS_CIPHER_GEN
+    ss_cipher_max,
+} ss_cipher_type;
+
+int ss_cipher_key_size(enum ss_cipher_type index);
+int ss_cipher_iv_size(enum ss_cipher_type index);
+const char * ss_cipher_name_from_index(enum ss_cipher_type index);
+enum ss_cipher_type ss_cipher_index_from_name(const char *name);
 
 
 #define SSR_PROTOCOL_MAP(V)                                                    \
-    V(0, ssr_protocol_origin,           "origin")                              \
+    V( 0, ssr_protocol_origin,          "origin")                              \
     V( 4, ssr_protocol_auth_sha1,       "auth_sha1")                           \
     V( 5, ssr_protocol_auth_sha1_v2,    "auth_sha1_v2")                        \
     V( 6, ssr_protocol_auth_sha1_v4,    "auth_sha1_v4")                        \
@@ -56,7 +68,7 @@ enum ss_cipher_index ss_cipher_index_from_name(const char *name);
 //    V(10, ssr_protocol_auth_chain_b,    "auth_chain_b")                        \
 
 typedef enum ssr_protocol {
-#define SSR_PROTOCOL_GEN(code, name, _) name = code,
+#define SSR_PROTOCOL_GEN(code, name, _) name = (code),
     SSR_PROTOCOL_MAP(SSR_PROTOCOL_GEN)
 #undef SSR_PROTOCOL_GEN
     ssr_protocol_max,
@@ -75,7 +87,7 @@ enum ssr_protocol ssr_protocol_index_from_name(const char *name);
 //    V(5, ssr_obfs_tls_1_2_ticket_fastauth,  "tls1.2_ticket_fastauth")          \
 
 typedef enum ssr_obfs {
-#define SSR_OBFS_GEN(code, name, _) name = code,
+#define SSR_OBFS_GEN(code, name, _) name = (code),
     SSR_OBFS_MAP(SSR_OBFS_GEN)
 #undef SSR_OBFS_GEN
     ssr_obfs_max,

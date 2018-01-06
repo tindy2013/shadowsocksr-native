@@ -79,7 +79,7 @@ typedef struct auth_chain_local_data {
     shift128plus_ctx random_client;
     shift128plus_ctx random_server;
     int cipher_init_flag;
-    struct cipher_env_t cipher;
+    struct cipher_env_t *cipher;
     struct enc_ctx *cipher_client_ctx;
     struct enc_ctx *cipher_server_ctx;
 }auth_chain_local_data;
@@ -130,12 +130,12 @@ void auth_chain_a_dispose(struct obfs_t *obfs) {
     }
     if (local->cipher_init_flag) {
         if (local->cipher_client_ctx) {
-            enc_ctx_release(&local->cipher, local->cipher_client_ctx);
+            enc_ctx_release_instance(local->cipher, local->cipher_client_ctx);
         }
         if (local->cipher_server_ctx) {
-            enc_ctx_release(&local->cipher, local->cipher_server_ctx);
+            enc_ctx_release_instance(local->cipher, local->cipher_server_ctx);
         }
-        enc_release(&local->cipher);
+        cipher_env_release(local->cipher);
         local->cipher_init_flag = 0;
     }
     free(local);
@@ -197,7 +197,7 @@ int auth_chain_a_pack_data(char *data, int datalength, char *outdata, auth_chain
         if (datalength > 0) {
             unsigned int start_pos = get_rand_start_pos((int)rand_len, &local->random_client);
             size_t out_len;
-            ss_encrypt_buffer(&local->cipher, local->cipher_client_ctx,
+            ss_encrypt_buffer(local->cipher, local->cipher_client_ctx,
                     data, (size_t)datalength, &outdata[2 + start_pos], &out_len);
             memcpy(outdata + 2, rnd_data, start_pos);
             memcpy(outdata + 2 + start_pos + datalength, rnd_data + start_pos, rand_len - start_pos);
@@ -316,11 +316,9 @@ int auth_chain_a_pack_auth_data(auth_chain_global_data *global, struct server_in
     base64_encode(local->user_key, (unsigned int)local->user_key_len, password);
     base64_encode(local->last_client_hash, 16, password + strlen(password));
     local->cipher_init_flag = 1;
-    enc_init(&local->cipher, password, "rc4");
-    local->cipher_client_ctx = malloc(sizeof(struct enc_ctx));
-    local->cipher_server_ctx = malloc(sizeof(struct enc_ctx));
-    enc_ctx_init(&local->cipher, local->cipher_client_ctx, 1);
-    enc_ctx_init(&local->cipher, local->cipher_server_ctx, 0);
+    local->cipher = cipher_env_new_instance(password, "rc4");
+    local->cipher_client_ctx = enc_ctx_new_instance(local->cipher, 1);
+    local->cipher_server_ctx = enc_ctx_new_instance(local->cipher, 0);
 
     out_size += auth_chain_a_pack_data(data, datalength, outdata + out_size, local, server);
 
@@ -416,7 +414,7 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
             pos = 2;
         }
         size_t out_len;
-        ss_decrypt_buffer(&local->cipher, local->cipher_server_ctx,
+        ss_decrypt_buffer(local->cipher, local->cipher_server_ctx,
                 (char*)recv_buffer + pos, (size_t)data_len, (char *)buffer, &out_len);
 
         if (local->recv_id == 1) {
@@ -489,14 +487,13 @@ int auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
     base64_encode(hash, 16, password + strlen(password));
 
     {
-        enc_init(&local->cipher, password, "rc4");
-        struct enc_ctx ctx;
-        enc_ctx_init(&local->cipher, &ctx, 1);
+        struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");
+        struct enc_ctx *ctx = enc_ctx_new_instance(cipher, 1);
         size_t out_len;
-        ss_encrypt_buffer(&local->cipher, &ctx,
+        ss_encrypt_buffer(cipher, ctx,
                 plaindata, (size_t)datalength, out_buffer, &out_len);
-        enc_ctx_release(&local->cipher, &ctx);
-        enc_release(&local->cipher);
+        enc_ctx_release_instance(cipher, ctx);
+        cipher_env_release(cipher);
     }
     uint8_t uid[4];
     for (int i = 0; i < 4; ++i) {
@@ -545,14 +542,13 @@ int auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     base64_encode(hash, 16, password + strlen(password));
 
     {
-        enc_init(&local->cipher, password, "rc4");
-        struct enc_ctx ctx;
-        enc_ctx_init(&local->cipher, &ctx, 0);
+        struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");
+        struct enc_ctx *ctx = enc_ctx_new_instance(cipher, 0);
         size_t out_len;
-        ss_decrypt_buffer(&local->cipher, &ctx,
+        ss_decrypt_buffer(cipher, ctx,
                 plaindata, (size_t)outlength, plaindata, &out_len);
-        enc_ctx_release(&local->cipher, &ctx);
-        enc_release(&local->cipher);
+        enc_ctx_release_instance(cipher, ctx);
+        cipher_env_release(cipher);
     }
 
     return outlength;

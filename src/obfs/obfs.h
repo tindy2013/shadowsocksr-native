@@ -21,7 +21,7 @@ struct server_info_t {
     uint16_t port;
     char *param;
     void *g_data;
-    uint8_t *iv;
+    const uint8_t *iv;
     uint16_t iv_len;
     uint8_t *recv_iv;
     uint16_t recv_iv_len;
