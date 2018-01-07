@@ -751,11 +751,9 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 struct server_env_t *server_env = local->server_env;
 
                 // init server cipher
-                if (server_env->cipher->enc_method > SS_TABLE) {
-                    local->e_ctx = ss_malloc(sizeof(struct enc_ctx));
-                    local->d_ctx = ss_malloc(sizeof(struct enc_ctx));
-                    enc_ctx_init(server_env->cipher, local->e_ctx, 1);
-                    enc_ctx_init(server_env->cipher, local->d_ctx, 0);
+                if (cipher_env_enc_method(server_env->cipher) > ss_cipher_table) {
+                    local->e_ctx = enc_ctx_new_instance(server_env->cipher, 1);
+                    local->d_ctx = enc_ctx_new_instance(server_env->cipher, 0);
                 } else {
                     local->e_ctx = NULL;
                     local->d_ctx = NULL;
@@ -775,7 +773,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 server_info.param = server_env->obfs_param;
                 server_info.g_data = server_env->obfs_global;
                 server_info.head_len = get_head_size(abuf->buffer, 320, 30);
-                server_info.iv = local->e_ctx->cipher_ctx.iv;
+                server_info.iv = enc_ctx_get_iv(local->e_ctx);
                 server_info.iv_len = enc_get_iv_len(server_env->cipher);
                 server_info.key = enc_get_key(server_env->cipher);
                 server_info.key_len = enc_get_key_len(server_env->cipher);
@@ -1142,8 +1140,7 @@ listener_release(struct listener_t *listener)
         ss_free(server_env->id);
         ss_free(server_env->group);
 
-        enc_release(server_env->cipher);
-        free(server_env->cipher);
+        cipher_env_release(server_env->cipher);
     }
     ss_free(listener);
 }
@@ -1166,12 +1163,10 @@ local_destroy(struct local_t *local)
 
     if(server_env) {
         if (local->e_ctx != NULL) {
-            enc_ctx_release(server_env->cipher, local->e_ctx);
-            ss_free(local->e_ctx);
+            enc_ctx_release_instance(server_env->cipher, local->e_ctx);
         }
         if (local->d_ctx != NULL) {
-            enc_ctx_release(server_env->cipher, local->d_ctx);
-            ss_free(local->d_ctx);
+            enc_ctx_release_instance(server_env->cipher, local->d_ctx);
         }
         // SSR beg
         if (server_env->obfs_plugin) {
@@ -1671,8 +1666,7 @@ main(int argc, char **argv)
             }
             // Setup keys
             LOGI("initializing ciphers... %s", serv_cfg->method);
-            serv->cipher = (struct cipher_env_t *) ss_malloc(sizeof(struct cipher_env_t));
-            enc_init(serv->cipher, serv_cfg->password, serv_cfg->method);
+            serv->cipher = (struct cipher_env_t *) cipher_env_new_instance(serv_cfg->password, serv_cfg->method);
             serv->psw = ss_strdup(serv_cfg->password);
             if (serv_cfg->protocol && strcmp(serv_cfg->protocol, "verify_sha1") == 0) {
                 ss_free(serv_cfg->protocol);
@@ -1707,8 +1701,7 @@ main(int argc, char **argv)
 
             // Setup keys
             LOGI("initializing ciphers... %s", method);
-            serv->cipher = (struct cipher_env_t *) ss_malloc(sizeof(struct cipher_env_t));
-            enc_init(serv->cipher, password, method);
+            serv->cipher = (struct cipher_env_t *) cipher_env_new_instance(password, method);
             serv->psw = ss_strdup(password);
 
             // init obfs
