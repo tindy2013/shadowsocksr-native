@@ -30,6 +30,7 @@
 
 #include "cache.h"
 #include "ssrutils.h"
+#include "uthash.h"
 
 #ifdef __MINGW32__
 #include "win32.h"
@@ -39,8 +40,26 @@
 #include <sys/time.h>
 #endif
 
-
 ev_tstamp ev_time(void);
+
+/**
+ * A cache entry
+ */
+struct cache_entry {
+    char *key;         /**<The key */
+    void *data;        /**<Payload */
+    ev_tstamp ts;    /**<Timestamp */
+    UT_hash_handle hh; /**<Hash Handle for uthash */
+};
+
+/**
+ * A cache object
+ */
+struct cache {
+    size_t max_entries;              /**<Amount of entries this cache object can hold */
+    struct cache_entry *entries;     /**<Head pointer for uthash */
+    void (*free_cb) (void *key, void *element); /**<Callback function to free cache entries */
+};
 
 /** Creates a new cache object
  *

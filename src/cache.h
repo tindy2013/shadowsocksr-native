@@ -28,28 +28,9 @@
 #ifndef _CACHE_
 #define _CACHE_
 
-#include "uthash.h"
-
 typedef double ev_tstamp;
 
-/**
- * A cache entry
- */
-struct cache_entry {
-    char *key;         /**<The key */
-    void *data;        /**<Payload */
-    ev_tstamp ts;    /**<Timestamp */
-    UT_hash_handle hh; /**<Hash Handle for uthash */
-};
-
-/**
- * A cache object
- */
-struct cache {
-    size_t max_entries;              /**<Amount of entries this cache object can hold */
-    struct cache_entry *entries;     /**<Head pointer for uthash */
-    void (*free_cb) (void *key, void *element); /**<Callback function to free cache entries */
-};
+struct cache;
 
 int cache_create(struct cache **dst, size_t capacity,
                         void (*free_cb)(void *key, void *element));
