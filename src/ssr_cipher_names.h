@@ -56,15 +56,15 @@ enum ss_cipher_type ss_cipher_index_from_name(const char *name);
 
 #define SSR_PROTOCOL_MAP(V)                                                    \
     V( 0, ssr_protocol_origin,          "origin")                              \
+    V( 1, ssr_protocol_verify_simple,   "verify_simple")                       \
+    V( 3, ssr_protocol_auth_simple,     "auth_simple")                         \
     V( 4, ssr_protocol_auth_sha1,       "auth_sha1")                           \
     V( 5, ssr_protocol_auth_sha1_v2,    "auth_sha1_v2")                        \
     V( 6, ssr_protocol_auth_sha1_v4,    "auth_sha1_v4")                        \
     V( 7, ssr_protocol_auth_aes128_md5, "auth_aes128_md5")                     \
     V( 8, ssr_protocol_auth_aes128_sha1,"auth_aes128_sha1")                    \
     V( 9, ssr_protocol_auth_chain_a,    "auth_chain_a")                        \
-//    V( 1, ssr_protocol_verify_simple,   "verify_simple")                       \
 //    V( 2, ssr_protocol_verify_sha1,     "verify_sha1")                         \
-//    V( 3, ssr_protocol_auth_simple,     "auth_simple")                         \
 //    V(10, ssr_protocol_auth_chain_b,    "auth_chain_b")                        \
 
 typedef enum ssr_protocol {

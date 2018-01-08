@@ -112,7 +112,8 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_decode = tls12_ticket_auth_client_decode;
 
         return plugin;
-    /*} else if (strcmp(plugin_name, "verify_simple") == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_verify_simple)) == 0) {
+        // verify_simple
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = init_data;
         plugin->new_obfs = verify_simple_new_obfs;
@@ -126,7 +127,8 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = NULL;
 
         return plugin;
-    } else if (strcmp(plugin_name, "auth_simple") == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_simple)) == 0) {
+        // auth_simple
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_simple_init_data;
         plugin->new_obfs = auth_simple_new_obfs;
@@ -139,7 +141,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_pre_encrypt = NULL;
         plugin->client_udp_post_decrypt = NULL;
 
-        return plugin;*/
+        return plugin;
     } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_sha1)) == 0) {
         // auth_sha1
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
