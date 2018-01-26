@@ -40,7 +40,7 @@
 #include <sys/time.h>
 #endif
 
-ev_tstamp ev_time(void);
+ev_tstamp _ev_time(void);
 
 /**
  * A cache entry
@@ -151,7 +151,7 @@ cache_clear(struct cache *cache, ev_tstamp age)
         return EINVAL;
     }
 
-    ev_tstamp now = ev_time();
+    ev_tstamp now = _ev_time();
 
     HASH_ITER(hh, cache->entries, entry, tmp){
         if (now - entry->ts > age) {
@@ -244,7 +244,7 @@ cache_lookup(struct cache *cache, char *key, size_t key_len, void *result)
     HASH_FIND(hh, cache->entries, key, key_len, tmp);
     if (tmp) {
         HASH_DELETE(hh, cache->entries, tmp);
-        tmp->ts = ev_time();
+        tmp->ts = _ev_time();
         HASH_ADD_KEYPTR(hh, cache->entries, tmp->key, key_len, tmp);
         *dirty_hack = tmp->data;
     } else {
@@ -266,7 +266,7 @@ cache_key_exist(struct cache *cache, char *key, size_t key_len)
     HASH_FIND(hh, cache->entries, key, key_len, tmp);
     if (tmp) {
         HASH_DELETE(hh, cache->entries, tmp);
-        tmp->ts = ev_time();
+        tmp->ts = _ev_time();
         HASH_ADD_KEYPTR(hh, cache->entries, tmp->key, key_len, tmp);
         return 1;
     } else {
@@ -311,7 +311,7 @@ cache_insert(struct cache *cache, char *key, size_t key_len, void *data)
     entry->key[key_len] = 0;
 
     entry->data = data;
-    entry->ts   = ev_time();
+    entry->ts   = _ev_time();
     HASH_ADD_KEYPTR(hh, cache->entries, entry->key, key_len, entry);
 
     if (HASH_COUNT(cache->entries) >= cache->max_entries) {
@@ -336,7 +336,7 @@ cache_insert(struct cache *cache, char *key, size_t key_len, void *data)
 #if defined(_WIN32)
 
 ev_tstamp
-ev_time(void)
+_ev_time(void)
 {
    FILETIME ft;
    ULARGE_INTEGER ui;
@@ -352,7 +352,7 @@ ev_time(void)
 #else
 
 ev_tstamp
-ev_time(void)
+_ev_time(void)
 {
 #if EV_USE_REALTIME
     if (expect_true(have_realtime))
