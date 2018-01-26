@@ -25,7 +25,9 @@
 #include <string.h>
 #include "util.h"
 #include "ssrcipher.h"
+#if UDP_RELAY_ENABLE
 #include "udprelay.h"
+#endif // UDP_RELAY_ENABLE
 
 #ifndef INET6_ADDRSTRLEN
 # define INET6_ADDRSTRLEN 63
@@ -33,7 +35,9 @@
 
 struct listener_t {
     uv_tcp_t *tcp_server;
+#if UDP_RELAY_ENABLE
     struct udp_server_ctx_t *udp_server;
+#endif
 };
 
 struct server_state {
@@ -97,10 +101,12 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
                 free(tcp_server);
             }
 
+#if UDP_RELAY_ENABLE
             struct udp_server_ctx_t *udp_server = listener->udp_server;
             if (udp_server) {
                 free_udprelay(udp_server);
             }
+#endif // UDP_RELAY_ENABLE
         }
     }
     if (state->listeners) {
@@ -213,6 +219,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 
         pr_info("listening on %s:%hu", addrbuf, cf->listen_port);
 
+#if UDP_RELAY_ENABLE
         if (cf->udp) {
             int remote_addr_len = (s.addr.sa_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
             listener->udp_server = init_udprelay(loop,
@@ -222,6 +229,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
                 state->env->cipher,
                 cf->protocol, cf->protocol_param);
         }
+#endif // UDP_RELAY_ENABLE
 
         n += 1;
     }
