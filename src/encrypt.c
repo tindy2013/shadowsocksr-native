@@ -413,7 +413,7 @@ cipher_context_set_iv(struct cipher_env_t *env, struct cipher_ctx_t *ctx, uint8_
         FATAL("Cannot set key and IV");
     }
 #ifdef DEBUG
-    dump("IV", (char *)iv, (int)iv_len);
+    // dump("IV", (char *)iv, (int)iv_len);
 #endif
 }
 
@@ -527,8 +527,8 @@ ss_encrypt_all(struct cipher_env_t *env, struct buffer_t *plain, size_t capacity
         }
 
 #ifdef DEBUG
-        dump("PLAIN", plain->buffer, (int)plain->len);
-        dump("CIPHER", cipher->buffer + iv_len, (int)cipher->len);
+        //dump("PLAIN", plain->buffer, (int)plain->len);
+        //dump("CIPHER", cipher->buffer + iv_len, (int)cipher->len);
 #endif
 
         cipher_context_release(env, &cipher_ctx);
@@ -605,8 +605,8 @@ ss_encrypt(struct cipher_env_t *env, struct buffer_t *plain, struct enc_ctx *ctx
         }
 
 #ifdef DEBUG
-        dump("PLAIN", plain->buffer, (int)plain->len);
-        dump("CIPHER", cipher->buffer + iv_len, (int)cipher->len);
+        //dump("PLAIN", plain->buffer, (int)plain->len);
+        //dump("CIPHER", cipher->buffer + iv_len, (int)cipher->len);
 #endif
 
         buffer_realloc(plain, max(iv_len + cipher->len, capacity));
@@ -668,8 +668,8 @@ ss_decrypt_all(struct cipher_env_t *env, struct buffer_t *cipher, size_t capacit
         }
 
 #ifdef DEBUG
-        dump("PLAIN", plain->buffer, (int)plain->len);
-        dump("CIPHER", cipher->buffer + iv_len, (int)(cipher->len - iv_len));
+        //dump("PLAIN", plain->buffer, (int)plain->len);
+        //dump("CIPHER", cipher->buffer + iv_len, (int)(cipher->len - iv_len));
 #endif
 
         cipher_context_release(env, &cipher_ctx);
@@ -755,8 +755,8 @@ ss_decrypt(struct cipher_env_t *env, struct buffer_t *cipher, struct enc_ctx *ct
         }
 
 #ifdef DEBUG
-        dump("PLAIN", plain->buffer, (int)plain->len);
-        dump("CIPHER", cipher->buffer + iv_len, (int)(cipher->len - iv_len));
+        //dump("PLAIN", plain->buffer, (int)plain->len);
+        //dump("CIPHER", cipher->buffer + iv_len, (int)(cipher->len - iv_len));
 #endif
 
         buffer_realloc(cipher, max(plain->len, capacity));
