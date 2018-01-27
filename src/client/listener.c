@@ -89,6 +89,9 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
     if (err != 0) {
         pr_err("uv_run: %s", uv_strerror(err));
     }
+    
+    uv_signal_stop(&sigint_watcher);
+    uv_signal_stop(&sigterm_watcher);
 
     ssr_cipher_env_release(state->env);
 
