@@ -82,7 +82,11 @@ struct enc_ctx {
     struct cipher_ctx_t cipher_ctx;
 };
 
-#ifdef DEBUG
+#if DEBUG
+//#define SHOW_DUMP
+#endif
+
+#ifdef SHOW_DUMP
 static void
 dump(char *tag, char *text, int len)
 {
@@ -412,8 +416,8 @@ cipher_context_set_iv(struct cipher_env_t *env, struct cipher_ctx_t *ctx, uint8_
         EVP_CIPHER_CTX_cleanup(core_ctx);
         FATAL("Cannot set key and IV");
     }
-#ifdef DEBUG
-    // dump("IV", (char *)iv, (int)iv_len);
+#ifdef SHOW_DUMP
+    dump("IV", (char *)iv, (int)iv_len);
 #endif
 }
 
@@ -526,9 +530,9 @@ ss_encrypt_all(struct cipher_env_t *env, struct buffer_t *plain, size_t capacity
             return -1;
         }
 
-#ifdef DEBUG
-        //dump("PLAIN", plain->buffer, (int)plain->len);
-        //dump("CIPHER", cipher->buffer + iv_len, (int)cipher->len);
+#ifdef SHOW_DUMP
+        dump("PLAIN", plain->buffer, (int)plain->len);
+        dump("CIPHER", cipher->buffer + iv_len, (int)cipher->len);
 #endif
 
         cipher_context_release(env, &cipher_ctx);
@@ -604,9 +608,9 @@ ss_encrypt(struct cipher_env_t *env, struct buffer_t *plain, struct enc_ctx *ctx
             }
         }
 
-#ifdef DEBUG
-        //dump("PLAIN", plain->buffer, (int)plain->len);
-        //dump("CIPHER", cipher->buffer + iv_len, (int)cipher->len);
+#ifdef SHOW_DUMP
+        dump("PLAIN", plain->buffer, (int)plain->len);
+        dump("CIPHER", cipher->buffer + iv_len, (int)cipher->len);
 #endif
 
         buffer_realloc(plain, max(iv_len + cipher->len, capacity));
@@ -667,9 +671,9 @@ ss_decrypt_all(struct cipher_env_t *env, struct buffer_t *cipher, size_t capacit
             return -1;
         }
 
-#ifdef DEBUG
-        //dump("PLAIN", plain->buffer, (int)plain->len);
-        //dump("CIPHER", cipher->buffer + iv_len, (int)(cipher->len - iv_len));
+#ifdef SHOW_DUMP
+        dump("PLAIN", plain->buffer, (int)plain->len);
+        dump("CIPHER", cipher->buffer + iv_len, (int)(cipher->len - iv_len));
 #endif
 
         cipher_context_release(env, &cipher_ctx);
@@ -754,9 +758,9 @@ ss_decrypt(struct cipher_env_t *env, struct buffer_t *cipher, struct enc_ctx *ct
             return -1;
         }
 
-#ifdef DEBUG
-        //dump("PLAIN", plain->buffer, (int)plain->len);
-        //dump("CIPHER", cipher->buffer + iv_len, (int)(cipher->len - iv_len));
+#ifdef SHOW_DUMP
+        dump("PLAIN", plain->buffer, (int)plain->len);
+        dump("CIPHER", cipher->buffer + iv_len, (int)(cipher->len - iv_len));
 #endif
 
         buffer_realloc(cipher, max(plain->len, capacity));
