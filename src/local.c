@@ -93,10 +93,6 @@
 #define EWOULDBLOCK EAGAIN
 #endif
 
-#ifndef BUF_SIZE
-#define BUF_SIZE 2048
-#endif
-
 int verbose = 0;
 int keep_resolving = 1;
 
@@ -377,7 +373,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
         char *host = local->listener->tunnel_addr.host;
         char *port = local->listener->tunnel_addr.port;
         if (host && port) {
-            struct buffer_t *buffer = buffer_alloc(BUF_SIZE);
+            struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
             size_t header_len = 0;
             struct socks5_request *hdr =
                     build_socks5_request(host, (uint16_t)atoi(port), buffer->buffer, buffer->capacity, &header_len);
@@ -448,7 +444,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
         } else if (local->stage == STAGE_INIT) {
             struct method_select_request *request = (struct method_select_request *)buf->buffer;
 
-            struct buffer_t *buffer = buffer_alloc(BUF_SIZE);
+            struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
             struct method_select_response *response =
                     build_socks5_method_select_response(SOCKS5_METHOD_NOAUTH, buffer->buffer, buffer->capacity);
 
@@ -484,7 +480,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 }
             } else if (request->cmd != SOCKS5_COMMAND_CONNECT) {
                 LOGE("unsupported cmd: %d", request->cmd);
-                struct buffer_t *buffer = buffer_alloc(BUF_SIZE);
+                struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
                 size_t size = 0;
                 struct socks5_response *response =
                         build_socks5_response(SOCKS5_REPLY_CMDUNSUPP, SOCKS5_ADDRTYPE_IPV4,
@@ -500,7 +496,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
             // Fake reply
             if (local->stage == STAGE_HANDSHAKE) {
-                struct buffer_t *buffer = buffer_alloc(BUF_SIZE);
+                struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
                 size_t size = 0;
                 struct socks5_response *response =
                         build_socks5_response(SOCKS5_REPLY_SUCCESS, SOCKS5_ADDRTYPE_IPV4,
@@ -518,7 +514,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
             char host[257], ip[INET6_ADDRSTRLEN], port[16];
 
-            struct buffer_t *abuf = buffer_alloc(BUF_SIZE);
+            struct buffer_t *abuf = buffer_alloc(SSR_BUFF_SIZE);
 
             char addr_type = request->addr_type;
 
@@ -585,7 +581,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     size_t data_len  = buf->len    - 3 - abuf->len;
                     ret = tls_protocol->parse_packet(data, data_len, &hostname);
                 }
-                if (ret == -1 && buf->len < BUF_SIZE) {
+                if (ret == -1 && buf->len < SSR_BUFF_SIZE) {
                     local->stage = STAGE_PARSE;
                     buffer_free(abuf);
                     return;
@@ -778,7 +774,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 server_info.key = enc_get_key(server_env->cipher);
                 server_info.key_len = enc_get_key_len(server_env->cipher);
                 server_info.tcp_mss = 1452;
-                server_info.buffer_size = BUF_SIZE;
+                server_info.buffer_size = SSR_BUFF_SIZE;
                 server_info.cipher_env = server_env->cipher;
 
                 if (server_env->obfs_plugin) {
@@ -935,7 +931,7 @@ remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
         return;
     }
 
-    static const size_t FIXED_BUFF_SIZE = BUF_SIZE;
+    static const size_t FIXED_BUFF_SIZE = SSR_BUFF_SIZE;
 
     buffer_realloc(local->buf, FIXED_BUFF_SIZE);
 
@@ -1031,7 +1027,7 @@ remote_new_object(uv_loop_t *loop, int timeout)
 
     uv_tcp_init(loop, &remote->socket);
 
-    remote->buf                 = buffer_alloc(BUF_SIZE);
+    remote->buf                 = buffer_alloc(SSR_BUFF_SIZE);
     remote->recv_ctx            = ss_malloc(sizeof(struct remote_ctx_t));
     remote->send_ctx            = ss_malloc(sizeof(struct remote_ctx_t));
     remote->recv_ctx->remote    = remote;
@@ -1102,7 +1098,7 @@ local_new_object(struct listener_t *listener)
     struct local_t *local = ss_malloc(sizeof(struct local_t));
 
     local->listener = listener;
-    local->buf = buffer_alloc(BUF_SIZE);
+    local->buf = buffer_alloc(SSR_BUFF_SIZE);
     local->stage = STAGE_INIT;
 
     return local;
