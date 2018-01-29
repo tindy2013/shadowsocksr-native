@@ -291,7 +291,7 @@ int auth_chain_a_pack_auth_data(auth_chain_global_data *global, struct server_in
         char encrypt_key_base64[256] = {0};
         unsigned char *encrypt_key = (unsigned char *) malloc((size_t)local->user_key_len * sizeof(unsigned char));
         memcpy(encrypt_key, local->user_key, local->user_key_len);
-        std_base64_encode((const char *)encrypt_key, local->user_key_len, encrypt_key_base64);
+        std_base64_encode(encrypt_key, local->user_key_len, (unsigned char *)encrypt_key_base64);
         free(encrypt_key);
         int salt_len = (int) strlen(salt);
         int base64_len = (local->user_key_len + 2) / 3 * 4;
@@ -313,8 +313,8 @@ int auth_chain_a_pack_auth_data(auth_chain_global_data *global, struct server_in
     }
 
     char password[256] = {0};
-    std_base64_encode((const char *)local->user_key, local->user_key_len, password);
-    std_base64_encode((const char *)local->last_client_hash, 16, password + strlen(password));
+    std_base64_encode(local->user_key, local->user_key_len, (unsigned char *)password);
+    std_base64_encode(local->last_client_hash, 16, (unsigned char *)(password + strlen(password)));
     local->cipher_init_flag = 1;
     local->cipher = cipher_env_new_instance(password, "rc4");
     local->cipher_client_ctx = enc_ctx_new_instance(local->cipher, 1);
@@ -483,8 +483,8 @@ int auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
     int outlength = datalength + rand_len + 8;
 
     char password[256] = {0};
-    std_base64_encode((const char *)local->user_key, local->user_key_len, password);
-    std_base64_encode((const char *)hash, 16, password + strlen(password));
+    std_base64_encode(local->user_key, local->user_key_len, (unsigned char *)password);
+    std_base64_encode(hash, 16, (unsigned char *)(password + strlen(password)));
 
     {
         struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");
@@ -538,8 +538,8 @@ int auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     int outlength = datalength - rand_len - 8;
 
     char password[256] = {0};
-    std_base64_encode((const char *)local->user_key, local->user_key_len, password);
-    std_base64_encode((const char *)hash, 16, password + strlen(password));
+    std_base64_encode(local->user_key, local->user_key_len, (unsigned char *)password);
+    std_base64_encode(hash, 16, (unsigned char *)(password + strlen(password)));
 
     {
         struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");

@@ -110,7 +110,7 @@ static const unsigned char pr2six[256] =
     64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
 };
 
-int std_base64_decode_len(const char *bufcoded)
+int std_base64_decode_len(const unsigned char *bufcoded)
 {
     int nbytesdecoded;
     register const unsigned char *bufin;
@@ -125,7 +125,7 @@ int std_base64_decode_len(const char *bufcoded)
     return nbytesdecoded + 1;
 }
 
-int std_base64_decode(char *bufplain, const char *bufcoded)
+int std_base64_decode(const unsigned char *bufcoded, unsigned char *bufplain)
 {
     int nbytesdecoded;
     register const unsigned char *bufin;
@@ -164,7 +164,7 @@ int std_base64_decode(char *bufplain, const char *bufcoded)
     return nbytesdecoded;
 }
 
-static const char basis_64[] =
+static const unsigned char basis_64[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 int std_base64_encode_len(int len)
@@ -172,10 +172,10 @@ int std_base64_encode_len(int len)
     return (((len + 2) / 3) * 4) + 1;
 }
 
-int std_base64_encode(const char *string, int len, char *encoded)
+int std_base64_encode(const unsigned char *string, int len, unsigned char *encoded)
 {
     int i;
-    char *p;
+    unsigned char *p;
 
     p = encoded;
     for (i = 0; i < len - 2; i += 3) {
@@ -205,44 +205,44 @@ int std_base64_encode(const char *string, int len, char *encoded)
 // https://en.wikipedia.org/wiki/Base64#URL_applications
 //
 
-static void str_replace_char(char *str, char old_char, char new_char);
-static void str_url_safe_base64_to_std_base64(char *coded_src);
+static void str_replace_char(unsigned char *str, unsigned char old_char, unsigned char new_char);
+static void str_url_safe_base64_to_std_base64(unsigned char *coded_src);
 
 int url_safe_base64_encode_len(int len) {
     return std_base64_encode_len(len);
 }
 
-int url_safe_base64_encode(char *coded_dst, const char *plain_src, int len_plain_src) {
-    int result = std_base64_encode(plain_src, len_plain_src, coded_dst);
+int url_safe_base64_encode(const unsigned char *plain_src, int len_plain_src, unsigned char *coded_dst) {
+    std_base64_encode(plain_src, len_plain_src, coded_dst);
     str_replace_char(coded_dst, '+', '-');
     str_replace_char(coded_dst, '/', '_');
     str_replace_char(coded_dst, '=', 0);
-    return result;
+    return (int) strlen((const char *)coded_dst);
 }
 
-int url_safe_base64_decode_len(const char *coded_src) {
-    size_t len = strlen(coded_src);
-    char *new_buf = (char *) calloc(len + 4, sizeof(new_buf[0]));
-    strcpy(new_buf, coded_src);
+int url_safe_base64_decode_len(const unsigned char *coded_src) {
+    size_t len = strlen((const char *)coded_src);
+    unsigned char *new_buf = (unsigned char *) calloc(len + 4, sizeof(new_buf[0]));
+    memcpy(new_buf, coded_src, len);
     
     str_url_safe_base64_to_std_base64(new_buf);
-    int result = (int) std_base64_decode_len(new_buf);
+    int result = std_base64_decode_len(new_buf);
     free(new_buf);
     return result;
 }
 
-int url_safe_base64_decode(char *plain_dst, const char *coded_src) {
-    size_t len = strlen(coded_src);
-    char *new_buf = (char *) calloc(len + 4, sizeof(new_buf[0]));
-    strcpy(new_buf, coded_src);
+int url_safe_base64_decode(const unsigned char *coded_src, unsigned char *plain_dst) {
+    size_t len = strlen((const char *)coded_src);
+    unsigned char *new_buf = (unsigned char *) calloc(len + 4, sizeof(new_buf[0]));
+    memcpy(new_buf, coded_src, len);
     
     str_url_safe_base64_to_std_base64(new_buf);
-    int result = std_base64_decode(plain_dst, new_buf);
+    int result = std_base64_decode(new_buf, plain_dst);
     free(new_buf);
     return result;
 }
 
-static void str_replace_char(char *str, char old_char, char new_char) {
+static void str_replace_char(unsigned char *str, unsigned char old_char, unsigned char new_char) {
     for (;; str++) {
         if (!*str) {
             break;
@@ -253,11 +253,11 @@ static void str_replace_char(char *str, char old_char, char new_char) {
     }
 }
 
-static void str_url_safe_base64_to_std_base64(char *coded_src) {
+static void str_url_safe_base64_to_std_base64(unsigned char *coded_src) {
     str_replace_char(coded_src, '-', '+');
     str_replace_char(coded_src, '_', '/');
 
-    size_t len = strlen(coded_src);
+    size_t len = strlen((const char *)coded_src);
 
     switch (len % 4) {
         case 1:

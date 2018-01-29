@@ -89,15 +89,15 @@ extern "C" {
 #endif
 
 int std_base64_encode_len(int len);
-int std_base64_encode(const char *plain_src,int len_plain_src, char * coded_dst);
+int std_base64_encode(const unsigned char *plain_src, int len_plain_src, unsigned char *coded_dst);
 
-int std_base64_decode_len(const char * coded_src);
-int std_base64_decode(char * plain_dst, const char *coded_src);
+int std_base64_decode_len(const unsigned char *coded_src);
+int std_base64_decode(const unsigned char *coded_src, unsigned char *plain_dst);
 
 int url_safe_base64_encode_len(int len);
-int url_safe_base64_encode(char * coded_dst, const char *plain_src, int len_plain_src);
-int url_safe_base64_decode_len(const char * coded_src);
-int url_safe_base64_decode(char * plain_dst, const char *coded_src);
+int url_safe_base64_encode(const unsigned char *plain_src, int len_plain_src, unsigned char *coded_dst);
+int url_safe_base64_decode_len(const unsigned char *coded_src);
+int url_safe_base64_decode(const unsigned char *coded_src, unsigned char *plain_dst);
 
 #ifdef __cplusplus
 }
