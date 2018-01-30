@@ -25,6 +25,7 @@ struct server_config {
     char *obfs_param;
     bool udp;
     unsigned int idle_timeout; /* Connection idle timeout in ms. */
+    char *remarks;
 };
 
 struct server_env_t {
