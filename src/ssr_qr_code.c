@@ -122,8 +122,7 @@ struct server_config * decode_shadowsocks(const char *text) {
         char *remarks = strchr(contents, '#');
         
         if (remarks != NULL) {
-            *remarks = '\0';
-            ++remarks;
+            *remarks++ = '\0';
         }
 
         if (strcspn(contents, "@:/?") != strlen(contents)) {
@@ -141,22 +140,19 @@ struct server_config * decode_shadowsocks(const char *text) {
         if (password == NULL) {
             break;
         }
-        *password = '\0';
-        ++password;
+        *password++ = '\0';
 
         char *port = strrchr(password, ':');
         if (port == NULL) {
             break;
         }
-        *port = '\0';
-        ++port;
+        *port++ = '\0';
         
         char *hostname = strrchr(password, '@');
         if (hostname == NULL) {
             break;
         }
-        *hostname = '\0';
-        ++hostname;
+        *hostname++ = '\0';
 
         config = config_create();
         string_safe_assign(&config->method, method);
@@ -210,11 +206,9 @@ struct server_config * decode_ssr(const char *text) {
         
         char *optional = strchr(plain_text, '/');
         if (optional != NULL) {
-            *optional = '\0';
-            ++optional;
+            *optional++ = '\0';
             if (*optional == '?') {
-                *optional = '\0';
-                ++optional;
+                *optional++ = '\0';
             }
         }
         
@@ -222,36 +216,31 @@ struct server_config * decode_ssr(const char *text) {
         if (base64pass == NULL) {
             break;
         }
-        *base64pass = '\0';
-        ++base64pass;
+        *base64pass++ = '\0';
 
         char *obfs = strrchr(basic, ':');
         if (obfs == NULL) {
             break;
         }
-        *obfs = '\0';
-        ++obfs;
+        *obfs++ = '\0';
         
         char *method = strrchr(basic, ':');
         if (method == NULL) {
             break;
         }
-        *method = '\0';
-        ++method;
+        *method++ = '\0';
         
         char *protocol = strrchr(basic, ':');
         if (protocol == NULL) {
             break;
         }
-        *protocol = '\0';
-        ++protocol;
+        *protocol++ = '\0';
         
         char *port = strrchr(basic, ':');
         if (port == NULL) {
             break;
         }
-        *port = '\0';
-        ++port;
+        *port++ = '\0';
         
         char *host = basic;
         
@@ -285,7 +274,7 @@ struct server_config * decode_ssr(const char *text) {
         do {
             char *next = strchr(iter, '&');
             if (next) {
-                *next = 0; ++next;
+                *next++ = 0;
             }
             
             char *key = iter;
@@ -328,6 +317,10 @@ struct server_config * decode_ssr(const char *text) {
             iter = next;
         } while (iter);
     } while (0);
+    
+    if (plain_text) {
+        free(plain_text);
+    }
     
     if (swap_buf) {
         free(swap_buf);
