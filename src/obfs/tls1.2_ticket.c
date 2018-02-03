@@ -165,7 +165,7 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
             }
             local->send_buffer = (uint8_t *)realloc(local->send_buffer, ((size_t)local->send_buffer_size + outlength));
             memcpy(local->send_buffer + local->send_buffer_size, out_buffer, outlength);
-            local->send_buffer_size += outlength;
+            local->send_buffer_size += (int) outlength;
             free(out_buffer);
         }
     }
@@ -332,7 +332,7 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
             }
             memcpy(encryptdata + datalength, local->recv_buffer + 5, size);
             datalength += size;
-            local->recv_buffer_size -= 5 + size;
+            local->recv_buffer_size -= (int) (5 + size);
             memmove(local->recv_buffer, local->recv_buffer + 5 + size, local->recv_buffer_size);
         }
         return (ssize_t)datalength;

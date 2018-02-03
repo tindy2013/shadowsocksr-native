@@ -31,7 +31,7 @@
 
 #ifdef __MINGW32__
 #include "win32.h"
-#define sleep(n) Sleep(1000 * (n))
+#define sleep(n) Sleep((DWORD)(1000 * (n)))
 #else
 #include <sys/socket.h>
 #include <netdb.h>
