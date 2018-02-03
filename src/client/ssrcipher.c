@@ -99,6 +99,9 @@ struct server_env_t * ssr_cipher_env_create(struct server_config *config) {
 }
 
 void ssr_cipher_env_release(struct server_env_t *env) {
+    if (env == NULL) {
+        return;
+    }
     object_safe_free(&env->protocol_global);
     object_safe_free(&env->obfs_global);
     if (env->protocol_plugin) {
@@ -176,7 +179,9 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
 }
 
 void tunnel_cipher_release(struct tunnel_cipher_ctx *tc) {
-    assert(tc);
+    if (tc == NULL) {
+        return;
+    }
     struct server_env_t *env = tc->env;
     if (tc->e_ctx != NULL) {
         enc_ctx_release_instance(env->cipher, tc->e_ctx);
