@@ -252,7 +252,7 @@ void auth_chain_b_dispose(struct obfs_t *obfs) {
 }
 
 void auth_chain_set_server_info(struct obfs_t * obfs, struct server_info_t * server) {
-    server->overhead = 4;
+    // server->overhead = 4;
     set_server_info(obfs, server);
 }
 
