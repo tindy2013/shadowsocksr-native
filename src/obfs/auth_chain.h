@@ -14,7 +14,7 @@ struct obfs_t * auth_chain_b_new_obfs(void);
 void auth_chain_a_dispose(struct obfs_t *obfs);
 void auth_chain_b_dispose(struct obfs_t *obfs);
 
-void auth_chain_set_server_info(struct obfs_t *obfs, struct server_info_t *server);
+void auth_chain_a_set_server_info(struct obfs_t *obfs, struct server_info_t *server);
 void auth_chain_b_set_server_info(struct obfs_t *obfs, struct server_info_t *server);
 
 int auth_chain_a_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);

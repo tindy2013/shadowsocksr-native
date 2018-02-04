@@ -251,13 +251,13 @@ void auth_chain_b_dispose(struct obfs_t *obfs) {
     auth_chain_a_dispose(obfs);
 }
 
-void auth_chain_set_server_info(struct obfs_t * obfs, struct server_info_t * server) {
+void auth_chain_a_set_server_info(struct obfs_t * obfs, struct server_info_t * server) {
     // server->overhead = 4;
     set_server_info(obfs, server);
 }
 
 void auth_chain_b_set_server_info(struct obfs_t *obfs, struct server_info_t *server) {
-    auth_chain_set_server_info(obfs, server);
+    auth_chain_a_set_server_info(obfs, server);
     auth_chain_b_init_data_size(obfs);
 }
 
@@ -393,8 +393,9 @@ int auth_chain_a_pack_data(struct obfs_t *obfs, char *data, int datalength, char
     return out_size + 2;
 }
 
-int auth_chain_a_pack_auth_data(struct auth_chain_global_data *global, struct obfs_t *obfs, char *data, int datalength, char *outdata) {
+int auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, int datalength, char *outdata) {
     struct server_info_t *server = &obfs->server;
+    struct auth_chain_global_data *global = (struct auth_chain_global_data *)obfs->server.g_data;
     struct auth_chain_local_data *local = (struct auth_chain_local_data *) obfs->l_data;
 
     const int authhead_len = 4 + 8 + 4 + 16 + 4;
@@ -516,7 +517,7 @@ int auth_chain_a_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int 
         if (head_size > datalength) {
             head_size = datalength;
         }
-        pack_len = auth_chain_a_pack_auth_data((struct auth_chain_global_data *)obfs->server.g_data, obfs, data, head_size, buffer);
+        pack_len = auth_chain_a_pack_auth_data(obfs, data, head_size, buffer);
         buffer += pack_len;
         data += head_size;
         len -= head_size;

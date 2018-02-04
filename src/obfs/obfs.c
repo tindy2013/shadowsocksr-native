@@ -218,7 +218,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->new_obfs = auth_chain_a_new_obfs;
         plugin->get_overhead = auth_chain_a_get_overhead;
         plugin->get_server_info = get_server_info;
-        plugin->set_server_info = auth_chain_set_server_info;
+        plugin->set_server_info = auth_chain_a_set_server_info;
         plugin->dispose = auth_chain_a_dispose;
 
         plugin->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
