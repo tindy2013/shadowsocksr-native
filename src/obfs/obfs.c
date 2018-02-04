@@ -218,8 +218,24 @@ new_obfs_manager(const char *plugin_name)
         plugin->new_obfs = auth_chain_a_new_obfs;
         plugin->get_overhead = auth_chain_a_get_overhead;
         plugin->get_server_info = get_server_info;
-        plugin->set_server_info = set_server_info;
+        plugin->set_server_info = auth_chain_set_server_info;
         plugin->dispose = auth_chain_a_dispose;
+
+        plugin->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
+        plugin->client_post_decrypt = auth_chain_a_client_post_decrypt;
+        plugin->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
+        plugin->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
+
+        return plugin;
+    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_chain_b)) == 0) {
+        // auth_chain_b
+        struct obfs_manager *plugin = (struct obfs_manager *)malloc(sizeof(struct obfs_manager));
+        plugin->init_data = auth_chain_b_init_data;
+        plugin->new_obfs = auth_chain_b_new_obfs;
+        plugin->get_overhead = auth_chain_b_get_overhead;
+        plugin->get_server_info = get_server_info;
+        plugin->set_server_info = auth_chain_b_set_server_info;
+        plugin->dispose = auth_chain_b_dispose;
 
         plugin->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
         plugin->client_post_decrypt = auth_chain_a_client_post_decrypt;
