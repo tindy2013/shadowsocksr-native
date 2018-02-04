@@ -1567,7 +1567,7 @@ init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     server_ctx->remote_addr     = remote_addr;
     server_ctx->remote_addr_len = remote_addr_len;
     //SSR beg
-    server_ctx->protocol_plugin = new_obfs_manager((char *)protocol);
+    server_ctx->protocol_plugin = new_obfs_manager(protocol);
     if (server_ctx->protocol_plugin) {
         server_ctx->protocol = server_ctx->protocol_plugin->new_obfs();
         server_ctx->protocol_global = server_ctx->protocol_plugin->init_data();
