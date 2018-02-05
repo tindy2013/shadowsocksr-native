@@ -119,7 +119,7 @@ void auth_chain_local_data_init(struct obfs_t *obfs, struct auth_chain_local_dat
 unsigned int auth_chain_a_get_rand_len(struct auth_chain_local_data *local, int datalength, shift128plus_ctx* random, uint8_t* last_hash);
 unsigned int auth_chain_b_get_rand_len(struct auth_chain_local_data *local, int datalength, shift128plus_ctx *random, uint8_t *last_hash);
 
-int data_size_list_length_compare(const void *a, const void *b) {
+int data_size_list_compare(const void *a, const void *b) {
     return (*(int *)a - *(int *)b);
 }
 
@@ -139,7 +139,7 @@ void auth_chain_b_init_data_size(struct obfs_t *obfs) {
     qsort(special_data->data_size_list,
         special_data->data_size_list_length,
         sizeof(special_data->data_size_list[0]),
-        data_size_list_length_compare
+        data_size_list_compare
         );
 
     special_data->data_size_list2_length = shift128plus_next(random) % 16 + 8;
@@ -151,7 +151,7 @@ void auth_chain_b_init_data_size(struct obfs_t *obfs) {
     qsort(special_data->data_size_list2,
         special_data->data_size_list2_length,
         sizeof(special_data->data_size_list2[0]),
-        data_size_list_length_compare
+        data_size_list_compare
         );
 
     free(random);
