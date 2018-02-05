@@ -386,6 +386,10 @@ void auth_chain_d_dispose(struct obfs_t *obfs) {
 }
 
 void auth_chain_a_set_server_info(struct obfs_t * obfs, struct server_info_t * server) {
+    //
+    // Don't change server.overhead in here. The server.overhead are counted from the ssrcipher.c#L176
+    // The input's server.overhead is the total server.overhead that sum of all the plugin's overhead
+    //
     // server->overhead = 4;
     set_server_info(obfs, server);
 }

@@ -147,8 +147,6 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
 
     strcpy(server_info.host, config->remote_host);
     server_info.port = config->remote_port;
-    server_info.param = config->obfs_param;
-    server_info.g_data = env->obfs_global;
     server_info.head_len = get_head_size(init_pkg->buffer, (int)init_pkg->len, 30);
     server_info.iv = enc_ctx_get_iv(tc->e_ctx);
     server_info.iv_len = (uint16_t) enc_get_iv_len(env->cipher);
@@ -157,6 +155,9 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
     server_info.tcp_mss = 1452;
     server_info.buffer_size = SSR_BUFF_SIZE;
     server_info.cipher_env = env->cipher;
+
+    server_info.param = config->obfs_param;
+    server_info.g_data = env->obfs_global;
 
     if (env->obfs_plugin) {
         tc->obfs = env->obfs_plugin->new_obfs();
@@ -168,9 +169,12 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
 
     if (env->protocol_plugin) {
         tc->protocol = env->protocol_plugin->new_obfs();
+
+        // overhead must count on this
         int p_len = env->protocol_plugin->get_overhead(tc->protocol);
         int o_len = (env->obfs_plugin ? env->obfs_plugin->get_overhead(tc->obfs) : 0);
         server_info.overhead = (uint16_t)(p_len + o_len);
+
         env->protocol_plugin->set_server_info(tc->protocol, &server_info);
     }
     // SSR end
