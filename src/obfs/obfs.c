@@ -243,6 +243,38 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 
         return plugin;
+    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_chain_c)) == 0) {
+        // auth_chain_c
+        struct obfs_manager *plugin = (struct obfs_manager *) calloc(1, sizeof(struct obfs_manager));
+        plugin->init_data = auth_chain_c_init_data;
+        plugin->new_obfs = auth_chain_c_new_obfs;
+        plugin->get_overhead = auth_chain_c_get_overhead;
+        plugin->get_server_info = get_server_info;
+        plugin->set_server_info = auth_chain_c_set_server_info;
+        plugin->dispose = auth_chain_c_dispose;
+
+        plugin->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
+        plugin->client_post_decrypt = auth_chain_a_client_post_decrypt;
+        plugin->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
+        plugin->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
+
+        return plugin;
+    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_chain_d)) == 0) {
+        // auth_chain_d
+        struct obfs_manager *plugin = (struct obfs_manager *) calloc(1, sizeof(struct obfs_manager));
+        plugin->init_data = auth_chain_d_init_data;
+        plugin->new_obfs = auth_chain_d_new_obfs;
+        plugin->get_overhead = auth_chain_d_get_overhead;
+        plugin->get_server_info = get_server_info;
+        plugin->set_server_info = auth_chain_d_set_server_info;
+        plugin->dispose = auth_chain_d_dispose;
+
+        plugin->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
+        plugin->client_post_decrypt = auth_chain_a_client_post_decrypt;
+        plugin->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
+        plugin->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
+
+        return plugin;
     }
     assert(0); // LOGE("Load obfs '%s' failed", plugin_name);
     return NULL;
