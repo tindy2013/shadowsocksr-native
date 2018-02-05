@@ -548,7 +548,7 @@ unsigned int auth_chain_a_get_rand_len(struct auth_chain_local_data *local, int 
     return shift128plus_next(random) % 1021;
 }
 
-size_t auth_chain_b_find_pos(int *arr, size_t length, int key) {
+size_t auth_chain_find_pos(int *arr, size_t length, int key) {
     size_t low = 0;
     size_t high = length - 1;
     size_t middle = -1;
@@ -579,13 +579,13 @@ unsigned int auth_chain_b_get_rand_len(struct auth_chain_local_data *local, int 
 
     shift128plus_init_from_bin_datalen(random, last_hash, 16, datalength);
 
-    size_t pos = auth_chain_b_find_pos(special_data->data_size_list, special_data->data_size_list_length, datalength + overhead);
+    size_t pos = auth_chain_find_pos(special_data->data_size_list, special_data->data_size_list_length, datalength + overhead);
     size_t final_pos = pos + shift128plus_next(random) % special_data->data_size_list_length;
     if (final_pos < special_data->data_size_list_length) {
         return special_data->data_size_list[final_pos] - datalength - overhead;
     }
 
-    size_t pos2 = auth_chain_b_find_pos(special_data->data_size_list2, special_data->data_size_list2_length, datalength + overhead);
+    size_t pos2 = auth_chain_find_pos(special_data->data_size_list2, special_data->data_size_list2_length, datalength + overhead);
     size_t final_pos2 = pos2 + shift128plus_next(random) % special_data->data_size_list2_length;
     if (final_pos2 < special_data->data_size_list2_length) {
         return special_data->data_size_list2[final_pos2] - datalength - overhead;
@@ -629,7 +629,7 @@ unsigned int auth_chain_c_get_rand_len(struct auth_chain_local_data *local, int 
         return shift128plus_next(random) % 1021;
     }
 
-    size_t pos = auth_chain_b_find_pos(special_data->data_size_list0, special_data->data_size_list0_length, other_data_size);
+    size_t pos = auth_chain_find_pos(special_data->data_size_list0, special_data->data_size_list0_length, other_data_size);
     // random select a size in the leftover data_size_list0
     size_t final_pos = pos + shift128plus_next(random) % (special_data->data_size_list0_length - pos);
     return special_data->data_size_list0[final_pos] - other_data_size;
@@ -649,7 +649,7 @@ unsigned int auth_chain_d_get_rand_len(struct auth_chain_local_data *local, int 
     }
 
     shift128plus_init_from_bin_datalen(random, last_hash, 16, datalength);
-    size_t pos = auth_chain_b_find_pos(special_data->data_size_list0, special_data->data_size_list0_length, other_data_size);
+    size_t pos = auth_chain_find_pos(special_data->data_size_list0, special_data->data_size_list0_length, other_data_size);
     // random select a size in the leftover data_size_list0
     size_t final_pos = pos + shift128plus_next(random) % (special_data->data_size_list0_length - pos);
     return special_data->data_size_list0[final_pos] - other_data_size;
@@ -671,7 +671,7 @@ unsigned int auth_chain_e_get_rand_len(struct auth_chain_local_data *local, int 
     }
 
     // use the mini size in the data_size_list0
-    size_t pos = auth_chain_b_find_pos(special_data->data_size_list0, special_data->data_size_list0_length, other_data_size);
+    size_t pos = auth_chain_find_pos(special_data->data_size_list0, special_data->data_size_list0_length, other_data_size);
     return special_data->data_size_list0[pos] - other_data_size;
 }
 
