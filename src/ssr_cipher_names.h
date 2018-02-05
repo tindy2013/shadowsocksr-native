@@ -67,6 +67,7 @@ enum ss_cipher_type ss_cipher_index_from_name(const char *name);
     V(10, ssr_protocol_auth_chain_b,    "auth_chain_b")                        \
     V(11, ssr_protocol_auth_chain_c,    "auth_chain_c")                        \
     V(12, ssr_protocol_auth_chain_d,    "auth_chain_d")                        \
+    V(13, ssr_protocol_auth_chain_e,    "auth_chain_e")                        \
 //    V( 2, ssr_protocol_verify_sha1,     "verify_sha1")                         \
 
 typedef enum ssr_protocol {
