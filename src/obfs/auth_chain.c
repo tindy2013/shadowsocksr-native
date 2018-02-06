@@ -1030,12 +1030,12 @@ static void auth_chain_f_init_data_size(struct obfs_t *obfs, const uint8_t *key_
     for (int i = 0; i != 8; ++i) {
         newKey[i] ^= key_change_datetime_key_bytes[i];
     }
-    shift128plus_init_from_bin(random, newKey, 16);
+    shift128plus_init_from_bin(random, newKey, server->key_len);
     free(newKey);
     newKey = NULL;
 
     special_data->data_size_list0_length = shift128plus_next(random) % (8 + 16) + (4 + 8);
-    size_t len = AUTH_CHAIN_D_MAX_DATA_SIZE_LIST_LIMIT_SIZE;
+    size_t len = max(AUTH_CHAIN_D_MAX_DATA_SIZE_LIST_LIMIT_SIZE, special_data->data_size_list0_length);
     special_data->data_size_list0 = (int *) calloc(len, sizeof(special_data->data_size_list0[0]));
     for (int i = 0; i < special_data->data_size_list0_length; i++) {
         special_data->data_size_list0[i] = shift128plus_next(random) % 2340 % 2040 % 1440;
