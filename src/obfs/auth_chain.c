@@ -873,14 +873,14 @@ void * auth_chain_d_init_data(void) {
 #define AUTH_CHAIN_D_MAX_DATA_SIZE_LIST_LIMIT_SIZE 64
 
 void auth_chain_d_check_and_patch_data_size(struct obfs_t *obfs, struct shift128plus_ctx *random) {
-    struct auth_chain_c_data *special_data = (struct auth_chain_c_data *)
-        ((struct auth_chain_local_data *)obfs->l_data)->auth_chain_special_data;
+    struct auth_chain_local_data *l_data = (struct auth_chain_local_data *)obfs->l_data;
+    struct auth_chain_c_data *special_data = (struct auth_chain_c_data *)l_data->auth_chain_special_data;
 
     while (special_data->data_size_list0[special_data->data_size_list0_length - 1] < 1300 &&
         special_data->data_size_list0_length < AUTH_CHAIN_D_MAX_DATA_SIZE_LIST_LIMIT_SIZE)
     {
-        special_data->data_size_list0[special_data->data_size_list0_length] =
-            shift128plus_next(random) % 2340 % 2040 % 1440;
+        uint64_t data = shift128plus_next(random) % 2340 % 2040 % 1440;
+        special_data->data_size_list0[special_data->data_size_list0_length] = (int) data;
 
         ++special_data->data_size_list0_length;
     }
@@ -1035,7 +1035,8 @@ static void auth_chain_f_init_data_size(struct obfs_t *obfs, const uint8_t *key_
     newKey = NULL;
 
     special_data->data_size_list0_length = shift128plus_next(random) % (8 + 16) + (4 + 8);
-    special_data->data_size_list0 = (int *)malloc(AUTH_CHAIN_D_MAX_DATA_SIZE_LIST_LIMIT_SIZE * sizeof(int));
+    size_t len = AUTH_CHAIN_D_MAX_DATA_SIZE_LIST_LIMIT_SIZE;
+    special_data->data_size_list0 = (int *) calloc(len, sizeof(special_data->data_size_list0[0]));
     for (int i = 0; i < special_data->data_size_list0_length; i++) {
         special_data->data_size_list0[i] = shift128plus_next(random) % 2340 % 2040 % 1440;
     }
@@ -1053,7 +1054,7 @@ static void auth_chain_f_init_data_size(struct obfs_t *obfs, const uint8_t *key_
         // stdlib qsort
         qsort(special_data->data_size_list0,
             special_data->data_size_list0_length,
-            sizeof(int),
+            sizeof(special_data->data_size_list0[0]),
             data_size_list_compare
             );
     }
