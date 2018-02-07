@@ -16,9 +16,9 @@ typedef struct tls12_ticket_auth_global_data {
 typedef struct tls12_ticket_auth_local_data {
     int handshake_status;
     uint8_t *send_buffer;
-    int send_buffer_size;
+    size_t   send_buffer_size;
     uint8_t *recv_buffer;
-    int recv_buffer_size;
+    size_t   recv_buffer_size;
     bool fastauth;
 }tls12_ticket_auth_local_data;
 
@@ -140,9 +140,9 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
 
     if (datalength > 0) {
         if (datalength < (SSR_BUFF_SIZE / 2)) {
-            local->send_buffer = (uint8_t *)realloc(local->send_buffer, ((size_t)local->send_buffer_size + datalength + 5));
+            local->send_buffer = (uint8_t *)realloc(local->send_buffer, (local->send_buffer_size + datalength + 5));
             tls12_ticket_auth_pack_data(encryptdata, 0, (uint16_t)datalength, local->send_buffer, (uint16_t)local->send_buffer_size);
-            local->send_buffer_size += (int)datalength + 5;
+            local->send_buffer_size += datalength + 5;
         } else {
             out_buffer = (uint8_t *)malloc(datalength + (SSR_BUFF_SIZE * 2));
             size_t start = 0;
@@ -166,9 +166,9 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
                 *pencryptdata = (char*)realloc(*pencryptdata, *capacity = (size_t)(outlength * 2));
                 encryptdata = (uint8_t *)*pencryptdata;
             }
-            local->send_buffer = (uint8_t *)realloc(local->send_buffer, ((size_t)local->send_buffer_size + outlength));
+            local->send_buffer = (uint8_t *)realloc(local->send_buffer, (local->send_buffer_size + outlength));
             memcpy(local->send_buffer + local->send_buffer_size, out_buffer, outlength);
-            local->send_buffer_size += (int) outlength;
+            local->send_buffer_size += outlength;
             free(out_buffer);
         }
     }
@@ -275,7 +275,7 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
         free(tls_data);
     } else if (datalength == 0 || local->fastauth) {
         size_t tmp = datalength;
-        datalength = (size_t)local->send_buffer_size + 43;
+        datalength = local->send_buffer_size + 43;
         out_buffer = (uint8_t *)malloc(datalength);
         uint8_t *pdata = out_buffer;
         memcpy(pdata, "\x14\x03\x03\x00\x01\x01", 6);
@@ -294,7 +294,7 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
         memcpy(pdata, hash, OBFS_HMAC_SHA1_LEN);
 
         pdata += OBFS_HMAC_SHA1_LEN;
-        memcpy(pdata, local->send_buffer, (size_t) local->send_buffer_size);
+        memcpy(pdata, local->send_buffer, local->send_buffer_size);
         free(local->send_buffer);
         local->send_buffer = NULL;
         local->send_buffer_size = 0;
@@ -321,8 +321,8 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
 
     *needsendback = 0;
     if (local->handshake_status == 8) {
-        local->recv_buffer_size += (int) datalength;
-        local->recv_buffer = (uint8_t *)realloc(local->recv_buffer, (size_t)local->recv_buffer_size);
+        local->recv_buffer_size += datalength;
+        local->recv_buffer = (uint8_t *)realloc(local->recv_buffer, local->recv_buffer_size);
         memcpy(local->recv_buffer + local->recv_buffer_size - datalength, encryptdata, datalength);
         datalength = 0;
         while (local->recv_buffer_size > 5) {
@@ -330,7 +330,7 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
                 return -1;
             }
             size_t size = (((size_t)local->recv_buffer[3]) << 8) + (size_t)local->recv_buffer[4];
-            if (size + 5 > (size_t)local->recv_buffer_size) {
+            if (size + 5 > local->recv_buffer_size) {
                 break;
             }
             if (*capacity < datalength + size) {
@@ -339,7 +339,7 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
             }
             memcpy(encryptdata + datalength, local->recv_buffer + 5, size);
             datalength += size;
-            local->recv_buffer_size -= (int) (5 + size);
+            local->recv_buffer_size -= (5 + size);
             memmove(local->recv_buffer, local->recv_buffer + 5 + size, local->recv_buffer_size);
         }
         return (ssize_t)datalength;
