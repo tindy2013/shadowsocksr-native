@@ -87,8 +87,8 @@ enum ssr_protocol ssr_protocol_index_from_name(const char *name);
     V(1, ssr_obfs_http_simple,              "http_simple")                     \
     V(2, ssr_obfs_http_post,                "http_post")                       \
     V(4, ssr_obfs_tls_1_2_ticket_auth,      "tls1.2_ticket_auth")              \
+    V(5, ssr_obfs_tls_1_2_ticket_fastauth,  "tls1.2_ticket_fastauth")          \
 //    V(3, ssr_obfs_tls_1_0_session_auth,     "tls1.0_session_auth")             \
-//    V(5, ssr_obfs_tls_1_2_ticket_fastauth,  "tls1.2_ticket_fastauth")          \
 
 typedef enum ssr_obfs {
 #define SSR_OBFS_GEN(code, name, _) name = (code),

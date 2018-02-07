@@ -112,6 +112,20 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_decode = tls12_ticket_auth_client_decode;
 
         return plugin;
+    } else if (strcmp(plugin_name, ssr_obfs_name_from_index(ssr_obfs_tls_1_2_ticket_fastauth)) == 0) {
+        // tls1.2_ticket_fastauth
+        struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
+        plugin->init_data = tls12_ticket_fastauth_init_data;
+        plugin->new_obfs = tls12_ticket_fastauth_new_obfs;
+        plugin->get_overhead = tls12_ticket_fastauth_get_overhead;
+        plugin->get_server_info = get_server_info;
+        plugin->set_server_info = set_server_info;
+        plugin->dispose = tls12_ticket_fastauth_dispose;
+
+        plugin->client_encode = tls12_ticket_fastauth_client_encode;
+        plugin->client_decode = tls12_ticket_fastauth_client_decode;
+
+        return plugin;
     } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_verify_simple)) == 0) {
         // verify_simple
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));

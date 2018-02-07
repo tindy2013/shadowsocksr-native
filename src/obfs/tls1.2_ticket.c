@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include "obfs.h"
 #include "tls1.2_ticket.h"
@@ -18,6 +19,7 @@ typedef struct tls12_ticket_auth_local_data {
     int send_buffer_size;
     uint8_t *recv_buffer;
     int recv_buffer_size;
+    bool fastauth;
 }tls12_ticket_auth_local_data;
 
 void tls12_ticket_auth_local_data_init(tls12_ticket_auth_local_data* local) {
@@ -26,6 +28,7 @@ void tls12_ticket_auth_local_data_init(tls12_ticket_auth_local_data* local) {
     local->send_buffer_size = 0;
     local->recv_buffer = malloc(0);
     local->recv_buffer_size = 0;
+    local->fastauth = false;
 }
 
 void * tls12_ticket_auth_init_data(void) {
@@ -36,7 +39,7 @@ void * tls12_ticket_auth_init_data(void) {
 
 struct obfs_t * tls12_ticket_auth_new_obfs(void) {
     struct obfs_t * obfs = new_obfs();
-    obfs->l_data = malloc(sizeof(tls12_ticket_auth_local_data));
+    obfs->l_data = calloc(1, sizeof(tls12_ticket_auth_local_data));
     tls12_ticket_auth_local_data_init((tls12_ticket_auth_local_data*)obfs->l_data);
     return obfs;
 }
@@ -270,7 +273,8 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
         local->handshake_status = 1;
 
         free(tls_data);
-    } else if (datalength == 0) {
+    } else if (datalength == 0 || local->fastauth) {
+        size_t tmp = datalength;
         datalength = (size_t)local->send_buffer_size + 43;
         out_buffer = (uint8_t *)malloc(datalength);
         uint8_t *pdata = out_buffer;
@@ -293,8 +297,11 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
         memcpy(pdata, local->send_buffer, (size_t) local->send_buffer_size);
         free(local->send_buffer);
         local->send_buffer = NULL;
+        local->send_buffer_size = 0;
 
-        local->handshake_status = 8;
+        if (tmp == 0) {
+            local->handshake_status = 8;
+        }
     } else {
         return 0;
     }
@@ -354,4 +361,32 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
 
     *needsendback = 1;
     return 0;
+}
+
+//============================= tls1.2_ticket_fastauth ==================================
+
+void * tls12_ticket_fastauth_init_data(void) {
+    return tls12_ticket_auth_init_data();
+}
+
+struct obfs_t * tls12_ticket_fastauth_new_obfs(void) {
+    struct obfs_t *obfs = tls12_ticket_auth_new_obfs();
+    ((tls12_ticket_auth_local_data*)obfs->l_data)->fastauth = true;
+    return obfs;
+}
+
+int tls12_ticket_fastauth_get_overhead(struct obfs_t *obfs) {
+    return tls12_ticket_auth_get_overhead(obfs);
+}
+
+void tls12_ticket_fastauth_dispose(struct obfs_t *obfs) {
+    tls12_ticket_auth_dispose(obfs);
+}
+
+size_t tls12_ticket_fastauth_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity) {
+    return tls12_ticket_auth_client_encode(obfs, pencryptdata, datalength, capacity);
+}
+
+ssize_t tls12_ticket_fastauth_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback) {
+    return tls12_ticket_auth_client_decode(obfs, pencryptdata, datalength, capacity, needsendback);
 }
