@@ -64,7 +64,10 @@ void tls12_ticket_auth_dispose(struct obfs_t *obfs) {
     dispose_obfs(obfs);
 }
 
-int tls12_ticket_pack_auth_data(struct tls12_ticket_auth_global_data *global, struct server_info_t *server, uint8_t *outdata) {
+static int tls12_ticket_pack_auth_data(struct obfs_t *obfs, uint8_t *outdata) {
+    struct server_info_t *server = &obfs->server;
+    struct tls12_ticket_auth_global_data *global = (struct tls12_ticket_auth_global_data*)obfs->server.g_data;
+
     int out_size = 32;
     time_t t = time(NULL);
     outdata[0] = (uint8_t)(t >> 24);
@@ -252,7 +255,7 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
         pdata -= 32; len += 32;
         pdata[-1] = 0x20;
         pdata -= 1; len += 1;
-        tls12_ticket_pack_auth_data(global, &obfs->server, pdata - 32);
+        tls12_ticket_pack_auth_data(obfs, pdata - 32);
         pdata -= 32; len += 32;
         pdata[-1] = 0x3;
         pdata[-2] = 0x3; // tls version
