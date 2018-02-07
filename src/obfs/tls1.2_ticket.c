@@ -9,38 +9,40 @@
 #include "obfsutil.h"
 #include "../encrypt.h"
 
-typedef struct tls12_ticket_auth_global_data {
+struct tls12_ticket_auth_global_data {
     uint8_t local_client_id[32];
-}tls12_ticket_auth_global_data;
+};
 
-typedef struct tls12_ticket_auth_local_data {
+struct tls12_ticket_auth_local_data {
     int handshake_status;
     uint8_t *send_buffer;
     size_t   send_buffer_size;
     uint8_t *recv_buffer;
     size_t   recv_buffer_size;
-    bool fastauth;
-}tls12_ticket_auth_local_data;
+    int      send_id;
+    bool     fastauth;
+};
 
-void tls12_ticket_auth_local_data_init(tls12_ticket_auth_local_data* local) {
+static void tls12_ticket_auth_local_data_init(struct tls12_ticket_auth_local_data* local) {
     local->handshake_status = 0;
     local->send_buffer = malloc(0);
     local->send_buffer_size = 0;
     local->recv_buffer = malloc(0);
     local->recv_buffer_size = 0;
+    local->send_id = 0;
     local->fastauth = false;
 }
 
 void * tls12_ticket_auth_init_data(void) {
-    tls12_ticket_auth_global_data *global = (tls12_ticket_auth_global_data*)malloc(sizeof(tls12_ticket_auth_global_data));
-    rand_bytes(global->local_client_id, 32);
+    struct tls12_ticket_auth_global_data *global = (struct tls12_ticket_auth_global_data*) malloc(sizeof(struct tls12_ticket_auth_global_data));
+    rand_bytes(global->local_client_id, sizeof(global->local_client_id));
     return global;
 }
 
 struct obfs_t * tls12_ticket_auth_new_obfs(void) {
     struct obfs_t * obfs = new_obfs();
-    obfs->l_data = calloc(1, sizeof(tls12_ticket_auth_local_data));
-    tls12_ticket_auth_local_data_init((tls12_ticket_auth_local_data*)obfs->l_data);
+    obfs->l_data = calloc(1, sizeof(struct tls12_ticket_auth_local_data));
+    tls12_ticket_auth_local_data_init((struct tls12_ticket_auth_local_data*)obfs->l_data);
     return obfs;
 }
 
@@ -49,7 +51,7 @@ int tls12_ticket_auth_get_overhead(struct obfs_t *obfs) {
 }
 
 void tls12_ticket_auth_dispose(struct obfs_t *obfs) {
-    tls12_ticket_auth_local_data *local = (tls12_ticket_auth_local_data*)obfs->l_data;
+    struct tls12_ticket_auth_local_data *local = (struct tls12_ticket_auth_local_data*)obfs->l_data;
     if (local->send_buffer != NULL) {
         free(local->send_buffer);
         local->send_buffer = NULL;
@@ -62,7 +64,7 @@ void tls12_ticket_auth_dispose(struct obfs_t *obfs) {
     dispose_obfs(obfs);
 }
 
-int tls12_ticket_pack_auth_data(tls12_ticket_auth_global_data *global, struct server_info_t *server, uint8_t *outdata) {
+int tls12_ticket_pack_auth_data(struct tls12_ticket_auth_global_data *global, struct server_info_t *server, uint8_t *outdata) {
     int out_size = 32;
     time_t t = time(NULL);
     outdata[0] = (uint8_t)(t >> 24);
@@ -92,8 +94,8 @@ void tls12_ticket_auth_pack_data(const uint8_t *encryptdata, uint16_t start, uin
 
 size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity) {
     uint8_t *encryptdata = (uint8_t *)*pencryptdata;
-    tls12_ticket_auth_local_data *local = (tls12_ticket_auth_local_data*)obfs->l_data;
-    tls12_ticket_auth_global_data *global = (tls12_ticket_auth_global_data*)obfs->server.g_data;
+    struct tls12_ticket_auth_local_data *local = (struct tls12_ticket_auth_local_data*)obfs->l_data;
+    struct tls12_ticket_auth_global_data *global = (struct tls12_ticket_auth_global_data*)obfs->server.g_data;
     uint8_t * out_buffer = NULL;
 
     if (local->handshake_status == 8) {
@@ -316,8 +318,8 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
 
 ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback) {
     char *encryptdata = *pencryptdata;
-    tls12_ticket_auth_local_data *local = (tls12_ticket_auth_local_data*)obfs->l_data;
-    tls12_ticket_auth_global_data *global = (tls12_ticket_auth_global_data*)obfs->server.g_data;
+    struct tls12_ticket_auth_local_data *local = (struct tls12_ticket_auth_local_data*)obfs->l_data;
+    struct tls12_ticket_auth_global_data *global = (struct tls12_ticket_auth_global_data*)obfs->server.g_data;
 
     *needsendback = 0;
     if (local->handshake_status == 8) {
@@ -371,7 +373,7 @@ void * tls12_ticket_fastauth_init_data(void) {
 
 struct obfs_t * tls12_ticket_fastauth_new_obfs(void) {
     struct obfs_t *obfs = tls12_ticket_auth_new_obfs();
-    ((tls12_ticket_auth_local_data*)obfs->l_data)->fastauth = true;
+    ((struct tls12_ticket_auth_local_data*)obfs->l_data)->fastauth = true;
     return obfs;
 }
 
