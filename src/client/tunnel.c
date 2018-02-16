@@ -28,8 +28,6 @@
 #include "encrypt.h"
 #include "ssrbuffer.h"
 
-#define IMPL_SSR_CLIENT 1
-
 /* A connection is modeled as an abstraction on top of two simple state
  * machines, one for reading and one for writing.  Either state machine
  * is, when active, in one of three states: busy, done or stop; the fourth
@@ -363,8 +361,6 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     }
     ASSERT(parser->cmd == s5_cmd_tcp_connect);
 
-#if IMPL_SSR_CLIENT
-
     tunnel->init_pkg = initial_package_create(parser);
     tunnel->cipher = tunnel_cipher_create(tunnel->env, tunnel->init_pkg);
 
@@ -376,33 +372,6 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     }
 
     memcpy(&outgoing->t.addr, &remote_addr, sizeof(remote_addr));
-
-#else
-
-    if (parser->atyp == s5_atyp_host) {
-        socket_getaddrinfo(outgoing, (const char *)parser->daddr);
-        tunnel->state = session_req_lookup;
-        return;
-    }
-
-    if (parser->atyp == s5_atyp_ipv4) {
-        memset(&outgoing->t.addr4, 0, sizeof(outgoing->t.addr4));
-        outgoing->t.addr4.sin_family = AF_INET;
-        outgoing->t.addr4.sin_port = htons(parser->dport);
-        memcpy(&outgoing->t.addr4.sin_addr,
-            parser->daddr,
-            sizeof(outgoing->t.addr4.sin_addr));
-    } else if (parser->atyp == s5_atyp_ipv6) {
-        memset(&outgoing->t.addr6, 0, sizeof(outgoing->t.addr6));
-        outgoing->t.addr6.sin6_family = AF_INET6;
-        outgoing->t.addr6.sin6_port = htons(parser->dport);
-        memcpy(&outgoing->t.addr6.sin6_addr,
-            parser->daddr,
-            sizeof(outgoing->t.addr6.sin6_addr));
-    } else {
-        UNREACHABLE();
-    }
-#endif // IMPL_SSR_CLIENT
 
     do_req_connect_start(tunnel);
 }
@@ -490,7 +459,6 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
     ASSERT(outgoing->wrstate == socket_stop);
 
     if (outgoing->result == 0) {
-#if IMPL_SSR_CLIENT
         struct buffer_t *tmp = buffer_clone(tunnel->init_pkg);
         if (ssr_ok != tunnel_encrypt(tunnel->cipher, tmp)) {
             buffer_free(tmp);
@@ -501,43 +469,6 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
         buffer_free(tmp);
 
         tunnel->state = session_ssr_auth_sent;
-#else
-        const struct sockaddr_in6 *in6;
-        const struct sockaddr_in *in;
-        char addr_storage[sizeof(*in6)];
-        int addrlen;
-        uint8_t *buf;
-
-        /* Build and send the reply.  Not very pretty but gets the job done. */
-        buf = (uint8_t *)incoming->t.buf;
-
-        /* The RFC mandates that the SOCKS server must include the local port
-        * and address in the reply.  So that's what we do.
-        */
-        addrlen = sizeof(addr_storage);
-        CHECK(0 == uv_tcp_getsockname(&outgoing->handle.tcp,
-            (struct sockaddr *) addr_storage,
-            &addrlen));
-        buf[0] = 5;  /* Version. */
-        buf[1] = 0;  /* Success. */
-        buf[2] = 0;  /* Reserved. */
-        if (addrlen == sizeof(*in)) {
-            buf[3] = 1;  /* IPv4. */
-            in = (const struct sockaddr_in *) &addr_storage;
-            memcpy(buf + 4, &in->sin_addr, 4);
-            memcpy(buf + 8, &in->sin_port, 2);
-            socket_write(incoming, buf, 10);
-        } else if (addrlen == sizeof(*in6)) {
-            buf[3] = 4;  /* IPv6. */
-            in6 = (const struct sockaddr_in6 *) &addr_storage;
-            memcpy(buf + 4, &in6->sin6_addr, 16);
-            memcpy(buf + 20, &in6->sin6_port, 2);
-            socket_write(incoming, buf, 22);
-        } else {
-            UNREACHABLE();
-        }
-        tunnel->state = session_proxy_start;
-#endif  // IMPL_SSR_CLIENT
         return;
     } else {
         s5_ctx *parser = &tunnel->parser;
@@ -610,14 +541,8 @@ static void do_proxy_start(struct tunnel_ctx *tunnel) {
         do_kill(tunnel);
         return;
     }
-#if IMPL_SSR_CLIENT
     CHECK(0 == uv_read_start(&outgoing->handle.stream, ssr_alloc_cb, ssr_outgoing_read_done_cb));
     CHECK(0 == uv_read_start(&incoming->handle.stream, ssr_alloc_cb, ssr_incoming_read_done_cb));
-#else
-    socket_read(outgoing);
-    socket_read(incoming);
-    tunnel->state = session_proxy;
-#endif // IMPL_SSR_CLIENT
 }
 
 /* Proxy incoming data back and forth. */
