@@ -226,6 +226,7 @@ sudo apt-get install libssl-dev
 git clone https://github.com/ShadowsocksR-Live/shadowsocksr-native.git
 cd shadowsocksr-native
 git submodule update --init
+git submodule foreach -q 'git checkout $(git config -f $toplevel/.gitmodules submodule.$name.branch || echo master)'
 
 # build ShadowsocksR-native
 cmake CMakeLists.txt && make
