@@ -2,6 +2,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <limits.h>  // for LLONG_MIN and LLONG_MAX
 #include "auth.h"
 #include "obfsutil.h"
 #include "crc32.h"
