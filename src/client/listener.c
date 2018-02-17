@@ -33,11 +33,11 @@
 # define INET6_ADDRSTRLEN 63
 #endif
 
+struct udp_server_ctx_t;
+
 struct listener_t {
     uv_tcp_t *tcp_server;
-#if UDP_RELAY_ENABLE
     struct udp_server_ctx_t *udp_server;
-#endif
 };
 
 struct server_state {

@@ -87,6 +87,7 @@ enum session_state {
     session_handshake_auth,   /* Wait for client authentication data. */
     session_req_start,        /* Start waiting for request data. */
     session_req_parse,        /* Wait for request data. */
+    session_req_udp_accoc,
     session_req_lookup,       /* Wait for upstream hostname DNS lookup to complete. */
     session_req_connect,      /* Wait for uv_tcp_connect() to complete. */
     session_ssr_auth_sent,

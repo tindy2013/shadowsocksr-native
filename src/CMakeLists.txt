@@ -123,6 +123,8 @@ if (!APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 endif()
 
+add_definitions(-DUDP_RELAY_ENABLE)
+
 add_executable(ssr-client ${SOURCE_FILES_CLIENT})
 add_executable(ssr-local ${SOURCE_FILES_LOCAL})
 #add_executable(ss_tunnel ${SOURCE_FILES_TUNNEL})

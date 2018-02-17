@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <uv.h>
 #include "util.h"
 #include "ssrcipher.h"
 #include "encrypt.h"
@@ -96,6 +97,7 @@ static void ssr_outgoing_read_done_cb(uv_stream_t *handle, ssize_t nread, const 
 static void ssr_write(struct socket_ctx *c, const void *data, size_t len);
 static void ssr_write_done_cb(uv_write_t *req, int status);
 static void ssr_incoming_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf0);
+uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len);
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
     return (tunnel->state == session_dead);
@@ -183,6 +185,10 @@ static void do_next(struct tunnel_ctx *tunnel) {
         break;
     case session_req_parse:
         do_req_parse(tunnel);
+        break;
+    case session_req_udp_accoc:
+        // waiting client close.
+        socket_read(&tunnel->incoming);
         break;
     case session_req_lookup:
         do_req_lookup(tunnel);
@@ -352,13 +358,15 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     }
 
     if (parser->cmd == s5_cmd_udp_assoc) {
-        /* Not supported.  Might be hard to implement because libuv has no
-        * functionality for detecting the MTU size which the RFC mandates.
-        */
-        pr_warn("UDP ASSOC requests are not supported.");
-        do_kill(tunnel);
+        // UDP ASSOCIATE requests
+        size_t len = sizeof(incoming->t.buf);
+        uint8_t *buf = build_udp_assoc_package(config->udp, config->listen_host, config->listen_port,
+                                               (uint8_t *)incoming->t.buf, &len);
+        socket_write(incoming, buf, len);
+        tunnel->state = session_req_udp_accoc;
         return;
     }
+
     ASSERT(parser->cmd == s5_cmd_tcp_connect);
 
     tunnel->init_pkg = initial_package_create(parser);
@@ -730,6 +738,9 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     }
 
     if (nread <= 0) {
+        if (tunnel->state == session_req_udp_accoc) {
+            pr_info("UDP ASSOCIATE ending: %s", uv_strerror((int)c->result));
+        }
         // http://docs.libuv.org/en/v1.x/stream.html
         ASSERT(nread == UV_EOF || nread == UV_ECONNRESET);
         if (nread < 0) { do_kill(tunnel); }
@@ -978,4 +989,54 @@ static void ssr_incoming_read_done_cb(uv_stream_t *handle, ssize_t nread, const 
     } while (0);
     buffer_free(buf);
     do_dealloc_uv_buffer((uv_buf_t *)buf0);
+}
+
+uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len) {
+    if (addr_str == NULL || buf==NULL || buf_len==NULL) {
+        return NULL;
+    }
+
+    bool ipV6 = false;
+
+    struct uv_interface_address_s addr;
+    if (uv_ip4_addr(addr_str, port, &addr.address.address4) != 0) {
+        if (uv_ip6_addr(addr_str, port, &addr.address.address6) != 0) {
+            return NULL;
+        }
+        ipV6 = true;
+    }
+
+    if (ipV6) {
+        if (*buf_len < 22) {
+            return NULL;
+        }
+    } else {
+        if (*buf_len < 10) {
+            return NULL;
+        }
+    }
+
+    buf[0] = 5;  // Version.
+    if (allow) {
+        buf[1] = 0;  // Success.
+    } else {
+        buf[1] = 0x07;  // Command not supported.
+    }
+    buf[2] = 0;  // Reserved.
+    buf[3] = (uint8_t) (ipV6 ? 0x04 : 0x01);  // atyp
+
+    size_t in6_addr_w = sizeof(addr.address.address6.sin6_addr);
+    size_t in4_addr_w = sizeof(addr.address.address4.sin_addr);
+    size_t port_w = sizeof(addr.address.address4.sin_port);
+
+    if (ipV6) {
+        *buf_len = 4 + in6_addr_w + port_w;
+        memcpy(buf + 4, &addr.address.address6.sin6_addr, in6_addr_w);
+        memcpy(buf + 4 + in6_addr_w, &addr.address.address6.sin6_port, port_w);
+    } else {
+        *buf_len = 4 + in4_addr_w + port_w;
+        memcpy(buf + 4, &addr.address.address4.sin_addr, in4_addr_w);
+        memcpy(buf + 4 + in4_addr_w, &addr.address.address4.sin_port, port_w);
+    }
+    return buf;
 }
