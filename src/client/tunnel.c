@@ -747,7 +747,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
         return;
     }
 
-    ASSERT(c->t.buf == buf->base);
+    ASSERT(c->t.buf == (uint8_t *) buf->base);
     ASSERT(c->rdstate == socket_busy);
     c->rdstate = socket_done;
     c->result = nread;
@@ -765,7 +765,7 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
 
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
     ASSERT(c->rdstate == socket_busy);
-    buf->base = c->t.buf;
+    buf->base = (char *) c->t.buf;
     buf->len = sizeof(c->t.buf);
 }
 

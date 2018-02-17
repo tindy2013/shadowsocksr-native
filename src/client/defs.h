@@ -77,7 +77,7 @@ struct socket_ctx {
         struct sockaddr_in6 addr6;
         struct sockaddr_in addr4;
         struct sockaddr addr;
-        char buf[SSR_BUFF_SIZE];  /* Scratch space. Used to read data into. */
+        uint8_t buf[SSR_BUFF_SIZE];  /* Scratch space. Used to read data into. */
     } t;
 };
 
