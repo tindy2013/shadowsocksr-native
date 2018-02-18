@@ -47,6 +47,7 @@ typedef size_t uv_buf_len_t;
 #include "obfs.h"
 
 struct server_config;
+struct server_state;
 
 enum socket_state {
     socket_stop,  /* Stopped. */
@@ -110,7 +111,8 @@ struct tunnel_ctx {
 };
 
 /* listener.c */
-int listener_run(struct server_config *cf, uv_loop_t *loop);
+int shadowsocks_r_loop_run(struct server_config *cf, uv_loop_t *loop, struct server_state **state);
+void shadowsocks_r_loop_shutdown(struct server_state *state);
 bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr);

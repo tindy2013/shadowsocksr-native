@@ -42,6 +42,10 @@ struct listener_t {
 
 struct server_state {
     struct server_env_t *env;
+
+    uv_signal_t sigint_watcher;
+    uv_signal_t sigterm_watcher;
+
     int listener_count;
     struct listener_t *listeners;
 };
@@ -50,14 +54,14 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
 static void signal_quit(uv_signal_t* handle, int signum);
 
-int listener_run(struct server_config *cf, uv_loop_t *loop) {
+int shadowsocks_r_loop_run(struct server_config *cf, uv_loop_t *loop, struct server_state **state) {
     struct addrinfo hints;
-    struct server_state *state;
+    struct server_state *svr_state;
     int err;
 
-    state = (struct server_state *) calloc(1, sizeof(*state));
-    state->listeners = NULL;
-    state->env = ssr_cipher_env_create(cf);
+    svr_state = (struct server_state *) calloc(1, sizeof(*svr_state));
+    svr_state->listeners = NULL;
+    svr_state->env = ssr_cipher_env_create(cf);
 
     /* Resolve the address of the interface that we should bind to.
     * The getaddrinfo callback starts the server and everything else.
@@ -68,7 +72,7 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
     hints.ai_protocol = IPPROTO_TCP;
 
     uv_getaddrinfo_t *req = (uv_getaddrinfo_t *)malloc(sizeof(*req));
-    req->data = state;
+    req->data = svr_state;
 
     err = uv_getaddrinfo(loop, req, getaddrinfo_done_cb, cf->listen_host, NULL, &hints);
     if (err != 0) {
@@ -77,23 +81,46 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
     }
 
     // Setup signal handler
-    uv_signal_t sigint_watcher;
-    uv_signal_t sigterm_watcher;
-    uv_signal_init(loop, &sigint_watcher);
-    uv_signal_init(loop, &sigterm_watcher);
-    uv_signal_start(&sigint_watcher, signal_quit, SIGINT);
-    uv_signal_start(&sigterm_watcher, signal_quit, SIGTERM);
+    uv_signal_init(loop, &svr_state->sigint_watcher);
+    uv_signal_start(&svr_state->sigint_watcher, signal_quit, SIGINT);
+    svr_state->sigint_watcher.data = svr_state;
+
+    uv_signal_init(loop, &svr_state->sigterm_watcher);
+    uv_signal_start(&svr_state->sigterm_watcher, signal_quit, SIGTERM);
+    svr_state->sigterm_watcher.data = svr_state;
+
+    if (state) {
+        *state = svr_state;
+    }
 
     /* Start the event loop.  Control continues in getaddrinfo_done_cb(). */
     err = uv_run(loop, UV_RUN_DEFAULT);
     if (err != 0) {
         pr_err("uv_run: %s", uv_strerror(err));
     }
-    
-    uv_signal_stop(&sigint_watcher);
-    uv_signal_stop(&sigterm_watcher);
 
-    ssr_cipher_env_release(state->env);
+    ssr_cipher_env_release(svr_state->env);
+
+    if (svr_state->listeners) {
+        free(svr_state->listeners);
+    }
+
+    free(svr_state);
+
+    return err;
+}
+
+static void tcp_close_done_cb(uv_handle_t* handle) {
+    free((void *)((uv_tcp_t *)handle));
+}
+
+void shadowsocks_r_loop_shutdown(struct server_state *state) {
+    if (state==NULL) {
+        return;
+    }
+
+    uv_signal_stop(&state->sigint_watcher);
+    uv_signal_stop(&state->sigterm_watcher);
 
     if (state->listeners && state->listener_count) {
         for (size_t n = 0; n < state->listener_count; ++n) {
@@ -101,24 +128,17 @@ int listener_run(struct server_config *cf, uv_loop_t *loop) {
 
             uv_tcp_t *tcp_server = listener->tcp_server;
             if (tcp_server) {
-                free(tcp_server);
+                uv_close((uv_handle_t *)tcp_server, tcp_close_done_cb);
             }
 
 #if UDP_RELAY_ENABLE
             struct udp_server_ctx_t *udp_server = listener->udp_server;
             if (udp_server) {
-                free_udprelay(udp_server);
+                udprelay_shutdown(udp_server);
             }
 #endif // UDP_RELAY_ENABLE
         }
     }
-    if (state->listeners) {
-        free(state->listeners);
-    }
-
-    free(state);
-
-    return err;
 }
 
 /* Bind a server to each address that getaddrinfo() reported. */
@@ -225,7 +245,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 #if UDP_RELAY_ENABLE
         if (cf->udp) {
             int remote_addr_len = (s.addr.sa_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
-            listener->udp_server = init_udprelay(loop,
+            listener->udp_server = udprelay_begin(loop,
                 cf->listen_host, cf->listen_port,
                 &s.addr, remote_addr_len,
                 NULL, 0, cf->idle_timeout, NULL,
@@ -298,7 +318,12 @@ static void signal_quit(uv_signal_t* handle, int signum) {
 #ifndef __MINGW32__
     case SIGUSR1:
 #endif
-        uv_stop(handle->loop);
+    {
+        assert(handle);
+        struct server_state *state = (struct server_state *)handle->data;
+        assert(state);
+        shadowsocks_r_loop_shutdown(state);
+    }
         break;
     default:
         assert(0);

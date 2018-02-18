@@ -41,6 +41,8 @@ static const char * parse_opts(int argc, char **argv);
 static bool parse_config_file(const char *file, struct server_config *cf);
 static void usage(void);
 
+struct server_state *state = NULL;
+
 int main(int argc, char **argv) {
     struct server_config *config = NULL;
     int err = -1;
@@ -72,8 +74,8 @@ int main(int argc, char **argv) {
         }
 
         uv_loop_t *loop = uv_loop_new(); // uv_default_loop();
-        listener_run(config, loop);
-        //uv_loop_delete(loop);
+        shadowsocks_r_loop_run(config, loop, &state);
+        uv_loop_delete(loop);
 
         err = 0;
     } while(0);
