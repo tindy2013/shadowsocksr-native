@@ -1791,7 +1791,7 @@ main(int argc, char **argv)
 
         // Setup UDP
         if (mode != TCP_ONLY) {
-            init_udprelay(server_host[index], server_port, mtu,
+            udprelay_begin(server_host[index], server_port, mtu,
                           atoi(timeout), iface, NULL, NULL);
         }
 
@@ -1858,7 +1858,7 @@ main(int argc, char **argv)
     }
 
     if (mode != TCP_ONLY) {
-        free_udprelay();
+        udprelay_shutdown();
     }
 
     resolv_shutdown(loop);

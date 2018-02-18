@@ -1447,7 +1447,7 @@ main(int argc, char **argv)
     // Setup UDP
     if (mode != TCP_ONLY) {
         LOGI("UDP relay enabled");
-        init_udprelay(local_addr, local_port, (struct sockaddr*)listen_ctx->servers[0].addr_udp,
+        udprelay_begin(local_addr, local_port, (struct sockaddr*)listen_ctx->servers[0].addr_udp,
                       listen_ctx->servers[0].addr_udp_len, tunnel_addr, mtu, listen_ctx->timeout, NULL, &listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
     }
 

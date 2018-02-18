@@ -29,7 +29,7 @@ struct ss_host_port;
 struct udp_server_ctx_t;
 struct cipher_env_t;
 
-struct udp_server_ctx_t * init_udprelay(uv_loop_t *loop, const char *server_host, uint16_t server_port,
+struct udp_server_ctx_t * udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 #ifdef MODULE_LOCAL
     const struct sockaddr *remote_addr, const int remote_addr_len,
     const struct ss_host_port *tunnel_addr,
@@ -37,6 +37,6 @@ struct udp_server_ctx_t * init_udprelay(uv_loop_t *loop, const char *server_host
     int mtu, int timeout, const char *iface, struct cipher_env_t *cipher_env,
     const char *protocol, const char *protocol_param);
 
-void free_udprelay(struct udp_server_ctx_t *server_ctx);
+void udprelay_shutdown(struct udp_server_ctx_t *server_ctx);
 
 #endif // _UDPRELAY_H
