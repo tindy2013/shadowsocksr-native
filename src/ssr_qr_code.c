@@ -2,6 +2,7 @@
 #include "base64.h"
 #include "ssrcipher.h"
 #include "ssr_cipher_names.h"
+#include "obfs.h" // for SSR_BUFF_SIZE
 
 static const char *ss_header = "ss://";
 static const char *ssr_header = "ssr://";

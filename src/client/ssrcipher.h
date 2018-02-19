@@ -8,9 +8,8 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "obfs.h"
-
 struct cipher_env_t;
+struct obfs_manager;
 
 struct server_config {
     char *listen_host;

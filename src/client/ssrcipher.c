@@ -29,6 +29,7 @@
 #include "encrypt.h"
 #include "obfsutil.h"
 #include "ssrbuffer.h"
+#include "obfs.h"
 
 const char * ssr_strerror(enum ssr_error err) {
 #define SSR_ERR_GEN(_, name, errmsg) case (name): return errmsg;
