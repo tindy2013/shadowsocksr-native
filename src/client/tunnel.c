@@ -475,13 +475,16 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
     } else {
         s5_ctx *parser = &tunnel->parser;
         char *addr = NULL;
+        char ip_str[INET6_ADDRSTRLEN] = { 0 };
 
         if (parser->atyp == s5_atyp_host) {
             addr = (char *)parser->daddr;
         } else if (parser->atyp == s5_atyp_ipv4) {
-            addr = inet_ntoa(*(struct in_addr *)parser->daddr);
+            uv_inet_ntop(AF_INET, parser->daddr, ip_str, sizeof(ip_str));
+            addr = ip_str;
         } else {
-            ASSERT(!"not support ipv6 yet."); // inet_ntop()
+            uv_inet_ntop(AF_INET6, parser->daddr, ip_str, sizeof(ip_str));
+            addr = ip_str;
         }
         const char *fmt = "upstream connection \"%s\" error: %s\n";
         pr_err(fmt, addr, uv_strerror((int)outgoing->result));

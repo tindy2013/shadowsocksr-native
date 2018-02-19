@@ -73,9 +73,8 @@ int main(int argc, char **argv) {
             break;
         }
 
-        uv_loop_t *loop = uv_loop_new(); // uv_default_loop();
-        shadowsocks_r_loop_run(config, loop, &state);
-        uv_loop_delete(loop);
+        ssr_run_loop_begin(config, &state);
+        state = NULL;
 
         err = 0;
     } while(0);
