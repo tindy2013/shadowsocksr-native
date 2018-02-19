@@ -10,6 +10,8 @@
 
 struct cipher_env_t;
 struct obfs_manager;
+struct tunnel_ctx;
+struct clib_slist;
 
 struct server_config {
     char *listen_host;
@@ -29,6 +31,8 @@ struct server_config {
 
 struct server_env_t {
     struct server_config *config; // __weak_ptr
+    
+    struct clib_set *tunnel_set;
 
     struct cipher_env_t *cipher;
 
@@ -80,6 +84,9 @@ void config_release(struct server_config *cf);
 
 struct server_env_t * ssr_cipher_env_create(struct server_config *config);
 void ssr_cipher_env_release(struct server_env_t *env);
+void cached_tunnel_add(struct server_env_t *env, struct tunnel_ctx *tunnel);
+void cached_tunnel_remove(struct server_env_t *env, struct tunnel_ctx *tunnel);
+void cached_tunnel_traverse(struct server_env_t *env, void(*fn)(struct tunnel_ctx *tunnel, void *p), void *p);
 struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const struct buffer_t *init_pkg);
 void tunnel_cipher_release(struct tunnel_cipher_ctx *tc);
 enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf);

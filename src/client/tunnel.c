@@ -75,7 +75,6 @@ static void do_req_connect(struct tunnel_ctx *tunnel);
 static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
 static void do_proxy_start(struct tunnel_ctx *tunnel);
 static void do_proxy(struct tunnel_ctx *tunnel);
-static void do_kill(struct tunnel_ctx *tunnel);
 static int socket_cycle(const char *who, struct socket_ctx *a, struct socket_ctx *b);
 static void socket_timer_reset(struct socket_ctx *c);
 static void socket_timer_expire_cb(uv_timer_t *handle);
@@ -107,15 +106,10 @@ static void tunnel_add_ref(struct tunnel_ctx *tunnel) {
     tunnel->ref_count++;
 }
 
-int tunnel_count = 0;
-
 static void tunnel_release(struct tunnel_ctx *tunnel) {
     tunnel->ref_count--;
     if (tunnel->ref_count == 0) {
-        tunnel_count--;
-        if (tunnel_count == 0) {
-            pr_info("Great! tunnel count is zero.");
-        }
+        cached_tunnel_remove(tunnel->env, tunnel);
         if (tunnel->cipher) {
             tunnel_cipher_release(tunnel->cipher);
         }
@@ -132,8 +126,6 @@ void tunnel_initialize(uv_tcp_t *listener, struct server_env_t *env) {
     uv_loop_t *loop = listener->loop;
     //struct server_env_t *env = listener->data;
     struct server_config *config = env->config;
-
-    tunnel_count++;
 
     tunnel = calloc(1, sizeof(*tunnel));
 
@@ -165,6 +157,8 @@ void tunnel_initialize(uv_tcp_t *listener, struct server_env_t *env) {
 
     /* Wait for the initial packet. */
     socket_read(incoming);
+
+    cached_tunnel_add(tunnel->env, tunnel);
 }
 
 /* This is the core state machine that drives the client <-> upstream proxy.
@@ -568,7 +562,7 @@ static void do_proxy(struct tunnel_ctx *tunnel) {
     }
 }
 
-static void do_kill(struct tunnel_ctx *tunnel) {
+void do_kill(struct tunnel_ctx *tunnel) {
     ASSERT(tunnel_is_dead(tunnel) == false);
 
     /* Try to cancel the request. The callback still runs but if the

@@ -30,6 +30,7 @@
 #include "obfsutil.h"
 #include "ssrbuffer.h"
 #include "obfs.h"
+#include "c_lib.h"
 
 const char * ssr_strerror(enum ssr_error err) {
 #define SSR_ERR_GEN(_, name, errmsg) case (name): return errmsg;
@@ -86,6 +87,18 @@ void config_release(struct server_config *cf) {
     object_safe_free((void **)&cf);
 }
 
+static int set_compare_element(void *left, void *right) {
+    struct tunnel_ctx *l = *(struct tunnel_ctx **)left;
+    struct tunnel_ctx *r = *(struct tunnel_ctx **)right;
+    if ( l < r ) {
+        return -1;
+    } else if ( l > r ) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 struct server_env_t * ssr_cipher_env_create(struct server_config *config) {
     srand((unsigned int)time(NULL));
 
@@ -96,6 +109,9 @@ struct server_env_t * ssr_cipher_env_create(struct server_config *config) {
     // init obfs
     init_obfs(env, config->protocol, config->obfs);
 
+    // https://github.com/davinash/cstl/blob/master/test/t_c_set.c#L93
+    env->tunnel_set = new_c_set(set_compare_element, NULL);
+    
     return env;
 }
 
@@ -115,7 +131,41 @@ void ssr_cipher_env_release(struct server_env_t *env) {
     }
     cipher_env_release(env->cipher);
 
+    delete_c_set(env->tunnel_set);
+    
     object_safe_free((void **)&env);
+}
+
+void cached_tunnel_add(struct server_env_t *env, struct tunnel_ctx *tunnel) {
+    struct clib_set *tunnel_set = env->tunnel_set;
+    insert_c_set(tunnel_set, &tunnel, sizeof(void *));
+}
+
+void cached_tunnel_remove(struct server_env_t *env, struct tunnel_ctx *tunnel) {
+    struct clib_set *tunnel_set = env->tunnel_set;
+    
+    assert(clib_true == exists_c_set(tunnel_set, &tunnel));
+    remove_c_set(tunnel_set, &tunnel);
+    
+    /*
+     if (tunnel_count == 0) {
+     pr_info("Great! tunnel count is zero.");
+     }
+     */
+}
+
+void cached_tunnel_traverse(struct server_env_t *env, void(*fn)(struct tunnel_ctx *tunnel, void *p), void *p) {
+    if (env==NULL || fn==NULL) {
+        return;
+    }
+    struct clib_iterator *set_iter = new_iterator_c_set(env->tunnel_set);
+    struct clib_object *element_in_set;
+    while( (element_in_set = set_iter->get_next(set_iter)) ) {
+        struct tunnel_ctx **tunnel = set_iter->get_value(element_in_set);
+        fn(*tunnel, p);
+        free(tunnel);
+    }
+    delete_iterator_c_array(set_iter);
 }
 
 void init_obfs(struct server_env_t *env, const char *protocol, const char *obfs) {

@@ -126,6 +126,11 @@ static void tcp_close_done_cb(uv_handle_t* handle) {
     free((void *)((uv_tcp_t *)handle));
 }
 
+static void _do_shutdown_tunnel(struct tunnel_ctx *tunnel, void *p) {
+    do_kill(tunnel);
+    (void)p;
+}
+
 void ssr_run_loop_shutdown(struct run_loop_state *state) {
     if (state==NULL) {
         return;
@@ -151,6 +156,8 @@ void ssr_run_loop_shutdown(struct run_loop_state *state) {
 #endif // UDP_RELAY_ENABLE
         }
     }
+
+    cached_tunnel_traverse(state->env, &_do_shutdown_tunnel, NULL);
 }
 
 /* Bind a server to each address that getaddrinfo() reported. */
