@@ -46,6 +46,8 @@ struct run_loop_state {
     uv_signal_t *sigint_watcher;
     uv_signal_t *sigterm_watcher;
 
+    bool shutting_down;
+    
     int listener_count;
     struct listener_t *listeners;
 };
@@ -135,6 +137,11 @@ void ssr_run_loop_shutdown(struct run_loop_state *state) {
     if (state==NULL) {
         return;
     }
+    
+    if (state->shutting_down) {
+        return;
+    }
+    state->shutting_down = true;
 
     uv_signal_stop(state->sigint_watcher);
     uv_signal_stop(state->sigterm_watcher);
