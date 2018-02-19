@@ -146,12 +146,6 @@ void cached_tunnel_remove(struct server_env_t *env, struct tunnel_ctx *tunnel) {
     
     assert(clib_true == exists_c_set(tunnel_set, &tunnel));
     remove_c_set(tunnel_set, &tunnel);
-    
-    /*
-     if (tunnel_count == 0) {
-     pr_info("Great! tunnel count is zero.");
-     }
-     */
 }
 
 void cached_tunnel_traverse(struct server_env_t *env, void(*fn)(struct tunnel_ctx *tunnel, void *p), void *p) {
