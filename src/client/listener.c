@@ -54,7 +54,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
 static void signal_quit(uv_signal_t* handle, int signum);
 
-int shadowsocks_r_loop_run(struct server_config *cf, struct run_loop_state **state) {
+int ssr_run_loop_begin(struct server_config *cf, struct run_loop_state **state) {
     uv_loop_t * loop = NULL;
     struct addrinfo hints;
     struct run_loop_state *svr_state;
@@ -126,7 +126,7 @@ static void tcp_close_done_cb(uv_handle_t* handle) {
     free((void *)((uv_tcp_t *)handle));
 }
 
-void shadowsocks_r_loop_shutdown(struct run_loop_state *state) {
+void ssr_run_loop_shutdown(struct run_loop_state *state) {
     if (state==NULL) {
         return;
     }
@@ -334,7 +334,7 @@ static void signal_quit(uv_signal_t* handle, int signum) {
         assert(handle);
         struct run_loop_state *state = (struct run_loop_state *)handle->data;
         assert(state);
-        shadowsocks_r_loop_shutdown(state);
+        ssr_run_loop_shutdown(state);
     }
         break;
     default:

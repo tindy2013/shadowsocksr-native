@@ -111,8 +111,8 @@ struct tunnel_ctx {
 };
 
 /* listener.c */
-int shadowsocks_r_loop_run(struct server_config *cf, struct run_loop_state **state);
-void shadowsocks_r_loop_shutdown(struct run_loop_state *state);
+int ssr_run_loop_begin(struct server_config *cf, struct run_loop_state **state);
+void ssr_run_loop_shutdown(struct run_loop_state *state);
 bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr);
