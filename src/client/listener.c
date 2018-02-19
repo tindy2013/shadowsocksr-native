@@ -43,8 +43,8 @@ struct listener_t {
 struct server_state {
     struct server_env_t *env;
 
-    uv_signal_t sigint_watcher;
-    uv_signal_t sigterm_watcher;
+    uv_signal_t *sigint_watcher;
+    uv_signal_t *sigterm_watcher;
 
     int listener_count;
     struct listener_t *listeners;
@@ -54,14 +54,20 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
 static void signal_quit(uv_signal_t* handle, int signum);
 
-int shadowsocks_r_loop_run(struct server_config *cf, uv_loop_t *loop, struct server_state **state) {
+int shadowsocks_r_loop_run(struct server_config *cf, struct server_state **state) {
+    uv_loop_t * loop = NULL;
     struct addrinfo hints;
     struct server_state *svr_state;
     int err;
 
+    loop = calloc(1, sizeof(uv_loop_t));
+    uv_loop_init(loop);
+
     svr_state = (struct server_state *) calloc(1, sizeof(*svr_state));
     svr_state->listeners = NULL;
     svr_state->env = ssr_cipher_env_create(cf);
+    svr_state->sigint_watcher = (uv_signal_t *) calloc(1, sizeof(uv_signal_t));
+    svr_state->sigterm_watcher = (uv_signal_t *) calloc(1, sizeof(uv_signal_t));
 
     /* Resolve the address of the interface that we should bind to.
     * The getaddrinfo callback starts the server and everything else.
@@ -81,13 +87,13 @@ int shadowsocks_r_loop_run(struct server_config *cf, uv_loop_t *loop, struct ser
     }
 
     // Setup signal handler
-    uv_signal_init(loop, &svr_state->sigint_watcher);
-    uv_signal_start(&svr_state->sigint_watcher, signal_quit, SIGINT);
-    svr_state->sigint_watcher.data = svr_state;
+    uv_signal_init(loop, svr_state->sigint_watcher);
+    uv_signal_start(svr_state->sigint_watcher, signal_quit, SIGINT);
+    svr_state->sigint_watcher->data = svr_state;
 
-    uv_signal_init(loop, &svr_state->sigterm_watcher);
-    uv_signal_start(&svr_state->sigterm_watcher, signal_quit, SIGTERM);
-    svr_state->sigterm_watcher.data = svr_state;
+    uv_signal_init(loop, svr_state->sigterm_watcher);
+    uv_signal_start(svr_state->sigterm_watcher, signal_quit, SIGTERM);
+    svr_state->sigterm_watcher->data = svr_state;
 
     if (state) {
         *state = svr_state;
@@ -105,8 +111,14 @@ int shadowsocks_r_loop_run(struct server_config *cf, uv_loop_t *loop, struct ser
         free(svr_state->listeners);
     }
 
+    free(svr_state->sigint_watcher);
+    free(svr_state->sigterm_watcher);
+    
     free(svr_state);
 
+    uv_loop_close(loop);
+    free(loop); loop = NULL;
+    
     return err;
 }
 
@@ -119,8 +131,8 @@ void shadowsocks_r_loop_shutdown(struct server_state *state) {
         return;
     }
 
-    uv_signal_stop(&state->sigint_watcher);
-    uv_signal_stop(&state->sigterm_watcher);
+    uv_signal_stop(state->sigint_watcher);
+    uv_signal_stop(state->sigterm_watcher);
 
     if (state->listeners && state->listener_count) {
         for (size_t n = 0; n < state->listener_count; ++n) {
