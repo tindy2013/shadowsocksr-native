@@ -40,7 +40,7 @@ struct listener_t {
     struct udp_server_ctx_t *udp_server;
 };
 
-struct server_state {
+struct run_loop_state {
     struct server_env_t *env;
 
     uv_signal_t *sigint_watcher;
@@ -54,16 +54,16 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
 static void signal_quit(uv_signal_t* handle, int signum);
 
-int shadowsocks_r_loop_run(struct server_config *cf, struct server_state **state) {
+int shadowsocks_r_loop_run(struct server_config *cf, struct run_loop_state **state) {
     uv_loop_t * loop = NULL;
     struct addrinfo hints;
-    struct server_state *svr_state;
+    struct run_loop_state *svr_state;
     int err;
 
     loop = calloc(1, sizeof(uv_loop_t));
     uv_loop_init(loop);
 
-    svr_state = (struct server_state *) calloc(1, sizeof(*svr_state));
+    svr_state = (struct run_loop_state *) calloc(1, sizeof(*svr_state));
     svr_state->listeners = NULL;
     svr_state->env = ssr_cipher_env_create(cf);
     svr_state->sigint_watcher = (uv_signal_t *) calloc(1, sizeof(uv_signal_t));
@@ -126,7 +126,7 @@ static void tcp_close_done_cb(uv_handle_t* handle) {
     free((void *)((uv_tcp_t *)handle));
 }
 
-void shadowsocks_r_loop_shutdown(struct server_state *state) {
+void shadowsocks_r_loop_shutdown(struct run_loop_state *state) {
     if (state==NULL) {
         return;
     }
@@ -158,7 +158,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
     char addrbuf[INET6_ADDRSTRLEN + 1];
     unsigned int ipv4_naddrs;
     unsigned int ipv6_naddrs;
-    struct server_state *state;
+    struct run_loop_state *state;
     struct server_env_t *env;
     const struct server_config *cf;
     struct addrinfo *ai;
@@ -175,7 +175,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 
     loop = req->loop;
 
-    state = (struct server_state *) req->data;
+    state = (struct run_loop_state *) req->data;
     ASSERT(state);
     env = state->env;
     cf = env->config;
@@ -332,7 +332,7 @@ static void signal_quit(uv_signal_t* handle, int signum) {
 #endif
     {
         assert(handle);
-        struct server_state *state = (struct server_state *)handle->data;
+        struct run_loop_state *state = (struct run_loop_state *)handle->data;
         assert(state);
         shadowsocks_r_loop_shutdown(state);
     }
