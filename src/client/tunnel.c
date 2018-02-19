@@ -200,7 +200,7 @@ static void do_next(struct tunnel_ctx *tunnel) {
         do_proxy(tunnel);
         break;
     case session_kill:
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         break;
     default:
         UNREACHABLE();
@@ -223,7 +223,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
 
     if (incoming->result < 0) {
         pr_err("read error: %s", uv_strerror((int)incoming->result));
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
@@ -242,13 +242,13 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
         * Requires client support however.
         */
         pr_err("junk in handshake");
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
     if (err != s5_auth_select) {
         pr_err("handshake error: %s", s5_strerror(err));
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
@@ -262,7 +262,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
 
     if ((methods & s5_auth_passwd) && can_auth_passwd(tunnel->listener, tunnel)) {
         /* TODO(bnoordhuis) Implement username/password auth. */
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
@@ -273,7 +273,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
 /* TODO(bnoordhuis) Implement username/password auth. */
 static void do_handshake_auth(struct tunnel_ctx *tunnel) {
     UNREACHABLE();
-    do_kill(tunnel);
+    tunnel_shutdown(tunnel);
 }
 
 static void do_req_start(struct tunnel_ctx *tunnel) {
@@ -286,7 +286,7 @@ static void do_req_start(struct tunnel_ctx *tunnel) {
 
     if (incoming->result < 0) {
         pr_err("write error: %s", uv_strerror((int)incoming->result));
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
@@ -319,7 +319,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
 
     if (incoming->result < 0) {
         pr_err("read error: %s", uv_strerror((int)incoming->result));
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
@@ -334,20 +334,20 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
 
     if (size != 0) {
         pr_err("junk in request %u", (unsigned)size);
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
     if (err != s5_exec_cmd) {
         pr_err("request error: %s", s5_strerror(err));
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
     if (parser->cmd == s5_cmd_tcp_bind) {
         /* Not supported but relatively straightforward to implement. */
         pr_warn("BIND requests are not supported.");
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
@@ -441,7 +441,7 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel) {
     err = socket_connect(outgoing);
     if (err != 0) {
         pr_err("connect error: %s\n", uv_strerror(err));
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
@@ -464,7 +464,7 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
         struct buffer_t *tmp = buffer_clone(tunnel->init_pkg);
         if (ssr_ok != tunnel_encrypt(tunnel->cipher, tmp)) {
             buffer_free(tmp);
-            do_kill(tunnel);
+            tunnel_shutdown(tunnel);
             return;
         }
         socket_write(outgoing, tmp->buffer, tmp->len);
@@ -492,7 +492,7 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
     }
 
     UNREACHABLE();
-    do_kill(tunnel);
+    tunnel_shutdown(tunnel);
 }
 
 static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
@@ -509,7 +509,7 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
 
     if (outgoing->result < 0) {
         pr_err("write error: %s", uv_strerror((int)outgoing->result));
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
@@ -540,7 +540,7 @@ static void do_proxy_start(struct tunnel_ctx *tunnel) {
 
     if (incoming->result < 0) {
         pr_err("write error: %s", uv_strerror((int)incoming->result));
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
     CHECK(0 == uv_read_start(&outgoing->handle.stream, ssr_alloc_cb, ssr_outgoing_read_done_cb));
@@ -552,17 +552,17 @@ static void do_proxy(struct tunnel_ctx *tunnel) {
     tunnel->state = session_proxy;
 
     if (socket_cycle("client", &tunnel->incoming, &tunnel->outgoing) != 0) {
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 
     if (socket_cycle("upstream", &tunnel->outgoing, &tunnel->incoming) != 0) {
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;
     }
 }
 
-void do_kill(struct tunnel_ctx *tunnel) {
+void tunnel_shutdown(struct tunnel_ctx *tunnel) {
     ASSERT(tunnel_is_dead(tunnel) == false);
 
     /* Try to cancel the request. The callback still runs but if the
@@ -630,7 +630,7 @@ static void socket_timer_expire_cb(uv_timer_t *handle) {
         return;
     }
 
-    do_kill(tunnel);
+    tunnel_shutdown(tunnel);
 }
 
 static void socket_getaddrinfo(struct socket_ctx *c, const char *hostname) {
@@ -704,7 +704,7 @@ static void socket_connect_done_cb(uv_connect_t *req, int status) {
     }
 
     if (status == UV_ECANCELED || status == UV_ECONNREFUSED) {
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;  /* Handle has been closed. */
     }
 
@@ -737,7 +737,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
         }
         // http://docs.libuv.org/en/v1.x/stream.html
         ASSERT(nread == UV_EOF || nread == UV_ECONNRESET);
-        if (nread < 0) { do_kill(tunnel); }
+        if (nread < 0) { tunnel_shutdown(tunnel); }
         return;
     }
 
@@ -790,7 +790,7 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
     }
 
     if (status == UV_ECANCELED) {
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
         return;  /* Handle has been closed. */
     }
 
@@ -892,7 +892,7 @@ static void ssr_outgoing_read_done_cb(uv_stream_t *handle, ssize_t nread, const 
 
         if (nread <= 0) {
             ASSERT(nread == 0 || nread == UV_EOF || nread == UV_ECONNRESET);
-            if (nread < 0) { do_kill(tunnel); }
+            if (nread < 0) { tunnel_shutdown(tunnel); }
             break;
         }
 
@@ -901,7 +901,7 @@ static void ssr_outgoing_read_done_cb(uv_stream_t *handle, ssize_t nread, const 
 
         struct buffer_t *feedback = NULL;
         if (ssr_ok != tunnel_decrypt(tc, buf, &feedback)) {
-            do_kill(tunnel);
+            tunnel_shutdown(tunnel);
             break;
         }
         if (feedback) {
@@ -940,7 +940,7 @@ static void ssr_write_done_cb(uv_write_t *req, int status) {
         return;
     }
     if (status < 0) {
-        do_kill(tunnel);
+        tunnel_shutdown(tunnel);
     }
 }
 
@@ -964,14 +964,14 @@ static void ssr_incoming_read_done_cb(uv_stream_t *handle, ssize_t nread, const 
 
         if (nread <= 0) {
             ASSERT(nread == 0 || nread == UV_EOF || nread == UV_ECONNRESET);
-            if (nread < 0) { do_kill(tunnel); }
+            if (nread < 0) { tunnel_shutdown(tunnel); }
             break;
         }
 
         buf = buffer_alloc(SSR_BUFF_SIZE);
         buffer_store(buf, buf0->base, (size_t)nread);
         if (ssr_ok != tunnel_encrypt(tc, buf)) {
-            do_kill(tunnel);
+            tunnel_shutdown(tunnel);
             break;
         }
         if (buf->len > 0) {

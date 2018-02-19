@@ -127,7 +127,7 @@ static void tcp_close_done_cb(uv_handle_t* handle) {
 }
 
 static void _do_shutdown_tunnel(struct tunnel_ctx *tunnel, void *p) {
-    do_kill(tunnel);
+    tunnel_shutdown(tunnel);
     (void)p;
 }
 
