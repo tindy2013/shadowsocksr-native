@@ -74,7 +74,7 @@ static void pr_do(FILE *stream, const char *label, const char *fmt, va_list ap) 
     free(fmtbuf);
 }
 
-int convert_address(const char *addr_str, unsigned short port, union sockaddr_universal *addr)
+int convert_address(const char *addr_str, unsigned short port, sockaddr_universal *addr)
 {
     struct addrinfo hints = { 0 }, *ai = NULL;
     int status;

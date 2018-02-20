@@ -24,6 +24,7 @@
 
 #include "s5.h"
 #include <uv.h>
+#include "util.h"
 
 #if defined(_WIN32)
 typedef ULONG uv_buf_len_t;
@@ -75,9 +76,7 @@ struct socket_ctx {
         uv_getaddrinfo_t addrinfo_req;
         uv_connect_t connect_req;
         uv_req_t req;
-        struct sockaddr_in6 addr6;
-        struct sockaddr_in addr4;
-        struct sockaddr addr;
+        sockaddr_universal addr;
         uint8_t buf[SSR_BUFF_SIZE];  /* Scratch space. Used to read data into. */
     } t;
 };

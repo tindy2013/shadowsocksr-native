@@ -181,11 +181,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
     uv_loop_t *loop;
     unsigned int n;
     int err;
-    union {
-        struct sockaddr addr;
-        struct sockaddr_in addr4;
-        struct sockaddr_in6 addr6;
-    } s;
+    sockaddr_universal s;
 
     loop = req->loop;
 

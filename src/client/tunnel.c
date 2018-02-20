@@ -365,7 +365,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     tunnel->init_pkg = initial_package_create(parser);
     tunnel->cipher = tunnel_cipher_create(tunnel->env, tunnel->init_pkg);
 
-    union sockaddr_universal remote_addr = { 0 };
+    sockaddr_universal remote_addr = { 0 };
     if (convert_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
         socket_getaddrinfo(outgoing, config->remote_host);
         tunnel->state = session_req_lookup;
@@ -402,12 +402,12 @@ static void do_req_lookup(struct tunnel_ctx *tunnel) {
     }
 
     /* Don't make assumptions about the offset of sin_port/sin6_port. */
-    switch (outgoing->t.addr.sa_family) {
+    switch (outgoing->t.addr.addr.sa_family) {
     case AF_INET:
-        outgoing->t.addr4.sin_port = htons(parser->dport);
+        outgoing->t.addr.addr4.sin_port = htons(parser->dport);
         break;
     case AF_INET6:
-        outgoing->t.addr6.sin6_port = htons(parser->dport);
+        outgoing->t.addr.addr6.sin6_port = htons(parser->dport);
         break;
     default:
         UNREACHABLE();
@@ -429,7 +429,7 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel) {
     ASSERT(outgoing->rdstate == socket_stop);
     ASSERT(outgoing->wrstate == socket_stop);
 
-    if (!can_access(tunnel->listener, tunnel, &outgoing->t.addr)) {
+    if (!can_access(tunnel->listener, tunnel, &outgoing->t.addr.addr)) {
         pr_warn("connection not allowed by ruleset");
         /* Send a 'Connection not allowed by ruleset' reply. */
         socket_write(incoming, "\5\2\0\1\0\0\0\0\0\0", 10);
@@ -670,9 +670,9 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
     if (status == 0) {
         /* FIXME(bnoordhuis) Should try all addresses. */
         if (ai->ai_family == AF_INET) {
-            c->t.addr4 = *(const struct sockaddr_in *) ai->ai_addr;
+            c->t.addr.addr4 = *(const struct sockaddr_in *) ai->ai_addr;
         } else if (ai->ai_family == AF_INET6) {
-            c->t.addr6 = *(const struct sockaddr_in6 *) ai->ai_addr;
+            c->t.addr.addr6 = *(const struct sockaddr_in6 *) ai->ai_addr;
         } else {
             UNREACHABLE();
         }
@@ -684,11 +684,11 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
 
 /* Assumes that c->t.sa contains a valid AF_INET or AF_INET6 address. */
 static int socket_connect(struct socket_ctx *c) {
-    ASSERT(c->t.addr.sa_family == AF_INET || c->t.addr.sa_family == AF_INET6);
+    ASSERT(c->t.addr.addr.sa_family == AF_INET || c->t.addr.addr.sa_family == AF_INET6);
     socket_timer_reset(c);
     return uv_tcp_connect(&c->t.connect_req,
         &c->handle.tcp,
-        &c->t.addr,
+        &c->t.addr.addr,
         socket_connect_done_cb);
 }
 
@@ -991,9 +991,9 @@ uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, ui
 
     bool ipV6 = false;
 
-    struct uv_interface_address_s addr;
-    if (uv_ip4_addr(addr_str, port, &addr.address.address4) != 0) {
-        if (uv_ip6_addr(addr_str, port, &addr.address.address6) != 0) {
+    sockaddr_universal addr;
+    if (uv_ip4_addr(addr_str, port, &addr.addr4) != 0) {
+        if (uv_ip6_addr(addr_str, port, &addr.addr6) != 0) {
             return NULL;
         }
         ipV6 = true;
@@ -1018,18 +1018,18 @@ uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, ui
     buf[2] = 0;  // Reserved.
     buf[3] = (uint8_t) (ipV6 ? 0x04 : 0x01);  // atyp
 
-    size_t in6_addr_w = sizeof(addr.address.address6.sin6_addr);
-    size_t in4_addr_w = sizeof(addr.address.address4.sin_addr);
-    size_t port_w = sizeof(addr.address.address4.sin_port);
+    size_t in6_addr_w = sizeof(addr.addr6.sin6_addr);
+    size_t in4_addr_w = sizeof(addr.addr4.sin_addr);
+    size_t port_w = sizeof(addr.addr4.sin_port);
 
     if (ipV6) {
         *buf_len = 4 + in6_addr_w + port_w;
-        memcpy(buf + 4, &addr.address.address6.sin6_addr, in6_addr_w);
-        memcpy(buf + 4 + in6_addr_w, &addr.address.address6.sin6_port, port_w);
+        memcpy(buf + 4, &addr.addr6.sin6_addr, in6_addr_w);
+        memcpy(buf + 4 + in6_addr_w, &addr.addr6.sin6_port, port_w);
     } else {
         *buf_len = 4 + in4_addr_w + port_w;
-        memcpy(buf + 4, &addr.address.address4.sin_addr, in4_addr_w);
-        memcpy(buf + 4 + in4_addr_w, &addr.address.address4.sin_port, port_w);
+        memcpy(buf + 4, &addr.addr4.sin_addr, in4_addr_w);
+        memcpy(buf + 4 + in4_addr_w, &addr.addr4.sin_port, port_w);
     }
     return buf;
 }
