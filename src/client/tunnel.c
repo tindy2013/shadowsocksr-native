@@ -181,8 +181,7 @@ static void do_next(struct tunnel_ctx *tunnel) {
         do_req_parse(tunnel);
         break;
     case session_req_udp_accoc:
-        // waiting client close.
-        socket_read(&tunnel->incoming);
+        tunnel_shutdown(tunnel);
         break;
     case session_req_lookup:
         do_req_lookup(tunnel);
@@ -735,9 +734,6 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     }
 
     if (nread <= 0) {
-        if (tunnel->state == session_req_udp_accoc) {
-            pr_info("UDP ASSOCIATE ending: %s", uv_strerror((int)c->result));
-        }
         // http://docs.libuv.org/en/v1.x/stream.html
         ASSERT(nread == UV_EOF || nread == UV_ECONNRESET);
         if (nread < 0) { tunnel_shutdown(tunnel); }
