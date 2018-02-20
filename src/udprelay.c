@@ -182,21 +182,6 @@ static void udp_uv_release_buffer(uv_buf_t *buf) {
     buf->len = 0;
 }
 
-/*
-#ifndef __MINGW32__
-static int
-setnonblocking(int fd)
-{
-    int flags;
-    if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
-        flags = 0;
-    }
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-}
-
-#endif
-*/
-
 #if defined(MODULE_REMOTE) && defined(SO_BROADCAST)
 static int
 set_broadcast(int socket_fd)
@@ -437,17 +422,6 @@ udp_create_remote_socket(bool ipv6, uv_loop_t *loop, uv_udp_t *udp)
         addr.sin6_family = AF_INET6;
         addr.sin6_addr   = in6addr_any;
         addr.sin6_port   = 0;
-        /*
-        remote_sock      = socket(AF_INET6, SOCK_DGRAM, 0);
-        if (remote_sock == -1) {
-            ERROR("[udp] cannot create socket");
-            return -1;
-        }
-        if (bind(remote_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-            FATAL("[udp] cannot bind remote");
-            return -1;
-        }
-        */
         uv_udp_bind(udp, (const struct sockaddr *)&addr, 0);
     } else {
         // Or else bind to IPv4
@@ -455,18 +429,7 @@ udp_create_remote_socket(bool ipv6, uv_loop_t *loop, uv_udp_t *udp)
         addr.sin_family      = AF_INET;
         addr.sin_addr.s_addr = INADDR_ANY;
         addr.sin_port        = 0;
-        /*
-        remote_sock          = socket(AF_INET, SOCK_DGRAM, 0);
-        if (remote_sock == -1) {
-            ERROR("[udp] cannot create socket");
-            return -1;
-        }
 
-        if (bind(remote_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-            FATAL("[udp] cannot bind remote");
-            return -1;
-        }
-        */
         uv_udp_bind(udp, (const struct sockaddr *)&addr, 0);
     }
     return remote_sock;
@@ -522,59 +485,6 @@ udp_create_local_listener(const char *host, uint16_t port, uv_loop_t *loop, uv_u
             break;
         }
         LOGE("uv_udp_bind: %s\n", uv_strerror(r));
-
-        /*
-        server_sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        if (server_sock == -1) {
-            continue;
-        }
-
-        if (rp->ai_family == AF_INET6) {
-            int ipv6only = host ? 1 : 0;
-            setsockopt(server_sock, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6only, sizeof(ipv6only));
-        }
-
-        int opt = 1;
-        setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-#ifdef SO_NOSIGPIPE
-        set_nosigpipe(server_sock);
-#endif
-        int err = set_reuseport(server_sock);
-        if (err == 0) {
-            LOGI("udp port reuse enabled");
-        }
-#ifdef IP_TOS
-        // Set QoS flag
-        int tos = 46;
-        setsockopt(server_sock, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
-#endif
-
-#ifdef MODULE_REDIR
-        if (setsockopt(server_sock, SOL_IP, IP_TRANSPARENT, &opt, sizeof(opt))) {
-            ERROR("[udp] setsockopt IP_TRANSPARENT");
-            exit(EXIT_FAILURE);
-        }
-        if (rp->ai_family == AF_INET) {
-            if (setsockopt(server_sock, SOL_IP, IP_RECVORIGDSTADDR, &opt, sizeof(opt))) {
-                FATAL("[udp] setsockopt IP_RECVORIGDSTADDR");
-            }
-        } else if (rp->ai_family == AF_INET6) {
-            if (setsockopt(server_sock, SOL_IPV6, IPV6_RECVORIGDSTADDR, &opt, sizeof(opt))) {
-                FATAL("[udp] setsockopt IPV6_RECVORIGDSTADDR");
-            }
-        }
-#endif
-
-        s = bind(server_sock, rp->ai_addr, rp->ai_addrlen);
-        if (s == 0) {
-            // We managed to bind successfully! 
-            break;
-        } else {
-            ERROR("[udp] bind");
-        }
-
-        close(server_sock);
-        */
     }
 
     if (rp == NULL) {
@@ -587,39 +497,6 @@ udp_create_local_listener(const char *host, uint16_t port, uv_loop_t *loop, uv_u
     return server_sock;
 }
 
-/*
-struct udp_remote_ctx_t *
-new_udp_remote(struct udp_remote_ctx_t *ctx, struct udp_server_ctx_t *server_ctx)
-{
-    struct udp_remote_ctx_t *ctx = ss_malloc(sizeof(struct udp_remote_ctx_t));
-    memset(ctx, 0, sizeof(struct udp_remote_ctx_t));
-
-    ctx->fd         = fd;
-    ctx->server_ctx = server_ctx;
-
-    ev_io_init(&ctx->io, udp_remote_recv_cb, fd, EV_READ);
-    ev_timer_init(&ctx->watcher, udp_remote_timeout_cb, server_ctx->timeout,
-                  server_ctx->timeout);
-
-    ctx->server_ctx = server_ctx;
-    return ctx;
-}
-*/
-
-/*
-struct udp_server_ctx_t *
-new_server_ctx(int fd)
-{
-    struct udp_server_ctx_t *ctx = ss_malloc(sizeof(struct udp_server_ctx_t));
-    memset(ctx, 0, sizeof(struct udp_server_ctx_t));
-
-    ctx->fd = fd;
-
-    ev_io_init(&ctx->io, udp_listener_recv_cb, fd, EV_READ);
-
-    return ctx;
-}
-*/
 #ifdef MODULE_REMOTE
 struct query_ctx *
 new_query_ctx(char *buf, size_t len)
@@ -800,19 +677,8 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
         return;
     }
 
-    /*
-    struct sockaddr_storage src_addr = { 0 };
-    socklen_t src_addr_len = sizeof(src_addr);
-
-    struct buffer_t *buf = buffer_alloc(buf_size);
-
-    // recv
-    r = recvfrom(remote_ctx->fd, buf->buffer, buf_size, 0, (struct sockaddr *)&src_addr, &src_addr_len);
-     */
-
     if (nread == -1) {
-        // error on recv
-        // simply drop that packet
+        // error on recv, simply drop that packet
         LOGE("[udp] remote_recv_recvfrom");
         goto CLEAN_UP;
     } else if (nread > (ssize_t) packet_size) {
@@ -978,14 +844,6 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
 
 #else
 
-    /*
-    int s = sendto(server_ctx->fd, buf->buffer, buf->len, 0,
-                   (struct sockaddr *)&remote_ctx->src_addr, remote_src_addr_len);
-    if (s == -1) {
-        ERROR("[udp] remote_recv_sendto");
-        goto CLEAN_UP;
-    }
-    */
     uv_udp_send_t *req = (uv_udp_send_t *)ss_malloc(sizeof(uv_udp_send_t));
     req->data = server_ctx;
     uv_buf_t tmp = uv_buf_init(buf->buffer, (unsigned int) buf->len);
@@ -1054,12 +912,6 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 
     src_addr_len = msg.msg_namelen;
 #else
-    /*
-    ssize_t r;
-    r = recvfrom(server_ctx->fd, buf->buffer, buf_size,
-                 0, (struct sockaddr *)&src_addr, &src_addr_len);
-     */
-
     // http://docs.libuv.org/en/v1.x/udp.html
 
     if (nread <= 0) {
@@ -1251,36 +1103,6 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         uv_timer_start(&remote_ctx->watcher, udp_remote_timeout_cb, (uint64_t)server_ctx->timeout, 0);
     }
 
-    /*
-    if (remote_ctx == NULL) {
-        if (verbose) {
-#ifdef MODULE_REDIR
-            char src[SS_ADDRSTRLEN];
-            char dst[SS_ADDRSTRLEN];
-            strcpy(src, get_addr_str((struct sockaddr *)&src_addr));
-            strcpy(dst, get_addr_str((struct sockaddr *)&dst_addr));
-            LOGI("[udp] cache miss: %s <-> %s", dst, src);
-#else
-            LOGI("[udp] cache miss: %s:%s <-> %s", host, port,
-                 get_addr_str((struct sockaddr *)&src_addr));
-#endif
-        }
-    } else {
-        if (verbose) {
-#ifdef MODULE_REDIR
-            char src[SS_ADDRSTRLEN];
-            char dst[SS_ADDRSTRLEN];
-            strcpy(src, get_addr_str((struct sockaddr *)&src_addr));
-            strcpy(dst, get_addr_str((struct sockaddr *)&dst_addr));
-            LOGI("[udp] cache hit: %s <-> %s", dst, src);
-#else
-            LOGI("[udp] cache hit: %s:%s <-> %s", host, port,
-                 get_addr_str((struct sockaddr *)&src_addr));
-#endif
-        }
-    }
-    */
-
 #ifdef MODULE_LOCAL
 
 #if !defined(MODULE_TUNNEL) && !defined(MODULE_REDIR)
@@ -1302,34 +1124,6 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
             LOGE("[udp] udprelay bind() error");
             goto CLEAN_UP;
         }
-        /*
-        setnonblocking(remotefd);
-
-#ifdef SO_NOSIGPIPE
-        set_nosigpipe(remotefd);
-#endif
-#ifdef IP_TOS
-        // Set QoS flag
-        int tos = 46;
-        setsockopt(remotefd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
-#endif
-#ifdef SET_INTERFACE
-        if (server_ctx->iface) {
-            if (setinterface(remotefd, server_ctx->iface) == -1)
-                ERROR("setinterface");
-        }
-#endif
-
-#ifdef ANDROID
-        if (vpn) {
-            if (protect_socket(remotefd) == -1) {
-                ERROR("protect_socket");
-                close(remotefd);
-                goto CLEAN_UP;
-            }
-        }
-#endif
-         */
 
         // Init remote_ctx
         remote_ctx->server_ctx = server_ctx;
@@ -1343,11 +1137,6 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         // Add to conn cache
         cache_insert(conn_cache, key, HASH_KEY_LEN, (void *)remote_ctx);
 
-        /*
-        // Start remote io
-        ev_io_start(EV_A_ & remote_ctx->io);
-        ev_timer_start(EV_A_ & remote_ctx->watcher);
-        */
         uv_udp_recv_start(&remote_ctx->io, udp_uv_alloc_buffer, udp_remote_recv_cb);
         uv_timer_start(&remote_ctx->watcher, udp_remote_timeout_cb, (uint64_t)server_ctx->timeout, 0);
     }
@@ -1378,13 +1167,6 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         goto CLEAN_UP;
     }
 
-    /*
-    int s = sendto(remote_ctx->fd, buf->buffer, buf->len, 0, remote_addr, remote_addr_len);
-
-    if (s == -1) {
-        ERROR("[udp] server_recv_sendto");
-    }
-    */
     uv_udp_send_t *req = (uv_udp_send_t *)ss_malloc(sizeof(uv_udp_send_t));
     req->data = server_ctx;
     uv_buf_t tmp = uv_buf_init(buf->buffer, (unsigned int) buf->len);
@@ -1551,7 +1333,6 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     if (serverfd < 0) {
         FATAL("[udp] bind() error");
     }
-    //setnonblocking(serverfd);
 
     server_ctx->cipher_env = cipher_env;
 #ifdef MODULE_REMOTE
@@ -1616,10 +1397,5 @@ udprelay_shutdown(struct udp_server_ctx_t *server_ctx)
     if (server_ctx == NULL) {
         return;
     }
-        /*
-        ev_io_stop(loop, &server_ctx->io);
-        close(server_ctx->fd);
-        ss_free(server_ctx);
-        */
     uv_close((uv_handle_t *)&server_ctx->io, udp_local_listener_close_done_cb);
 }
