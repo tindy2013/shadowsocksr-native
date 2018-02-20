@@ -266,10 +266,12 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 
 #if UDP_RELAY_ENABLE
         if (cf->udp) {
-            int remote_addr_len = (s.addr.sa_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
+            sockaddr_universal remote_addr = { 0 };
+            convert_address(cf->remote_host, cf->remote_port, &remote_addr);
+
             listener->udp_server = udprelay_begin(loop,
                 cf->listen_host, cf->listen_port,
-                &s.addr, remote_addr_len,
+                &remote_addr,
                 NULL, 0, cf->idle_timeout, NULL,
                 state->env->cipher,
                 cf->protocol, cf->protocol_param);

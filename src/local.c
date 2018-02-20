@@ -1745,8 +1745,8 @@ main(int argc, char **argv)
     // Setup UDP
     if (mode != TCP_ONLY) {
         LOGI("udprelay enabled");
-        udp_server = udprelay_begin(loop, local_addr, atoi(local_port), (struct sockaddr*)listen_ctx->servers[0].addr_udp,
-                      listen_ctx->servers[0].addr_udp_len, &tunnel_addr, mtu, listen_ctx->timeout, listener->iface, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
+        udp_server = udprelay_begin(loop, local_addr, atoi(local_port), (sockaddr_universal *)listen_ctx->servers[0].addr_udp,
+                      &tunnel_addr, mtu, listen_ctx->timeout, listener->iface, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
     }
 
 #ifdef HAVE_LAUNCHD

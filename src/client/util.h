@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
+
 /* main.c */
 void _setprogname(const char *name);
 const char *_getprogname(void);
@@ -21,11 +23,6 @@ void pr_info(const char *fmt, ...) ATTRIBUTE_FORMAT_PRINTF(1, 2);
 void pr_warn(const char *fmt, ...) ATTRIBUTE_FORMAT_PRINTF(1, 2);
 void pr_err(const char *fmt, ...) ATTRIBUTE_FORMAT_PRINTF(1, 2);
 
-typedef union sockaddr_universal {
-    struct sockaddr_in6 addr6;
-    struct sockaddr_in addr4;
-    struct sockaddr addr;
-} sockaddr_universal;
 int convert_address(const char *addr_str, unsigned short port, sockaddr_universal *addr);
 
 #endif // defined(__UTIL_H__)

@@ -105,8 +105,7 @@ struct udp_server_ctx_t {
     const char *iface;
     struct cache *conn_cache;
 #ifdef MODULE_LOCAL
-    const struct sockaddr *remote_addr;
-    int remote_addr_len;
+    sockaddr_universal remote_addr;
     struct ss_host_port tunnel_addr;
 #endif
 #ifdef MODULE_REMOTE
@@ -1226,12 +1225,12 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
             goto CLEAN_UP;
         }
 
-        strncpy(addr_header, buf->buffer + offset, (size_t) addr_header_len);
+        memcpy(addr_header, buf->buffer + offset, (size_t) addr_header_len);
     }
 #endif
 
 #ifdef MODULE_LOCAL
-    char *key = hash_key(server_ctx->remote_addr->sa_family, &src_addr);
+    char *key = hash_key(server_ctx->remote_addr.addr.sa_family, &src_addr);
 #else
     char *key = hash_key(dst_addr.ss_family, &src_addr);
 #endif
@@ -1291,9 +1290,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
     }
 #endif
 
-    const struct sockaddr *remote_addr = server_ctx->remote_addr;
-    const int remote_addr_len          = server_ctx->remote_addr_len;
-    (void)remote_addr_len;
+    const struct sockaddr *remote_addr = &server_ctx->remote_addr.addr;
 
     if (remote_ctx == NULL) {
         remote_ctx = ss_malloc(sizeof(struct udp_remote_ctx_t));
@@ -1391,7 +1388,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
     uv_udp_send_t *req = (uv_udp_send_t *)ss_malloc(sizeof(uv_udp_send_t));
     req->data = server_ctx;
     uv_buf_t tmp = uv_buf_init(buf->buffer, (unsigned int) buf->len);
-    uv_udp_send(req, &remote_ctx->io, &tmp, 1, (const struct sockaddr *)remote_addr, udp_send_done_cb);
+    uv_udp_send(req, &remote_ctx->io, &tmp, 1, remote_addr, udp_send_done_cb);
 
 #if !defined(MODULE_TUNNEL) && !defined(MODULE_REDIR)
 #ifdef ANDROID
@@ -1528,7 +1525,7 @@ cache_free_cb(void *key, void *element)
 struct udp_server_ctx_t *
 udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 #ifdef MODULE_LOCAL
-    const struct sockaddr *remote_addr, const int remote_addr_len,
+    const union sockaddr_universal *remote_addr,
     const struct ss_host_port *tunnel_addr,
 #endif
     int mtu, int timeout, const char *iface, struct cipher_env_t *cipher_env,
@@ -1564,8 +1561,7 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     server_ctx->iface      = iface;
     server_ctx->conn_cache = conn_cache;
 #ifdef MODULE_LOCAL
-    server_ctx->remote_addr     = remote_addr;
-    server_ctx->remote_addr_len = remote_addr_len;
+    server_ctx->remote_addr     = *remote_addr;
     //SSR beg
     server_ctx->protocol_plugin = new_obfs_manager(protocol);
     if (server_ctx->protocol_plugin) {

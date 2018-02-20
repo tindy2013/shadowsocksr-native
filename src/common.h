@@ -47,6 +47,7 @@ typedef ULONG uv_buf_len_t;
 typedef size_t uv_buf_len_t;
 #endif // defined(_WIN32)
 
+#if defined(_LOCAL_H)
 struct server_env_t {
     char *hostname;
     char *host;
@@ -78,6 +79,7 @@ struct server_env_t {
     char *group;
     int udp_over_tcp;
 };
+#endif // defined(_LOCAL_H)
 
 #ifdef ANDROID
 int protect_socket(int fd);
@@ -92,5 +94,11 @@ enum net_stage {
     STAGE_RESOLVE   = 4,  /* Resolve the hostname             */
     STAGE_STREAM    = 5,  /* Stream between client and server */
 };
+
+typedef union sockaddr_universal {
+    struct sockaddr_in6 addr6;
+    struct sockaddr_in addr4;
+    struct sockaddr addr;
+} sockaddr_universal;
 
 #endif // _COMMON_H
