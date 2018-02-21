@@ -181,6 +181,7 @@ clib_error remove_from_c_array(struct clib_array *pArray, int index) {
         void* elem;
         if (CLIB_ERROR_SUCCESS == element_at_c_array(pArray, index, &elem)) {
             pArray->destruct_fn(elem);
+            free(elem);
         }
     }
     delete_clib_object(pArray->pElements[index]);
@@ -205,6 +206,7 @@ clib_error delete_c_array(struct clib_array *pArray) {
             void* elem;
             if (CLIB_ERROR_SUCCESS == element_at_c_array(pArray, i, &elem)) {
                 pArray->destruct_fn(elem);
+                free(elem);
             }
         }
     }
@@ -238,14 +240,16 @@ static void replace_value_c_array(struct clib_iterator *pIterator, void* elem, s
 
     if (pArray->destruct_fn) {
         void* old_element;
-        get_raw_clib_object(pIterator->pCurrentElement, &old_element);
-        pArray->destruct_fn(old_element);
+        if (CLIB_ERROR_SUCCESS == get_raw_clib_object(pIterator->pCurrentElement, &old_element)) {
+            pArray->destruct_fn(old_element);
+            free(old_element);
+        }
     }
     replace_raw_clib_object(pIterator->pCurrentElement, elem, elem_size);
 }
 
 struct clib_iterator * new_iterator_c_array(struct clib_array* pArray) {
-    struct clib_iterator *itr = (struct clib_iterator*) malloc(sizeof(struct clib_iterator));
+    struct clib_iterator *itr = (struct clib_iterator*) calloc(1, sizeof(struct clib_iterator));
     itr->get_next = get_next_c_array;
     itr->get_value = get_value_c_array;
     itr->replace_value = replace_value_c_array;
@@ -360,6 +364,7 @@ clib_error pop_back_c_deque(struct clib_deque* pDeq) {
         void* elem;
         if (element_at_c_deque(pDeq, pDeq->tail - 1, &elem) == CLIB_ERROR_SUCCESS) {
             pDeq->destruct_fn(elem);
+            free(elem);
         }
     }
     delete_clib_object(pDeq->pElements[pDeq->tail - 1]);
@@ -377,6 +382,7 @@ clib_error pop_front_c_deque(struct clib_deque* pDeq) {
         void* elem;
         if (element_at_c_deque(pDeq, pDeq->head + 1, &elem) == CLIB_ERROR_SUCCESS) {
             pDeq->destruct_fn(elem);
+            free(elem);
         }
     }
     delete_clib_object(pDeq->pElements[pDeq->head + 1]);
@@ -422,6 +428,7 @@ clib_error delete_c_deque(struct clib_deque* pDeq) {
             void* elem;
             if (element_at_c_deque(pDeq, i, &elem) == CLIB_ERROR_SUCCESS) {
                 pDeq->destruct_fn(elem);
+                free(elem);
             }
         }
     }
@@ -455,14 +462,16 @@ static void replace_value_c_deque(struct clib_iterator *pIterator, void* elem, s
     struct clib_deque*  pDeq = (struct clib_deque*)pIterator->pContainer;
     if (pDeq->destruct_fn) {
         void* old_element;
-        get_raw_clib_object(pIterator->pCurrentElement, &old_element);
-        pDeq->destruct_fn(old_element);
+        if (get_raw_clib_object(pIterator->pCurrentElement, &old_element) == CLIB_ERROR_SUCCESS) {
+            pDeq->destruct_fn(old_element);
+            free(old_element);
+        }
     }
     replace_raw_clib_object(pIterator->pCurrentElement, elem, elem_size);
 }
 
 struct clib_iterator * new_iterator_c_deque(struct clib_deque* pDeq) {
-    struct clib_iterator *itr = (struct clib_iterator*) malloc(sizeof(struct clib_iterator));
+    struct clib_iterator *itr = (struct clib_iterator*) calloc(1, sizeof(struct clib_iterator));
     itr->get_next = get_next_c_deque;
     itr->get_value = get_value_c_deque;
     itr->replace_value = replace_value_c_deque;
@@ -522,12 +531,20 @@ clib_error remove_c_map(struct clib_map* pMap, void* key) {
     node = remove_c_rb(pMap->root, key);
     if (node != (struct clib_rb_node*)0) {
         void* removed_node;
-        get_raw_clib_object(node->key, &removed_node);
-        free(removed_node);
+        if (pMap->root->destruct_k_fn) {
+            if (get_raw_clib_object(node->key, &removed_node) == CLIB_ERROR_SUCCESS) {
+                pMap->root->destruct_k_fn(removed_node);
+                free(removed_node);
+            }
+        }
         delete_clib_object(node->key);
 
-        get_raw_clib_object(node->value, &removed_node);
-        free(removed_node);
+        if (pMap->root->destruct_v_fn) {
+            if (get_raw_clib_object(node->value, &removed_node) == CLIB_ERROR_SUCCESS) {
+                pMap->root->destruct_v_fn(removed_node);
+                free(removed_node);
+            }
+        }
         delete_clib_object(node->value);
 
         free(node);
@@ -589,8 +606,10 @@ static void replace_value_c_map(struct clib_iterator *pIterator, void* elem, siz
 
     if (pMap->root->destruct_v_fn) {
         void* old_element;
-        get_raw_clib_object(pIterator->pCurrentElement, &old_element);
-        pMap->root->destruct_v_fn(old_element);
+        if (get_raw_clib_object(pIterator->pCurrentElement, &old_element) == CLIB_ERROR_SUCCESS) {
+            pMap->root->destruct_v_fn(old_element);
+            free(old_element);
+        }
     }
     replace_raw_clib_object(((struct clib_rb_node*)pIterator->pCurrentElement)->value, elem, elem_size);
 }
@@ -679,7 +698,7 @@ static void __right_rotate(struct clib_rb* pTree, struct clib_rb_node* x) {
 }
 
 struct clib_rb * new_c_rb(clib_compare fn_c, clib_destroy fn_ed, clib_destroy fn_vd) {
-    struct clib_rb* pTree = (struct clib_rb*)malloc(sizeof(struct clib_rb));
+    struct clib_rb* pTree = (struct clib_rb*)calloc(1, sizeof(struct clib_rb));
     if (pTree == (struct clib_rb*)0) {
         return (struct clib_rb*)0;
     }
@@ -761,7 +780,7 @@ clib_error insert_c_rb(struct clib_rb* pTree, void* k, size_t key_size, void* v,
     struct clib_rb_node* y;
     struct clib_rb_node* z;
 
-    x = (struct clib_rb_node*)malloc(sizeof(struct clib_rb_node));
+    x = (struct clib_rb_node*)calloc(1, sizeof(struct clib_rb_node));
     if (x == (struct clib_rb_node*)0) {
         return CLIB_ERROR_MEMORY;
     }
@@ -954,6 +973,7 @@ static void __delete_c_rb_node(struct clib_rb* pTree, struct clib_rb_node* x) {
     if (pTree->destruct_k_fn) {
         get_raw_clib_object(x->key, &key);
         pTree->destruct_k_fn(key);
+        free(key);
     }
     delete_clib_object(x->key);
 
@@ -961,6 +981,7 @@ static void __delete_c_rb_node(struct clib_rb* pTree, struct clib_rb_node* x) {
         if (pTree->destruct_v_fn) {
             get_raw_clib_object(x->value, &value);
             pTree->destruct_v_fn(value);
+            free(value);
         }
         delete_clib_object(x->value);
     }
@@ -1162,8 +1183,16 @@ clib_error remove_c_set(struct clib_set* pSet, void* key) {
     }
     node = remove_c_rb(pSet->root, key);
     if (node != (struct clib_rb_node*)0) {
-        /*free ( node->raw_data.key);
-        free ( node );*/
+        if (pSet->root->destruct_k_fn) {
+            void* key = (void*)0;
+            if (CLIB_ERROR_SUCCESS == get_raw_clib_object(node->key, &key)) {
+                pSet->root->destruct_k_fn(key);
+                free(key);
+            }
+        }
+        delete_clib_object(node->key);
+
+        free(node);
     }
     return rc;
 }
@@ -1216,7 +1245,7 @@ static void * get_value_c_set(void* pObject) {
 }
 
 struct clib_iterator * new_iterator_c_set(struct clib_set* pSet) {
-    struct clib_iterator *itr = (struct clib_iterator*) malloc(sizeof(struct clib_iterator));
+    struct clib_iterator *itr = (struct clib_iterator*) calloc(1, sizeof(struct clib_iterator));
     itr->get_next = get_next_c_set;
     itr->get_value = get_value_c_set;
     itr->pContainer = pSet;
@@ -1277,15 +1306,15 @@ clib_error push_back_c_slist(struct clib_slist* pSlist, void* elem, size_t elem_
 }
 
 static void __remove_c_list(struct clib_slist* pSlist, struct clib_slist_node* pSlistNode) {
-    void* elem;
-    get_raw_clib_object(pSlistNode->elem, &elem);
     if (pSlist->destruct_fn) {
-        (pSlist->destruct_fn)(elem);
-        delete_clib_object(pSlistNode->elem);
-    } else {
-        free(elem);
-        delete_clib_object(pSlistNode->elem);
+        void* elem;
+        if (get_raw_clib_object(pSlistNode->elem, &elem) == CLIB_ERROR_SUCCESS) {
+            pSlist->destruct_fn(elem);
+            free(elem);
+        }
     }
+    delete_clib_object(pSlistNode->elem);
+
     free(pSlistNode);
 }
 
@@ -1405,9 +1434,10 @@ static void replace_value_c_slist(struct clib_iterator *pIterator, void* elem, s
 
     if (pSlist->destruct_fn) {
         void* old_element;
-
-        get_raw_clib_object(pObj, &old_element);
-        pSlist->destruct_fn(old_element);
+        if (get_raw_clib_object(pObj, &old_element) == CLIB_ERROR_SUCCESS) {
+            pSlist->destruct_fn(old_element);
+            free(old_element);
+        }
     }
     replace_raw_clib_object(pObj, elem, elem_size);
 }
