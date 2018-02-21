@@ -99,10 +99,10 @@ enum net_stage {
     STAGE_STREAM    = 5,  /* Stream between client and server */
 };
 
-typedef union sockaddr_universal {
+union sockaddr_universal {
     struct sockaddr_in6 addr6;
     struct sockaddr_in addr4;
     struct sockaddr addr;
-} sockaddr_universal;
+};
 
 #endif // _COMMON_H

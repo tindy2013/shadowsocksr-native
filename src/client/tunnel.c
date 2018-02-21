@@ -365,7 +365,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     tunnel->init_pkg = initial_package_create(parser);
     tunnel->cipher = tunnel_cipher_create(tunnel->env, tunnel->init_pkg);
 
-    sockaddr_universal remote_addr = { 0 };
+    union sockaddr_universal remote_addr = { 0 };
     if (convert_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
         socket_getaddrinfo(outgoing, config->remote_host);
         tunnel->state = session_req_lookup;
@@ -993,7 +993,7 @@ uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, ui
 
     bool ipV6 = false;
 
-    sockaddr_universal addr;
+    union sockaddr_universal addr;
     if (uv_ip4_addr(addr_str, port, &addr.addr4) != 0) {
         if (uv_ip6_addr(addr_str, port, &addr.addr6) != 0) {
             return NULL;

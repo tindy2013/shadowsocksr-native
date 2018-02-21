@@ -105,7 +105,7 @@ struct udp_server_ctx_t {
     const char *iface;
     struct cache *conn_cache;
 #ifdef MODULE_LOCAL
-    sockaddr_universal remote_addr;
+    union sockaddr_universal remote_addr;
     struct ss_host_port tunnel_addr;
 #endif
 #ifdef MODULE_REMOTE

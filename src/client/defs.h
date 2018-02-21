@@ -76,7 +76,7 @@ struct socket_ctx {
         uv_getaddrinfo_t addrinfo_req;
         uv_connect_t connect_req;
         uv_req_t req;
-        sockaddr_universal addr;
+        union sockaddr_universal addr;
         uint8_t buf[SSR_BUFF_SIZE];  /* Scratch space. Used to read data into. */
     } t;
 };
