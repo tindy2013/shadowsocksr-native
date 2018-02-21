@@ -23,7 +23,7 @@
     <ClCompile Include="..\..\src\client\listener.c" />
     <ClCompile Include="..\..\src\client\main.c" />
     <ClCompile Include="..\..\src\client\s5.c" />
-    <ClCompile Include="..\..\src\client\ssrcipher.c" />
+    <ClCompile Include="..\..\src\client\ssr_executive.c" />
     <ClCompile Include="..\..\src\client\tunnel.c" />
     <ClCompile Include="..\..\src\client\util.c" />
     <ClCompile Include="..\..\src\encrypt.c" />
@@ -49,7 +49,7 @@
     <ClInclude Include="..\..\src\cache.h" />
     <ClInclude Include="..\..\src\client\defs.h" />
     <ClInclude Include="..\..\src\client\s5.h" />
-    <ClInclude Include="..\..\src\client\ssrcipher.h" />
+    <ClInclude Include="..\..\src\client\ssr_executive.h" />
     <ClInclude Include="..\..\src\client\util.h" />
     <ClInclude Include="..\..\src\encrypt.h" />
     <ClInclude Include="..\..\src\netutils.h" />

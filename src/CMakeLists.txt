@@ -54,8 +54,8 @@ set(SOURCE_FILES_CLIENT
         client/main.c
         client/s5.c
         client/s5.h
-        client/ssrcipher.c
-        client/ssrcipher.h
+        client/ssr_executive.c
+        client/ssr_executive.h
         client/tunnel.c
         client/util.c
         client/util.h

@@ -25,7 +25,7 @@
 #include <string.h>
 #include <json-c/json.h>
 #include "util.h"
-#include "ssrcipher.h"
+#include "ssr_executive.h"
 
 #if HAVE_UNISTD_H
 #include <unistd.h>  /* getopt */

@@ -1,5 +1,5 @@
-#if !defined(__SSR_CIPHER__)
-#define __SSR_CIPHER__ 1
+#if !defined(__SSR_EXECUTIVE__)
+#define __SSR_EXECUTIVE__ 1
 
 
 #include <stdarg.h>
@@ -92,4 +92,4 @@ void tunnel_cipher_release(struct tunnel_cipher_ctx *tc);
 enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf);
 enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback);
 
-#endif // defined(__SSR_CIPHER__)
+#endif // defined(__SSR_EXECUTIVE__)

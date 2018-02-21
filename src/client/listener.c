@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "util.h"
-#include "ssrcipher.h"
+#include "ssr_executive.h"
 #if UDP_RELAY_ENABLE
 #include "udprelay.h"
 #endif // UDP_RELAY_ENABLE

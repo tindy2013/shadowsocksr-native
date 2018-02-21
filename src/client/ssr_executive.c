@@ -25,7 +25,7 @@
 #include <string.h>
 #include <time.h>
 #include <assert.h>
-#include "ssrcipher.h"
+#include "ssr_executive.h"
 #include "encrypt.h"
 #include "obfsutil.h"
 #include "ssrbuffer.h"
