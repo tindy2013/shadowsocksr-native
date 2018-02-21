@@ -99,7 +99,7 @@
 
 #define DEFAULT_PACKET_SIZE MAX_UDP_PACKET_SIZE // 1492 - 1 - 28 - 2 - 64 = 1397, the default MTU for UDP relay
 
-struct udp_server_ctx_t {
+struct udp_listener_ctx_t {
     uv_udp_t io;
     int timeout;
     const char *iface;
@@ -125,7 +125,7 @@ typedef struct query_ctx {
     struct buffer_t *buf;
     int addr_header_len;
     char addr_header[384];
-    struct udp_server_ctx_t *server_ctx;
+    struct udp_listener_ctx_t *server_ctx;
     struct udp_remote_ctx_t *remote_ctx;
 } query_ctx_t;
 #endif
@@ -140,7 +140,7 @@ struct udp_remote_ctx_t {
 #ifdef MODULE_REMOTE
     struct sockaddr_storage dst_addr;
 #endif
-    struct udp_server_ctx_t *server_ctx;
+    struct udp_listener_ctx_t *server_ctx;
     int ref_count;
 };
 
@@ -153,7 +153,6 @@ static char *hash_key(int af, const struct sockaddr_storage *addr);
 static void query_resolve_cb(struct sockaddr *addr, void *data);
 #endif
 static void udp_remote_shutdown(struct udp_remote_ctx_t *ctx);
-// static struct udp_remote_ctx_t * new_udp_remote(struct udp_remote_ctx_t *ctx, struct udp_server_ctx_t *server_ctx);
 
 #ifdef ANDROID
 extern int log_tx_rx;
@@ -659,7 +658,7 @@ query_resolve_cb(struct sockaddr *addr, void *data)
 #endif
 
 static void udp_send_done_cb(uv_udp_send_t* req, int status) {
-    //struct udp_server_ctx_t *server_ctx = (struct udp_server_ctx_t *)req->data;
+    //struct udp_listener_ctx_t *server_ctx = (struct udp_listener_ctx_t *)req->data;
     free(req);
 }
 
@@ -667,7 +666,7 @@ static void
 udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags)
 {
     struct udp_remote_ctx_t *remote_ctx = cork_container_of(handle, struct udp_remote_ctx_t, io);
-    struct udp_server_ctx_t *server_ctx = remote_ctx->server_ctx;
+    struct udp_listener_ctx_t *server_ctx = remote_ctx->server_ctx;
     struct buffer_t *buf = NULL;
 
     // server has been closed
@@ -867,7 +866,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         return;
     }
 
-    struct udp_server_ctx_t *server_ctx = cork_container_of(handle, struct udp_server_ctx_t, io);
+    struct udp_listener_ctx_t *server_ctx = cork_container_of(handle, struct udp_listener_ctx_t, io);
     assert(server_ctx);
 
     struct sockaddr_storage src_addr = *(struct sockaddr_storage *)addr;
@@ -1304,7 +1303,7 @@ cache_free_cb(void *key, void *element)
     udp_remote_shutdown(remote_ctx);
 }
 
-struct udp_server_ctx_t *
+struct udp_listener_ctx_t *
 udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 #ifdef MODULE_LOCAL
     const union sockaddr_universal *remote_addr,
@@ -1326,7 +1325,7 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     // ////////////////////////////////////////////////
     // Setup server context
 
-    struct udp_server_ctx_t *server_ctx = calloc(1, sizeof(struct udp_server_ctx_t));
+    struct udp_listener_ctx_t *server_ctx = calloc(1, sizeof(struct udp_listener_ctx_t));
 
     // Bind to port
     int serverfd = udp_create_local_listener(server_host, server_port, loop, &server_ctx->io);
@@ -1374,7 +1373,7 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 }
 
 static void udp_local_listener_close_done_cb(uv_handle_t* handle) {
-    struct udp_server_ctx_t *server_ctx = cork_container_of(handle, struct udp_server_ctx_t, io);
+    struct udp_listener_ctx_t *server_ctx = cork_container_of(handle, struct udp_listener_ctx_t, io);
     cache_delete(server_ctx->conn_cache, 0);
 
 #ifdef MODULE_LOCAL
@@ -1392,7 +1391,7 @@ static void udp_local_listener_close_done_cb(uv_handle_t* handle) {
 }
 
 void
-udprelay_shutdown(struct udp_server_ctx_t *server_ctx)
+udprelay_shutdown(struct udp_listener_ctx_t *server_ctx)
 {
     if (server_ctx == NULL) {
         return;

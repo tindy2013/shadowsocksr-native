@@ -26,11 +26,11 @@
 #include <uv.h>
 
 struct ss_host_port;
-struct udp_server_ctx_t;
+struct udp_listener_ctx_t;
 struct cipher_env_t;
 union sockaddr_universal;
 
-struct udp_server_ctx_t * udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
+struct udp_listener_ctx_t * udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 #ifdef MODULE_LOCAL
     const union sockaddr_universal *remote_addr,
     const struct ss_host_port *tunnel_addr,
@@ -38,6 +38,6 @@ struct udp_server_ctx_t * udprelay_begin(uv_loop_t *loop, const char *server_hos
     int mtu, int timeout, const char *iface, struct cipher_env_t *cipher_env,
     const char *protocol, const char *protocol_param);
 
-void udprelay_shutdown(struct udp_server_ctx_t *server_ctx);
+void udprelay_shutdown(struct udp_listener_ctx_t *server_ctx);
 
 #endif // _UDPRELAY_H

@@ -51,6 +51,7 @@
     <ClInclude Include="..\..\src\client\s5.h" />
     <ClInclude Include="..\..\src\client\ssr_executive.h" />
     <ClInclude Include="..\..\src\client\util.h" />
+    <ClInclude Include="..\..\src\common.h" />
     <ClInclude Include="..\..\src\encrypt.h" />
     <ClInclude Include="..\..\src\netutils.h" />
     <ClInclude Include="..\..\src\obfs\auth.h" />

@@ -33,11 +33,11 @@
 # define INET6_ADDRSTRLEN 63
 #endif
 
-struct udp_server_ctx_t;
+struct udp_listener_ctx_t;
 
 struct listener_t {
     uv_tcp_t *tcp_server;
-    struct udp_server_ctx_t *udp_server;
+    struct udp_listener_ctx_t *udp_server;
 };
 
 struct run_loop_state {
@@ -155,7 +155,7 @@ void ssr_run_loop_shutdown(struct run_loop_state *state) {
             }
 
 #if UDP_RELAY_ENABLE
-            struct udp_server_ctx_t *udp_server = listener->udp_server;
+            struct udp_listener_ctx_t *udp_server = listener->udp_server;
             if (udp_server) {
                 udprelay_shutdown(udp_server);
             }

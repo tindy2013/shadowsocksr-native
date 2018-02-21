@@ -173,5 +173,8 @@
     <ClInclude Include="..\..\src\client\ssr_executive.h">
       <Filter>client</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
