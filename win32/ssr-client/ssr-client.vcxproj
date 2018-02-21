@@ -32,6 +32,7 @@
     <ClCompile Include="..\..\src\obfs\auth_chain.c" />
     <ClCompile Include="..\..\src\obfs\base64.c" />
     <ClCompile Include="..\..\src\obfs\crc32.c" />
+    <ClCompile Include="..\..\src\obfs\c_lib.c" />
     <ClCompile Include="..\..\src\obfs\http_simple.c" />
     <ClCompile Include="..\..\src\obfs\obfs.c" />
     <ClCompile Include="..\..\src\obfs\obfsutil.c" />
@@ -56,6 +57,7 @@
     <ClInclude Include="..\..\src\obfs\auth_chain.h" />
     <ClInclude Include="..\..\src\obfs\base64.h" />
     <ClInclude Include="..\..\src\obfs\crc32.h" />
+    <ClInclude Include="..\..\src\obfs\c_lib.h" />
     <ClInclude Include="..\..\src\obfs\http_simple.h" />
     <ClInclude Include="..\..\src\obfs\obfs.h" />
     <ClInclude Include="..\..\src\obfs\obfsutil.h" />

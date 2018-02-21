@@ -110,7 +110,7 @@ struct tunnel_ctx {
 };
 
 /* listener.c */
-int ssr_run_loop_begin(struct server_config *cf, struct run_loop_state **state);
+int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct run_loop_state *state, void *p), void *p);
 void ssr_run_loop_shutdown(struct run_loop_state *state);
 bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);

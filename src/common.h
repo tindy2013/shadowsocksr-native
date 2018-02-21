@@ -22,7 +22,11 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#if defined(WIN32)
+#define DEFAULT_CONF_PATH "config.json"
+#else
 #define DEFAULT_CONF_PATH "/etc/ssr-native/config.json"
+#endif // defined(WIN32)
 
 #ifndef SOL_TCP
 #define SOL_TCP IPPROTO_TCP

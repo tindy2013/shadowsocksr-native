@@ -565,7 +565,9 @@ static void do_proxy(struct tunnel_ctx *tunnel) {
 }
 
 void tunnel_shutdown(struct tunnel_ctx *tunnel) {
-    ASSERT(tunnel_is_dead(tunnel) == false);
+    if (tunnel_is_dead(tunnel) != false) {
+        return;
+    }
 
     /* Try to cancel the request. The callback still runs but if the
     * cancellation succeeded, it gets called with status=UV_ECANCELED.

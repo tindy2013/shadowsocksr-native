@@ -96,6 +96,9 @@
     <ClCompile Include="..\..\src\ssr_cipher_names.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\obfs\c_lib.c">
+      <Filter>obfs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\encrypt.h">
@@ -166,6 +169,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\ssr_cipher_names.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\obfs\c_lib.h">
+      <Filter>obfs</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

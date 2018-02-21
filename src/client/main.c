@@ -27,12 +27,6 @@
 #include "util.h"
 #include "ssrcipher.h"
 
-#if defined(WIN32)
-#define DEFAULT_CONF_PATH "config.json"
-#else
-#define DEFAULT_CONF_PATH "/etc/ssr-native/config.json"
-#endif // defined(WIN32)
-
 #if HAVE_UNISTD_H
 #include <unistd.h>  /* getopt */
 #endif
@@ -41,7 +35,8 @@ static const char * parse_opts(int argc, char **argv);
 static bool parse_config_file(const char *file, struct server_config *cf);
 static void usage(void);
 
-struct server_state *state = NULL;
+struct run_loop_state *g_state = NULL;
+void feedback_state(struct run_loop_state *state, void *p);
 
 int main(int argc, char **argv) {
     struct server_config *config = NULL;
@@ -73,8 +68,8 @@ int main(int argc, char **argv) {
             break;
         }
 
-        ssr_run_loop_begin(config, &state);
-        state = NULL;
+        ssr_run_loop_begin(config, &feedback_state, NULL);
+        g_state = NULL;
 
         err = 0;
     } while(0);
@@ -86,6 +81,11 @@ int main(int argc, char **argv) {
     }
 
     return 0;
+}
+
+void feedback_state(struct run_loop_state *state, void *p) {
+    g_state = state;
+    (void)p;
 }
 
 static const char * parse_opts(int argc, char **argv) {
