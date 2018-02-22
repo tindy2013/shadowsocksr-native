@@ -156,8 +156,10 @@ void cached_tunnel_traverse(struct server_env_t *env, void(*fn)(struct tunnel_ct
     struct clib_object *element;
     while( (element = iterator->get_next(iterator)) ) {
         struct tunnel_ctx **tunnel = iterator->get_value(element);
-        fn(*tunnel, p);
-        free(tunnel);
+        if (tunnel) {
+            fn(*tunnel, p);
+            free(tunnel);
+        }
     }
     c_set_delete_iterator(iterator);
 }

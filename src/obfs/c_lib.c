@@ -30,12 +30,12 @@
 void clib_for_each(struct clib_iterator *pIterator, void(*fn)(void*)) {
     struct clib_object *pElement;
 
-    pElement = pIterator->get_next(pIterator);
-    while (pElement) {
+    while ((pElement = pIterator->get_next(pIterator))) {
         void *value = pIterator->get_value(pElement);
-        (fn)(value);
-        free(value);
-        pElement = pIterator->get_next(pIterator);
+        if (value) {
+            (fn)(value);
+            free(value);
+        }
     }
 }
 
@@ -48,8 +48,8 @@ void clib_for_each(struct clib_iterator *pIterator, void(*fn)(void*)) {
 static struct clib_array * c_array_check_and_grow(struct clib_array* pArray) {
     if (pArray->no_of_elements >= pArray->no_max_elements) {
         pArray->no_max_elements = 2 * pArray->no_max_elements;
-        pArray->pElements = (struct clib_object**) realloc(pArray->pElements,
-            pArray->no_max_elements * sizeof(struct clib_object*));
+        size_t size = pArray->no_max_elements * sizeof(struct clib_object*);
+        pArray->pElements = (struct clib_object**) realloc(pArray->pElements, size);
     }
     return pArray;
 }
@@ -178,7 +178,7 @@ clib_error c_array_remove_from(struct clib_array *pArray, int index) {
         return CLIB_ARRAY_INDEX_OUT_OF_BOUND;
     }
     if (pArray->destruct_fn) {
-        void* elem;
+        void* elem = (void *)0;
         if (CLIB_ERROR_SUCCESS == c_array_element_at(pArray, index, &elem)) {
             pArray->destruct_fn(elem);
             free(elem);
@@ -203,7 +203,7 @@ clib_error c_array_delete(struct clib_array *pArray) {
     }
     if (pArray->destruct_fn) {
         for (i = 0; i < pArray->no_of_elements; i++) {
-            void* elem;
+            void* elem = (void *)0;
             if (CLIB_ERROR_SUCCESS == c_array_element_at(pArray, i, &elem)) {
                 pArray->destruct_fn(elem);
                 free(elem);
@@ -230,7 +230,7 @@ static struct clib_object * c_array_get_next(struct clib_iterator *pIterator) {
 }
 
 static void * c_array_get_value(void* pObject) {
-    void* elem;
+    void* elem = (void *)0;
     clib_object_get_raw(pObject, &elem);
     return elem;
 }
@@ -239,7 +239,7 @@ static void c_array_replace_value(struct clib_iterator *pIterator, void* elem, s
     struct clib_array*  pArray = (struct clib_array*)pIterator->pContainer;
 
     if (pArray->destruct_fn) {
-        void* old_element;
+        void* old_element = (void *)0;
         if (CLIB_ERROR_SUCCESS == clib_object_get_raw(pIterator->pCurrentElement, &old_element)) {
             pArray->destruct_fn(old_element);
             free(old_element);
@@ -282,8 +282,8 @@ static clib_error c_deque_insert(struct clib_deque* pDeq, int index, void* elem,
 
 static struct clib_deque * c_deque_grow(struct clib_deque* pDeq) {
     pDeq->no_max_elements = pDeq->no_max_elements * 2;
-    pDeq->pElements = (struct clib_object**) realloc(pDeq->pElements,
-        pDeq->no_max_elements * sizeof(struct clib_object*));
+    size_t size = pDeq->no_max_elements * sizeof(struct clib_object*);
+    pDeq->pElements = (struct clib_object**) realloc(pDeq->pElements, size);
     return pDeq;
 }
 
@@ -361,7 +361,7 @@ clib_error c_deque_pop_back(struct clib_deque* pDeq) {
         return CLIB_DEQUE_NOT_INITIALIZED;
     }
     if (pDeq->destruct_fn) {
-        void* elem;
+        void *elem = (void *)0;
         if (c_deque_element_at(pDeq, pDeq->tail - 1, &elem) == CLIB_ERROR_SUCCESS) {
             pDeq->destruct_fn(elem);
             free(elem);
@@ -379,7 +379,7 @@ clib_error c_deque_pop_front(struct clib_deque* pDeq) {
         return CLIB_DEQUE_NOT_INITIALIZED;
     }
     if (pDeq->destruct_fn) {
-        void* elem;
+        void* elem = (void *)0;
         if (c_deque_element_at(pDeq, pDeq->head + 1, &elem) == CLIB_ERROR_SUCCESS) {
             pDeq->destruct_fn(elem);
             free(elem);
@@ -425,7 +425,7 @@ clib_error c_deque_delete(struct clib_deque* pDeq) {
     }
     if (pDeq->destruct_fn) {
         for (i = pDeq->head + 1; i < pDeq->tail; i++) {
-            void* elem;
+            void* elem = (void *)0;
             if (c_deque_element_at(pDeq, i, &elem) == CLIB_ERROR_SUCCESS) {
                 pDeq->destruct_fn(elem);
                 free(elem);
@@ -453,7 +453,7 @@ static struct clib_object * c_deque_get_next(struct clib_iterator* pIterator) {
 }
 
 static void * c_deque_get_value(void* pObject) {
-    void* elem;
+    void* elem = (void *)0;
     clib_object_get_raw(pObject, &elem);
     return elem;
 }
@@ -461,7 +461,7 @@ static void * c_deque_get_value(void* pObject) {
 static void c_deque_replace_value(struct clib_iterator *pIterator, void* elem, size_t elem_size) {
     struct clib_deque*  pDeq = (struct clib_deque*)pIterator->pContainer;
     if (pDeq->destruct_fn) {
-        void* old_element;
+        void* old_element = (void *)0;
         if (clib_object_get_raw(pIterator->pCurrentElement, &old_element) == CLIB_ERROR_SUCCESS) {
             pDeq->destruct_fn(old_element);
             free(old_element);
@@ -530,7 +530,7 @@ clib_error c_map_remove(struct clib_map* pMap, void* key) {
     }
     node = c_rb_remove(pMap->root, key);
     if (node != (struct clib_rb_node*)0) {
-        void* removed_node;
+        void* removed_node = (void *)0;
         if (pMap->root->destruct_k_fn) {
             if (clib_object_get_raw(node->key, &removed_node) == CLIB_ERROR_SUCCESS) {
                 pMap->root->destruct_k_fn(removed_node);
@@ -596,7 +596,7 @@ static struct clib_object * c_map_get_next(struct clib_iterator* pIterator) {
 }
 
 static void * c_map_get_value(void* pObject) {
-    void* elem;
+    void* elem = (void *)0;
     clib_object_get_raw(pObject, &elem);
     return elem;
 }
@@ -605,7 +605,7 @@ static void c_map_replace_value(struct clib_iterator *pIterator, void* elem, siz
     struct clib_map*  pMap = (struct clib_map*)pIterator->pContainer;
 
     if (pMap->root->destruct_v_fn) {
-        void* old_element;
+        void* old_element = (void *)0;
         if (clib_object_get_raw(pIterator->pCurrentElement, &old_element) == CLIB_ERROR_SUCCESS) {
             pMap->root->destruct_v_fn(old_element);
             free(old_element);
@@ -648,7 +648,7 @@ static void debug_verify_property_5(struct clib_rb*, struct clib_rb_node*);
 static void debug_verify_property_5_helper(struct clib_rb*, struct clib_rb_node*, int, int*);
 
 
-static void __left_rotate(struct clib_rb* pTree, struct clib_rb_node* x) {
+static void __c_rb_left_rotate(struct clib_rb* pTree, struct clib_rb_node* x) {
     struct clib_rb_node* y;
     y = x->right;
     x->right = y->left;
@@ -726,7 +726,7 @@ static void __c_rb_insert_fixup(struct clib_rb* pTree, struct clib_rb_node* x) {
             } else {
                 if (x == x->parent->right) {
                     x = x->parent;
-                    __left_rotate(pTree, x);
+                    __c_rb_left_rotate(pTree, x);
                 }
                 x->parent->color = clib_black;
                 x->parent->parent->color = clib_red;
@@ -746,7 +746,7 @@ static void __c_rb_insert_fixup(struct clib_rb* pTree, struct clib_rb_node* x) {
                 }
                 x->parent->color = clib_black;
                 x->parent->parent->color = clib_red;
-                __left_rotate(pTree, x->parent->parent);
+                __c_rb_left_rotate(pTree, x->parent->parent);
             }
         }
     }
@@ -758,10 +758,11 @@ struct clib_rb_node * c_rb_find(struct clib_rb* pTree, void* key) {
 
     while (x != rb_sentinel) {
         int c = 0;
-        void* cur_key;
-        clib_object_get_raw(x->key, &cur_key);
-        c = pTree->compare_fn(key, cur_key);
-        free(cur_key);
+        void* cur_key = (void *)0;
+        if (CLIB_ERROR_SUCCESS == clib_object_get_raw(x->key, &cur_key)) {
+            c = pTree->compare_fn(key, cur_key);
+            free(cur_key);
+        }
         if (c == 0) {
             break;
         } else {
@@ -800,8 +801,8 @@ clib_error c_rb_insert(struct clib_rb* pTree, void* k, size_t key_size, void* v,
 
     while (y != rb_sentinel) {
         int c = 0;
-        void* cur_key;
-        void* new_key;
+        void* cur_key = (void *)0;
+        void* new_key = (void *)0;
 
         clib_object_get_raw(y->key, &cur_key);
         clib_object_get_raw(x->key, &new_key);
@@ -823,8 +824,8 @@ clib_error c_rb_insert(struct clib_rb* pTree, void* k, size_t key_size, void* v,
     x->parent = z;
     if (z) {
         int c = 0;
-        void* cur_key;
-        void* new_key;
+        void* cur_key = (void *)0;
+        void* new_key = (void *)0;
         clib_object_get_raw(z->key, &cur_key);
         clib_object_get_raw(x->key, &new_key);
 
@@ -852,7 +853,7 @@ static void __c_rb_remove_fixup(struct clib_rb* pTree, struct clib_rb_node* x) {
             if (w->color == clib_red) {
                 w->color = clib_black;
                 x->parent->color = clib_red;
-                __left_rotate(pTree, x->parent);
+                __c_rb_left_rotate(pTree, x->parent);
                 w = x->parent->right;
             }
             if (w->left->color == clib_black && w->right->color == clib_black) {
@@ -868,7 +869,7 @@ static void __c_rb_remove_fixup(struct clib_rb* pTree, struct clib_rb_node* x) {
                 w->color = x->parent->color;
                 x->parent->color = clib_black;
                 w->right->color = clib_black;
-                __left_rotate(pTree, x->parent);
+                __c_rb_left_rotate(pTree, x->parent);
                 x = pTree->root;
             }
         } else {
@@ -886,7 +887,7 @@ static void __c_rb_remove_fixup(struct clib_rb* pTree, struct clib_rb_node* x) {
                 if (w->left->color == clib_black) {
                     w->right->color = clib_black;
                     w->color = clib_red;
-                    __left_rotate(pTree, w);
+                    __c_rb_left_rotate(pTree, w);
                     w = x->parent->left;
                 }
                 w->color = x->parent->color;
@@ -950,10 +951,11 @@ struct clib_rb_node * c_rb_remove(struct clib_rb* pTree, void* key) {
     z = pTree->root;
     while (z != rb_sentinel) {
         int c = 0;
-        void* cur_key;
-        clib_object_get_raw(z->key, &cur_key);
-        c = pTree->compare_fn(key, cur_key);
-        free(cur_key);
+        void* cur_key = (void *)0;
+        if (CLIB_ERROR_SUCCESS == clib_object_get_raw(z->key, &cur_key)) {
+            c = pTree->compare_fn(key, cur_key);
+            free(cur_key);
+        }
         if (c == 0) {
             break;
         } else {
@@ -967,21 +969,22 @@ struct clib_rb_node * c_rb_remove(struct clib_rb* pTree, void* key) {
 }
 
 static void __c_rb_delete_node(struct clib_rb* pTree, struct clib_rb_node* x) {
-    void* key;
-    void* value;
-
     if (pTree->destruct_k_fn) {
-        clib_object_get_raw(x->key, &key);
-        pTree->destruct_k_fn(key);
-        free(key);
+        void* key = (void *)0;
+        if (CLIB_ERROR_SUCCESS == clib_object_get_raw(x->key, &key)) {
+            pTree->destruct_k_fn(key);
+            free(key);
+        }
     }
     clib_object_delete(x->key);
 
     if (x->value) {
         if (pTree->destruct_v_fn) {
-            clib_object_get_raw(x->value, &value);
-            pTree->destruct_v_fn(value);
-            free(value);
+            void* value = (void *)0;
+            if (CLIB_ERROR_SUCCESS == clib_object_get_raw(x->value, &value)) {
+                pTree->destruct_v_fn(value);
+                free(value);
+            }
         }
         clib_object_delete(x->value);
     }
@@ -1239,7 +1242,7 @@ static struct clib_object * c_set_get_next(struct clib_iterator* pIterator) {
 }
 
 static void * c_set_get_value(void* pObject) {
-    void* elem;
+    void* elem = (void *)0;
     clib_object_get_raw(pObject, &elem);
     return elem;
 }
@@ -1307,7 +1310,7 @@ clib_error c_slist_push_back(struct clib_slist* pSlist, void* elem, size_t elem_
 
 static void __c_slist_remove(struct clib_slist* pSlist, struct clib_slist_node* pSlistNode) {
     if (pSlist->destruct_fn) {
-        void* elem;
+        void* elem = (void *)0;
         if (clib_object_get_raw(pSlistNode->elem, &elem) == CLIB_ERROR_SUCCESS) {
             pSlist->destruct_fn(elem);
             free(elem);
@@ -1383,12 +1386,13 @@ clib_error c_slist_insert(struct clib_slist* pSlist, int pos, void* elem, size_t
 }
 
 void c_slist_for_each(struct clib_slist* pSlist, void(*fn)(void*)) {
-    void* elem;
+    void* elem = (void *)0;
     struct clib_slist_node* current = pSlist->head;
     while (current != (struct clib_slist_node*)0) {
-        clib_object_get_raw(current->elem, &elem);
-        (fn)(elem);
-        free(elem);
+        if (CLIB_ERROR_SUCCESS == clib_object_get_raw(current->elem, &elem)) {
+            (fn)(elem);
+            free(elem);
+        }
         current = current->next;
     }
 }
@@ -1423,7 +1427,7 @@ static struct clib_object * c_slist_get_next(struct clib_iterator* pIterator) {
 }
 
 static void * c_slist_get_value(void* pObject) {
-    void* elem;
+    void* elem = (void *)0;
     clib_object_get_raw(pObject, &elem);
     return elem;
 }
@@ -1433,7 +1437,7 @@ static void c_slist_replace_value(struct clib_iterator *pIterator, void* elem, s
     struct clib_object *pObj = ((struct clib_slist_node*)pIterator->pCurrentElement)->elem;
 
     if (pSlist->destruct_fn) {
-        void* old_element;
+        void* old_element = (void *)0;
         if (clib_object_get_raw(pObj, &old_element) == CLIB_ERROR_SUCCESS) {
             pSlist->destruct_fn(old_element);
             free(old_element);
@@ -1499,6 +1503,7 @@ void clib_object_replace_raw(struct clib_object* current_object, void* elem, siz
     free(current_object->raw_data);
     current_object->raw_data = (void*)calloc(1, elem_size);
     memcpy(current_object->raw_data, elem, elem_size);
+    current_object->size = elem_size;
 }
 
 void clib_object_delete(struct clib_object* inObject) {
