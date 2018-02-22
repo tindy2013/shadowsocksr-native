@@ -27,6 +27,8 @@
 #include "config.h"
 #endif
 
+#if defined(USE_CRYPTO_OPENSSL)
+
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <openssl/md5.h>
@@ -41,6 +43,39 @@ typedef EVP_MD digest_type_t;
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
 #include <openssl/aes.h>
+
+#elif defined(USE_CRYPTO_MBEDTLS)
+
+#include <mbedtls/md5.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/version.h>
+#include <mbedtls/aes.h>
+#define CIPHER_UNSUPPORTED "unsupported"
+
+#include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <wincrypt.h>
+#else
+#include <stdio.h>
+#endif
+
+#include <mbedtls/cipher.h>
+#include <mbedtls/md.h>
+typedef mbedtls_cipher_info_t cipher_core_t;
+typedef mbedtls_cipher_context_t cipher_core_ctx_t;
+typedef mbedtls_md_info_t digest_type_t;
+#define MAX_KEY_LENGTH 64
+#define MAX_IV_LENGTH MBEDTLS_MAX_IV_LENGTH
+#define MAX_MD_SIZE MBEDTLS_MD_MAX_SIZE
+
+/* we must have MBEDTLS_CIPHER_MODE_CFB defined */
+#if !defined(MBEDTLS_CIPHER_MODE_CFB)
+#error Cipher Feedback mode a.k.a CFB not supported by your mbed TLS.
+#endif
+
+#endif
 
 #include <sodium.h>
 
@@ -81,6 +116,49 @@ struct enc_ctx {
     uint64_t counter;
     struct cipher_ctx_t cipher_ctx;
 };
+
+#ifdef USE_CRYPTO_MBEDTLS
+
+#define SS_CIPHERS_MBEDTLS_MAP(V)                               \
+    V(ss_cipher_none,               "none"                  )   \
+    V(ss_cipher_table,              "table"                 )   \
+    V(ss_cipher_rc4,                "ARC4-128"              )   \
+    V(ss_cipher_rc4_md5_6,          "ARC4-128"              )   \
+    V(ss_cipher_rc4_md5,            "ARC4-128"              )   \
+    V(ss_cipher_aes_128_cfb,        "AES-128-CFB128"        )   \
+    V(ss_cipher_aes_192_cfb,        "AES-192-CFB128"        )   \
+    V(ss_cipher_aes_256_cfb,        "AES-256-CFB128"        )   \
+    V(ss_cipher_aes_128_ctr,        "AES-128-CTR"           )   \
+    V(ss_cipher_aes_192_ctr,        "AES-192-CTR"           )   \
+    V(ss_cipher_aes_256_ctr,        "AES-256-CTR"           )   \
+    V(ss_cipher_bf_cfb,             "BLOWFISH-CFB64"        )   \
+    V(ss_cipher_camellia_128_cfb,   "CAMELLIA-128-CFB128"   )   \
+    V(ss_cipher_camellia_192_cfb,   "CAMELLIA-192-CFB128"   )   \
+    V(ss_cipher_camellia_256_cfb,   "CAMELLIA-256-CFB128"   )   \
+    V(ss_cipher_cast5_cfb,          CIPHER_UNSUPPORTED      )   \
+    V(ss_cipher_des_cfb,            CIPHER_UNSUPPORTED      )   \
+    V(ss_cipher_idea_cfb,           CIPHER_UNSUPPORTED      )   \
+    V(ss_cipher_rc2_cfb,            CIPHER_UNSUPPORTED      )   \
+    V(ss_cipher_seed_cfb,           CIPHER_UNSUPPORTED      )   \
+    V(ss_cipher_salsa20,            "salsa20"               )   \
+    V(ss_cipher_chacha20,           "chacha20"              )   \
+    V(ss_cipher_chacha20ietf,       "chacha20-ietf"         )   \
+
+static const char *
+ss_mbedtls_cipher_name_by_type(enum ss_cipher_type index)
+{
+#define SS_CIPHER_MBEDTLS_GEN(name, text) case (name): return (text);
+    switch (index) {
+        SS_CIPHERS_MBEDTLS_MAP(SS_CIPHER_MBEDTLS_GEN)
+    default:;  // Silence ss_cipher_max -Wswitch warning.
+    }
+#undef SS_CIPHER_MBEDTLS_GEN
+    LOGE("Invalid index");
+    return NULL; // "Invalid index";
+}
+
+#endif
+
 
 #if DEBUG
 //#define SHOW_DUMP
@@ -226,27 +304,59 @@ enc_get_key_len(struct cipher_env_t *env)
 unsigned char *
 enc_md5(const unsigned char *d, size_t n, unsigned char *md)
 {
+#if defined(USE_CRYPTO_OPENSSL)
     return MD5(d, n, md);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    static unsigned char m[16];
+    if (md == NULL) {
+        md = m;
+    }
+    mbedtls_md5_ret(d, n, md);
+    return md;
+#endif
 }
 
 int
 cipher_iv_size(const struct cipher_wrapper *cipher)
 {
+#if defined(USE_CRYPTO_OPENSSL)
     if (cipher->core == NULL) {
         return (int) cipher->iv_len;
     } else {
         return EVP_CIPHER_iv_length(cipher->core);
     }
+#elif defined(USE_CRYPTO_MBEDTLS)
+    if (cipher == NULL) {
+        return 0;
+    }
+    return cipher->core->iv_size;
+#endif
 }
 
 int
 cipher_key_size(const struct cipher_wrapper *cipher)
 {
+#if defined(USE_CRYPTO_OPENSSL)
     if (cipher->core == NULL) {
         return (int) cipher->key_len;
     } else {
         return EVP_CIPHER_key_length(cipher->core);
     }
+#elif defined(USE_CRYPTO_MBEDTLS)
+    /*
+    * Semi-API changes (technically public, morally private)
+    * Renamed a few headers to include _internal in the name. Those headers are
+    * not supposed to be included by users.
+    * Changed md_info_t into an opaque structure (use md_get_xxx() accessors).
+    * Changed pk_info_t into an opaque structure.
+    * Changed cipher_base_t into an opaque structure.
+    */
+    if (cipher == NULL) {
+        return 0;
+    }
+    /* From Version 1.2.7 released 2013-04-13 Default Blowfish keysize is now 128-bits */
+    return cipher->core->key_bitlen / 8;
+#endif
 }
 
 void
@@ -269,6 +379,8 @@ bytes_to_key(const struct cipher_wrapper *cipher, const digest_type_t *md,
 {
     size_t datal;
     datal = strlen((const char *)pass);
+
+#if defined(USE_CRYPTO_OPENSSL)
 
     MD5_CTX c;
     unsigned char md_buf[MAX_MD_SIZE];
@@ -302,6 +414,46 @@ bytes_to_key(const struct cipher_wrapper *cipher, const digest_type_t *md,
     }
 
     return nkey;
+
+#elif defined(USE_CRYPTO_MBEDTLS)
+
+    mbedtls_md_context_t c;
+    unsigned char md_buf[MAX_MD_SIZE];
+    int nkey;
+    int addmd;
+    unsigned int i, j, mds;
+
+    nkey = 16;
+    if (cipher != NULL) {
+        nkey = cipher_key_size(cipher);
+    }
+    mds = mbedtls_md_get_size(md);
+    memset(&c, 0, sizeof(mbedtls_md_context_t));
+
+    if (pass == NULL)
+        return nkey;
+    if (mbedtls_md_setup(&c, md, 1))
+        return 0;
+
+    for (j = 0, addmd = 0; j < (unsigned int)nkey; addmd++) {
+        mbedtls_md_starts(&c);
+        if (addmd) {
+            mbedtls_md_update(&c, md_buf, mds);
+        }
+        mbedtls_md_update(&c, pass, datal);
+        mbedtls_md_finish(&c, &(md_buf[0]));
+
+        for (i = 0; i < mds; i++, j++) {
+            if (j >= (unsigned int)nkey) {
+                break;
+            }
+            key[j] = md_buf[i];
+        }
+    }
+
+    mbedtls_md_free(&c);
+    return nkey;
+#endif
 }
 
 int
@@ -327,7 +479,16 @@ get_cipher_of_type(enum ss_cipher_type method)
     if (cipherName == NULL) {
         return NULL;
     }
+#if defined(USE_CRYPTO_OPENSSL)
     return EVP_get_cipherbyname(cipherName);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    const char *mbedtlsname = ss_mbedtls_cipher_name_by_type(method);
+    if (strcmp(mbedtlsname, CIPHER_UNSUPPORTED) == 0) {
+        LOGE("Cipher %s currently is not supported by mbed TLS library", mbedtlsname);
+        return NULL;
+    }
+    return mbedtls_cipher_info_from_string(mbedtlsname);
+#endif
 }
 
 const digest_type_t *
@@ -338,7 +499,11 @@ get_digest_type(const char *digest)
         return NULL;
     }
 
+#if defined(USE_CRYPTO_OPENSSL)
     return EVP_get_digestbyname(digest);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    return mbedtls_md_info_from_string(digest);
+#endif
 }
 
 void
@@ -358,6 +523,7 @@ cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, int enc)
 
     const cipher_core_t *cipher = get_cipher_of_type(method);
 
+#if defined(USE_CRYPTO_OPENSSL)
     ctx->core_ctx = EVP_CIPHER_CTX_new();
     cipher_core_ctx_t *core_ctx = ctx->core_ctx;
 
@@ -377,6 +543,20 @@ cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, int enc)
     if (method > ss_cipher_rc4_md5) {
         EVP_CIPHER_CTX_set_padding(core_ctx, 1);
     }
+#elif defined(USE_CRYPTO_MBEDTLS)
+    ctx->core_ctx = ss_malloc(sizeof(cipher_core_ctx_t));
+    memset(ctx->core_ctx, 0, sizeof(cipher_core_ctx_t));
+    cipher_core_ctx_t *core_ctx = ctx->core_ctx;
+
+    if (cipher == NULL) {
+        LOGE("Cipher %s not found in mbed TLS library", cipherName);
+        FATAL("Cannot initialize mbed TLS cipher");
+    }
+    mbedtls_cipher_init(core_ctx);
+    if (mbedtls_cipher_setup(core_ctx, cipher) != 0) {
+        FATAL("Cannot initialize mbed TLS cipher context");
+    }
+#endif
 }
 
 void
@@ -412,10 +592,27 @@ cipher_context_set_iv(struct cipher_env_t *env, struct cipher_ctx_t *ctx, uint8_
         LOGE("cipher_context_set_iv(): Cipher context is null");
         return;
     }
+#if defined(USE_CRYPTO_OPENSSL)
     if (!EVP_CipherInit_ex(core_ctx, NULL, NULL, true_key, iv, enc)) {
         EVP_CIPHER_CTX_cleanup(core_ctx);
         FATAL("Cannot set key and IV");
     }
+#elif defined(USE_CRYPTO_MBEDTLS)
+    if (mbedtls_cipher_setkey(core_ctx, true_key, env->enc_key_len * 8, enc) != 0) {
+        mbedtls_cipher_free(core_ctx);
+        FATAL("Cannot set mbed TLS cipher key");
+    }
+
+    if (mbedtls_cipher_set_iv(core_ctx, iv, iv_len) != 0) {
+        mbedtls_cipher_free(core_ctx);
+        FATAL("Cannot set mbed TLS cipher IV");
+    }
+    if (mbedtls_cipher_reset(core_ctx) != 0) {
+        mbedtls_cipher_free(core_ctx);
+        FATAL("Cannot finalize mbed TLS cipher context");
+    }
+#endif
+
 #ifdef SHOW_DUMP
     dump("IV", (char *)iv, (int)iv_len);
 #endif
@@ -427,7 +624,12 @@ cipher_context_release(struct cipher_env_t *env, struct cipher_ctx_t *ctx)
     if (env->enc_method >= ss_cipher_salsa20) {
         return;
     }
+#if defined(USE_CRYPTO_OPENSSL)
     EVP_CIPHER_CTX_free(ctx->core_ctx);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    mbedtls_cipher_free(ctx->core_ctx);
+    ss_free(ctx->core_ctx);
+#endif
 }
 
 static int
@@ -435,18 +637,27 @@ cipher_context_update(struct cipher_ctx_t *ctx, uint8_t *output, size_t *olen,
                       const uint8_t *input, size_t ilen)
 {
     cipher_core_ctx_t *core_ctx = ctx->core_ctx;
+#if defined(USE_CRYPTO_OPENSSL)
     int err = 0, tlen = (int)*olen;
     err = EVP_CipherUpdate(core_ctx, (unsigned char *)output, &tlen,
                            (const unsigned char *)input, (int)ilen);
     *olen = (size_t)tlen;
     return err;
+#elif defined(USE_CRYPTO_MBEDTLS)
+    return !mbedtls_cipher_update(core_ctx, (const uint8_t *)input, ilen,
+        (uint8_t *)output, olen);
+#endif
 }
 
 int
 ss_md5_hmac_with_key(char *auth, char *msg, int msg_len, uint8_t *auth_key, int key_len)
 {
     uint8_t hash[MD5_BYTES];
+#if defined(USE_CRYPTO_OPENSSL)
     HMAC(EVP_md5(), auth_key, key_len, (unsigned char *)msg, (size_t)msg_len, (unsigned char *)hash, NULL);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_MD5), auth_key, key_len, (uint8_t *)msg, msg_len, (uint8_t *)hash);
+#endif
     memcpy(auth, hash, MD5_BYTES);
 
     return 0;
@@ -456,7 +667,11 @@ int
 ss_md5_hash_func(char *auth, char *msg, int msg_len)
 {
     uint8_t hash[MD5_BYTES];
+#if defined(USE_CRYPTO_OPENSSL)
     MD5((unsigned char *)msg, (size_t)msg_len, (unsigned char *)hash);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_MD5), (uint8_t *)msg, msg_len, (uint8_t *)hash);
+#endif
     memcpy(auth, hash, MD5_BYTES);
 
     return 0;
@@ -466,7 +681,11 @@ int
 ss_sha1_hmac_with_key(char *auth, char *msg, int msg_len, uint8_t *auth_key, int key_len)
 {
     uint8_t hash[SHA1_BYTES];
+#if defined(USE_CRYPTO_OPENSSL)
     HMAC(EVP_sha1(), auth_key, key_len, (unsigned char *)msg, (size_t)msg_len, (unsigned char *)hash, NULL);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA1), auth_key, key_len, (uint8_t *)msg, msg_len, (uint8_t *)hash);
+#endif
     memcpy(auth, hash, SHA1_BYTES);
 
     return 0;
@@ -476,7 +695,11 @@ int
 ss_sha1_hash_func(char *auth, char *msg, int msg_len)
 {
     uint8_t hash[SHA1_BYTES];
+#if defined(USE_CRYPTO_OPENSSL)
     SHA1((unsigned char *)msg, (size_t)msg_len, (unsigned char *)hash);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA1), (uint8_t *)msg, msg_len, (uint8_t *)hash);
+#endif
     memcpy(auth, hash, SHA1_BYTES);
 
     return 0;
@@ -487,9 +710,20 @@ ss_aes_128_cbc(char *encrypt, char *out_data, char *key)
 {
     unsigned char iv[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
+#if defined(USE_CRYPTO_OPENSSL)
     AES_KEY aes;
     AES_set_encrypt_key((unsigned char*)key, 128, &aes);
     AES_cbc_encrypt((const unsigned char *)encrypt, (unsigned char *)out_data, 16, &aes, iv, AES_ENCRYPT);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    mbedtls_aes_context aes;
+
+    unsigned char output[16];
+
+    mbedtls_aes_setkey_enc(&aes, (unsigned char *)key, 128);
+    mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, 16, iv, (unsigned char *)encrypt, output);
+
+    memcpy(out_data, output, 16);
+#endif
     return 0;
 }
 
@@ -891,7 +1125,11 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
     // Initialize cache
     cache_create(&env->iv_cache, 256, NULL);
 
+#if defined(USE_CRYPTO_OPENSSL)
     OpenSSL_add_all_algorithms();
+#else
+    cipher_core_t cipher_info = { 0 };
+#endif
 
     struct cipher_wrapper *cipher = (struct cipher_wrapper *)calloc(1, sizeof(struct cipher_wrapper));
 
@@ -901,9 +1139,20 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
     }
 
     if (method == ss_cipher_salsa20 || method == ss_cipher_chacha20 || method == ss_cipher_chacha20ietf) {
+#if defined(USE_CRYPTO_OPENSSL)
         cipher->core    = NULL;
         cipher->key_len = (size_t) ss_cipher_key_size(method);
         cipher->iv_len  = (size_t) ss_cipher_iv_size(method);
+#endif
+#if defined(USE_CRYPTO_MBEDTLS)
+        // XXX: key_length changed to key_bitlen in mbed TLS 2.0.0
+
+        cipher_info.base = NULL;
+        cipher_info.key_bitlen = (size_t)ss_cipher_key_size(method) * 8;
+        cipher_info.iv_size = (size_t)ss_cipher_iv_size(method);
+
+        cipher->core = &cipher_info;
+#endif
     } else {
         cipher->core = get_cipher_of_type(method);
     }

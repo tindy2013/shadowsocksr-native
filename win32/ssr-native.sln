@@ -6,7 +6,6 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ssr-client", "ssr-client\ssr-client.vcxproj", "{F97AD980-48B0-4C94-9662-499EFEE4AB44}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C9840117-C1B9-43F1-9D18-A91AEB56F4C9} = {C9840117-C1B9-43F1-9D18-A91AEB56F4C9}
-		{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85} = {663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}
 		{44EA013F-AD0F-4D53-8E06-0B4EF26F4B65} = {44EA013F-AD0F-4D53-8E06-0B4EF26F4B65}
 		{86BF073F-D15A-4952-A7DF-0F4C29C93EB4} = {86BF073F-D15A-4952-A7DF-0F4C29C93EB4}
 		{A185B162-6CB6-4502-B03F-B56F7699A8D9} = {A185B162-6CB6-4502-B03F-B56F7699A8D9}
@@ -19,8 +18,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "json-c", "..\depends\json-c\win32\json-c.vcxproj", "{F1F4BA6A-0368-4F34-95BB-C29A2244A772}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcrypto", "..\depends\openssl\win32\libcrypto\libcrypto.vcxproj", "{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libuv", "..\depends\libuv\win32\libuv.vcxproj", "{44EA013F-AD0F-4D53-8E06-0B4EF26F4B65}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcork", "libcork\libcork.vcxproj", "{86BF073F-D15A-4952-A7DF-0F4C29C93EB4}"
@@ -31,6 +28,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libudns", "libudns\libudns.vcxproj", "{C9840117-C1B9-43F1-9D18-A91AEB56F4C9}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pthreads", "..\depends\pthreads4w\win32\pthreads.vcxproj", "{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mbedTLS", "..\depends\mbedtls\visualc\vs2015\mbedTLS.vcxproj", "{46CF2D25-6A36-4189-B59C-E4815388E554}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -64,14 +63,6 @@ Global
 		{F1F4BA6A-0368-4F34-95BB-C29A2244A772}.Release|x64.Build.0 = Release|x64
 		{F1F4BA6A-0368-4F34-95BB-C29A2244A772}.Release|x86.ActiveCfg = Release|Win32
 		{F1F4BA6A-0368-4F34-95BB-C29A2244A772}.Release|x86.Build.0 = Release|Win32
-		{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}.Debug|x64.ActiveCfg = Debug|x64
-		{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}.Debug|x64.Build.0 = Debug|x64
-		{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}.Debug|x86.ActiveCfg = Debug|Win32
-		{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}.Debug|x86.Build.0 = Debug|Win32
-		{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}.Release|x64.ActiveCfg = Release|x64
-		{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}.Release|x64.Build.0 = Release|x64
-		{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}.Release|x86.ActiveCfg = Release|Win32
-		{663D1B2D-6BB0-43FA-BB4A-2769C0B80E85}.Release|x86.Build.0 = Release|Win32
 		{44EA013F-AD0F-4D53-8E06-0B4EF26F4B65}.Debug|x64.ActiveCfg = Debug|x64
 		{44EA013F-AD0F-4D53-8E06-0B4EF26F4B65}.Debug|x64.Build.0 = Debug|x64
 		{44EA013F-AD0F-4D53-8E06-0B4EF26F4B65}.Debug|x86.ActiveCfg = Debug|Win32
@@ -104,6 +95,14 @@ Global
 		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Release|x64.Build.0 = Release|x64
 		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Release|x86.ActiveCfg = Release|Win32
 		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}.Release|x86.Build.0 = Release|Win32
+		{46CF2D25-6A36-4189-B59C-E4815388E554}.Debug|x64.ActiveCfg = Debug|x64
+		{46CF2D25-6A36-4189-B59C-E4815388E554}.Debug|x64.Build.0 = Debug|x64
+		{46CF2D25-6A36-4189-B59C-E4815388E554}.Debug|x86.ActiveCfg = Debug|Win32
+		{46CF2D25-6A36-4189-B59C-E4815388E554}.Debug|x86.Build.0 = Debug|Win32
+		{46CF2D25-6A36-4189-B59C-E4815388E554}.Release|x64.ActiveCfg = Release|x64
+		{46CF2D25-6A36-4189-B59C-E4815388E554}.Release|x64.Build.0 = Release|x64
+		{46CF2D25-6A36-4189-B59C-E4815388E554}.Release|x86.ActiveCfg = Release|Win32
+		{46CF2D25-6A36-4189-B59C-E4815388E554}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

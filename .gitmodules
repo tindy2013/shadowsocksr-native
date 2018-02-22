@@ -26,3 +26,7 @@
 	path = depends/zlib
 	url = https://github.com/ShadowsocksR-Live/zlib.git
 	branch = master
+[submodule "depends/mbedtls"]
+	path = depends/mbedtls
+	url = https://github.com/ShadowsocksR-Live/mbedtls.git
+	branch = master
