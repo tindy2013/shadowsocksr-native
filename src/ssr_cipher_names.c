@@ -35,7 +35,7 @@ int ss_cipher_iv_size(enum ss_cipher_type index) {
 }
 
 const char *
-ss_cipher_name_from_index(enum ss_cipher_type index)
+ss_cipher_name_of_type(enum ss_cipher_type index)
 {
 #define SS_CIPHER_GEN(_, name, text, iv_size, key_size) case (name): return (text);
     switch (index) {
@@ -55,13 +55,11 @@ static int strcicmp(char const *a, char const *b) {
     }
 }
 
-enum ss_cipher_type
-ss_cipher_index_from_name(const char *name)
-{
+enum ss_cipher_type ss_cipher_type_of_name(const char *name) {
     enum ss_cipher_type m = ss_cipher_none;
     if (name != NULL) {
         for (m = ss_cipher_none; m < ss_cipher_max; ++m) {
-            if (strcicmp(name, ss_cipher_name_from_index(m)) == 0) {
+            if (strcicmp(name, ss_cipher_name_of_type(m)) == 0) {
                 break;
             }
         }
@@ -76,7 +74,7 @@ ss_cipher_index_from_name(const char *name)
 
 //=========================== ssr_protocol =====================================
 
-const char * ssr_protocol_name_from_index(enum ssr_protocol index) {
+const char * ssr_protocol_name_of_type(enum ssr_protocol index) {
 #define SSR_PROTOCOL_GEN(_, name, msg) case (name): return (msg);
     switch (index) {
         SSR_PROTOCOL_MAP(SSR_PROTOCOL_GEN)
@@ -86,7 +84,7 @@ const char * ssr_protocol_name_from_index(enum ssr_protocol index) {
     return NULL; // "Invalid index";
 }
 
-enum ssr_protocol ssr_protocol_index_from_name(const char *name) {
+enum ssr_protocol ssr_protocol_type_of_name(const char *name) {
     struct {
         enum ssr_protocol index;
         char *name;
@@ -110,7 +108,7 @@ enum ssr_protocol ssr_protocol_index_from_name(const char *name) {
 
 //=========================== ssr_obfs =========================================
 
-const char * ssr_obfs_name_from_index(enum ssr_obfs index) {
+const char * ssr_obfs_name_of_type(enum ssr_obfs index) {
 #define SSR_OBFS_GEN(_, name, msg) case (name): return (msg);
     switch (index) {
             SSR_OBFS_MAP(SSR_OBFS_GEN)
@@ -120,7 +118,7 @@ const char * ssr_obfs_name_from_index(enum ssr_obfs index) {
     return NULL; // "Invalid index";
 }
 
-enum ssr_obfs ssr_obfs_index_from_name(const char *name) {
+enum ssr_obfs ssr_obfs_type_of_name(const char *name) {
     struct {
         enum ssr_obfs index;
         char *name;

@@ -475,7 +475,7 @@ get_cipher_of_type(enum ss_cipher_type method)
         method = ss_cipher_rc4;
     }
 
-    const char *cipherName = ss_cipher_name_from_index(method);
+    const char *cipherName = ss_cipher_name_of_type(method);
     if (cipherName == NULL) {
         return NULL;
     }
@@ -516,7 +516,7 @@ cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, int enc)
         return;
     }
 
-    const char *cipherName = ss_cipher_name_from_index(method);
+    const char *cipherName = ss_cipher_name_of_type(method);
     if (cipherName == NULL) {
         return;
     }
@@ -1158,7 +1158,7 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
     }
 
     if (cipher->core == NULL && cipher->key_len == 0) {
-        LOGE("Cipher %s not found in crypto library", ss_cipher_name_from_index(method));
+        LOGE("Cipher %s not found in crypto library", ss_cipher_name_of_type(method));
         FATAL("Cannot initialize cipher");
     }
 
@@ -1185,7 +1185,7 @@ struct cipher_env_t *
 cipher_env_new_instance(const char *pass, const char *method)
 {
     struct cipher_env_t *env = (struct cipher_env_t *)calloc(1, sizeof(struct cipher_env_t));
-    enum ss_cipher_type m = ss_cipher_index_from_name(method);
+    enum ss_cipher_type m = ss_cipher_type_of_name(method);
     if (m <= ss_cipher_table) {
         enc_table_init(env, m, pass);
     } else {

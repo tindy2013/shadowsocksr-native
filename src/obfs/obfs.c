@@ -60,17 +60,17 @@ new_obfs_manager(const char *plugin_name)
     if (plugin_name == NULL || strlen(plugin_name)==0) {
         return NULL;
     }
-    if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_origin)) == 0) {
+    if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_origin)) == 0) {
         // origin
         return NULL;
     }
-    if (strcmp(plugin_name, ssr_obfs_name_from_index(ssr_obfs_plain)) == 0) {
+    if (strcmp(plugin_name, ssr_obfs_name_of_type(ssr_obfs_plain)) == 0) {
         // plain
         return NULL;
     }
     init_crc32_table();
     init_shift128plus();
-    if (strcmp(plugin_name, ssr_obfs_name_from_index(ssr_obfs_http_simple)) == 0) {
+    if (strcmp(plugin_name, ssr_obfs_name_of_type(ssr_obfs_http_simple)) == 0) {
         // http_simple
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = init_data;
@@ -84,7 +84,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_decode = http_simple_client_decode;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_obfs_name_from_index(ssr_obfs_http_post)) == 0) {
+    } else if (strcmp(plugin_name, ssr_obfs_name_of_type(ssr_obfs_http_post)) == 0) {
         // http_post
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = init_data;
@@ -98,7 +98,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_decode = http_simple_client_decode;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_obfs_name_from_index(ssr_obfs_tls_1_2_ticket_auth)) == 0) {
+    } else if (strcmp(plugin_name, ssr_obfs_name_of_type(ssr_obfs_tls_1_2_ticket_auth)) == 0) {
         // tls1.2_ticket_auth
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = tls12_ticket_auth_init_data;
@@ -112,7 +112,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_decode = tls12_ticket_auth_client_decode;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_obfs_name_from_index(ssr_obfs_tls_1_2_ticket_fastauth)) == 0) {
+    } else if (strcmp(plugin_name, ssr_obfs_name_of_type(ssr_obfs_tls_1_2_ticket_fastauth)) == 0) {
         // tls1.2_ticket_fastauth
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = tls12_ticket_fastauth_init_data;
@@ -126,7 +126,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_decode = tls12_ticket_fastauth_client_decode;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_verify_simple)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_verify_simple)) == 0) {
         // verify_simple
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = init_data;
@@ -141,7 +141,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = NULL;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_simple)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_simple)) == 0) {
         // auth_simple
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_simple_init_data;
@@ -156,7 +156,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = NULL;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_sha1)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_sha1)) == 0) {
         // auth_sha1
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_simple_init_data;
@@ -172,7 +172,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = NULL;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_sha1_v2)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_sha1_v2)) == 0) {
         // auth_sha1_v2
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_simple_init_data;
@@ -188,7 +188,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = NULL;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_sha1_v4)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_sha1_v4)) == 0) {
         // auth_sha1_v4
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_simple_init_data;
@@ -204,12 +204,12 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = NULL;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_aes128_md5)) == 0 || strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_aes128_sha1)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_aes128_md5)) == 0 || strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_aes128_sha1)) == 0) {
         // auth_aes128_md5
         // auth_aes128_sha1
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_simple_init_data;
-        if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_aes128_md5)) == 0) {
+        if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_aes128_md5)) == 0) {
             plugin->new_obfs = auth_aes128_md5_new_obfs;
         } else {
             plugin->new_obfs = auth_aes128_sha1_new_obfs;
@@ -225,7 +225,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = auth_aes128_sha1_client_udp_post_decrypt;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_chain_a)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_chain_a)) == 0) {
         // auth_chain_a
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_chain_a_init_data;
@@ -241,7 +241,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_chain_b)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_chain_b)) == 0) {
         // auth_chain_b
         struct obfs_manager *plugin = (struct obfs_manager *)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_chain_b_init_data;
@@ -257,7 +257,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_chain_c)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_chain_c)) == 0) {
         // auth_chain_c
         struct obfs_manager *plugin = (struct obfs_manager *) calloc(1, sizeof(struct obfs_manager));
         plugin->init_data = auth_chain_c_init_data;
@@ -273,7 +273,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_chain_d)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_chain_d)) == 0) {
         // auth_chain_d
         struct obfs_manager *plugin = (struct obfs_manager *) calloc(1, sizeof(struct obfs_manager));
         plugin->init_data = auth_chain_d_init_data;
@@ -289,7 +289,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_chain_e)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_chain_e)) == 0) {
         // auth_chain_e
         struct obfs_manager *plugin = (struct obfs_manager *)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_chain_e_init_data;
@@ -305,7 +305,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 
         return plugin;
-    } else if (strcmp(plugin_name, ssr_protocol_name_from_index(ssr_protocol_auth_chain_f)) == 0) {
+    } else if (strcmp(plugin_name, ssr_protocol_name_of_type(ssr_protocol_auth_chain_f)) == 0) {
         // auth_chain_f
         struct obfs_manager *plugin = (struct obfs_manager *)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_chain_f_init_data;

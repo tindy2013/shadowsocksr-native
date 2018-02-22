@@ -146,7 +146,7 @@ void ssr_run_loop_shutdown(struct run_loop_state *state) {
     uv_signal_stop(state->sigterm_watcher);
 
     if (state->listeners && state->listener_count) {
-        for (size_t n = 0; n < state->listener_count; ++n) {
+        for (size_t n = 0; n < (size_t) state->listener_count; ++n) {
             struct listener_t *listener = state->listeners + n;
 
             uv_tcp_t *tcp_server = listener->tcp_server;

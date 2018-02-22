@@ -50,8 +50,8 @@ typedef enum ss_cipher_type {
 
 int ss_cipher_key_size(enum ss_cipher_type index);
 int ss_cipher_iv_size(enum ss_cipher_type index);
-const char * ss_cipher_name_from_index(enum ss_cipher_type index);
-enum ss_cipher_type ss_cipher_index_from_name(const char *name);
+const char * ss_cipher_name_of_type(enum ss_cipher_type index);
+enum ss_cipher_type ss_cipher_type_of_name(const char *name);
 
 
 #define SSR_PROTOCOL_MAP(V)                                                    \
@@ -78,8 +78,8 @@ typedef enum ssr_protocol {
     ssr_protocol_max,
 } ssr_protocol;
 
-const char * ssr_protocol_name_from_index(enum ssr_protocol index);
-enum ssr_protocol ssr_protocol_index_from_name(const char *name);
+const char * ssr_protocol_name_of_type(enum ssr_protocol index);
+enum ssr_protocol ssr_protocol_type_of_name(const char *name);
 
 
 #define SSR_OBFS_MAP(V)                                                        \
@@ -97,7 +97,7 @@ typedef enum ssr_obfs {
     ssr_obfs_max,
 } ssr_obfs;
 
-const char * ssr_obfs_name_from_index(enum ssr_obfs index);
-enum ssr_obfs ssr_obfs_index_from_name(const char *name);
+const char * ssr_obfs_name_of_type(enum ssr_obfs index);
+enum ssr_obfs ssr_obfs_type_of_name(const char *name);
 
 #endif /* ssr_cipher_names_h */
