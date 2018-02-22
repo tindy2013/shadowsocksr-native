@@ -55,12 +55,12 @@ static struct clib_array * array_check_and_grow(struct clib_array* pArray) {
 }
 
 struct clib_array * new_c_array(int array_size, clib_compare fn_c, clib_destroy fn_d) {
-    struct clib_array* pArray = (struct clib_array*)malloc(sizeof(struct clib_array));
+    struct clib_array* pArray = (struct clib_array*)calloc(1, sizeof(struct clib_array));
     if (!pArray) {
         return (struct clib_array*)0;
     }
     pArray->no_max_elements = array_size < 8 ? 8 : array_size;
-    pArray->pElements = (struct clib_object**) malloc(pArray->no_max_elements * sizeof(struct clib_object*));
+    pArray->pElements = (struct clib_object**) calloc(1, pArray->no_max_elements * sizeof(struct clib_object*));
     if (!pArray->pElements) {
         free(pArray);
         return (struct clib_array*)0;
@@ -288,12 +288,12 @@ static struct clib_deque * grow_deque(struct clib_deque* pDeq) {
 }
 
 struct clib_deque * new_c_deque(int deq_size, clib_compare fn_c, clib_destroy fn_d) {
-    struct clib_deque* pDeq = (struct clib_deque*)malloc(sizeof(struct clib_deque));
+    struct clib_deque* pDeq = (struct clib_deque*)calloc(1, sizeof(struct clib_deque));
     if (pDeq == (struct clib_deque*)0) {
         return (struct clib_deque*)0;
     }
     pDeq->no_max_elements = deq_size < 8 ? 8 : deq_size;
-    pDeq->pElements = (struct clib_object**) malloc(pDeq->no_max_elements * sizeof(struct clib_object*));
+    pDeq->pElements = (struct clib_object**) calloc(1, pDeq->no_max_elements * sizeof(struct clib_object*));
 
     if (pDeq == (struct clib_deque*)0) {
         return (struct clib_deque*)0;
@@ -490,7 +490,7 @@ void delete_iterator_c_deque(struct clib_iterator* pItr) {
 #include <stdio.h>
 
 struct clib_map * new_c_map(clib_compare fn_c_k, clib_destroy fn_k_d, clib_destroy fn_v_d) {
-    struct clib_map* pMap = (struct clib_map*)malloc(sizeof(struct clib_map));
+    struct clib_map* pMap = (struct clib_map*)calloc(1, sizeof(struct clib_map));
     if (pMap == (struct clib_map*)0) {
         return (struct clib_map*)0;
     }
@@ -615,7 +615,7 @@ static void replace_value_c_map(struct clib_iterator *pIterator, void* elem, siz
 }
 
 struct clib_iterator * new_iterator_c_map(struct clib_map *pMap) {
-    struct clib_iterator *itr = (struct clib_iterator*) malloc(sizeof(struct clib_iterator));
+    struct clib_iterator *itr = (struct clib_iterator*) calloc(1, sizeof(struct clib_iterator));
     itr->get_next = get_next_c_map;
     itr->get_value = get_value_c_map;
     itr->replace_value = replace_value_c_map;
@@ -1143,7 +1143,7 @@ void debug_verify_property_5_helper(struct clib_rb* pTree, struct clib_rb_node* 
 #include <stdio.h>
 
 struct clib_set * new_c_set(clib_compare fn_c, clib_destroy fn_d) {
-    struct clib_set* pSet = (struct clib_set*)malloc(sizeof(struct clib_set));
+    struct clib_set* pSet = (struct clib_set*)calloc(1, sizeof(struct clib_set));
     if (pSet == (struct clib_set*)0) {
         return (struct clib_set*)0;
     }
@@ -1263,7 +1263,7 @@ void delete_iterator_c_set(struct clib_iterator* pItr) {
 #include "c_lib.h"
 
 struct clib_slist * new_c_slist(clib_destroy fn_d, clib_compare fn_c) {
-    struct clib_slist* pSlist = (struct clib_slist*)malloc(sizeof(struct clib_slist));
+    struct clib_slist* pSlist = (struct clib_slist*)calloc(1, sizeof(struct clib_slist));
     pSlist->head = (struct clib_slist_node*)0;
     pSlist->destruct_fn = fn_d;
     pSlist->compare_key_fn = fn_c;
@@ -1282,7 +1282,7 @@ clib_error push_back_c_slist(struct clib_slist* pSlist, void* elem, size_t elem_
     struct clib_slist_node* current = (struct clib_slist_node*)0;
     struct clib_slist_node* new_node = (struct clib_slist_node*)0;
 
-    new_node = (struct clib_slist_node*)malloc(sizeof(struct clib_slist_node));
+    new_node = (struct clib_slist_node*)calloc(1, sizeof(struct clib_slist_node));
 
     new_node->elem = new_clib_object(elem, elem_size);
     if (!new_node->elem) {
@@ -1349,7 +1349,7 @@ clib_error insert_c_slist(struct clib_slist* pSlist, int pos, void* elem, size_t
     struct clib_slist_node* new_node = (struct clib_slist_node*)0;
 
     if (pos == 1) {
-        new_node = (struct clib_slist_node*)malloc(sizeof(struct clib_slist_node));
+        new_node = (struct clib_slist_node*)calloc(1, sizeof(struct clib_slist_node));
         new_node->elem = new_clib_object(elem, elem_size);
         if (!new_node->elem) {
             free(new_node);
@@ -1368,7 +1368,7 @@ clib_error insert_c_slist(struct clib_slist* pSlist, int pos, void* elem, size_t
     for (i = 1; i < pos - 1; i++) {
         current = current->next;
     }
-    new_node = (struct clib_slist_node*)malloc(sizeof(struct clib_slist_node));
+    new_node = (struct clib_slist_node*)calloc(1, sizeof(struct clib_slist_node));
     new_node->elem = new_clib_object(elem, elem_size);
     if (!new_node->elem) {
         free(new_node);
@@ -1443,7 +1443,7 @@ static void replace_value_c_slist(struct clib_iterator *pIterator, void* elem, s
 }
 
 struct clib_iterator * new_iterator_c_slist(struct clib_slist* pSlist) {
-    struct clib_iterator *itr = (struct clib_iterator*) malloc(sizeof(struct clib_iterator));
+    struct clib_iterator *itr = (struct clib_iterator*) calloc(1, sizeof(struct clib_iterator));
     itr->get_next = get_next_c_slist;
     itr->get_value = get_value_c_slist;
     itr->replace_value = replace_value_c_slist;
@@ -1471,12 +1471,12 @@ void clib_get(void* destination, void* source, size_t size) {
 }
 
 struct clib_object * new_clib_object(void* inObject, size_t obj_size) {
-    struct clib_object* tmp = (struct clib_object*)malloc(sizeof(struct clib_object));
+    struct clib_object* tmp = (struct clib_object*)calloc(1, sizeof(struct clib_object));
     if (!tmp) {
         return (struct clib_object*)0;
     }
     tmp->size = obj_size;
-    tmp->raw_data = (void*)malloc(obj_size);
+    tmp->raw_data = (void*)calloc(1, obj_size);
     if (!tmp->raw_data) {
         free(tmp);
         return (struct clib_object*)0;
@@ -1486,7 +1486,7 @@ struct clib_object * new_clib_object(void* inObject, size_t obj_size) {
 }
 
 clib_error get_raw_clib_object(struct clib_object *inObject, void**elem) {
-    *elem = (void*)malloc(inObject->size);
+    *elem = (void*)calloc(1, inObject->size);
     if (!*elem) {
         return CLIB_ELEMENT_RETURN_ERROR;
     }
@@ -1497,7 +1497,7 @@ clib_error get_raw_clib_object(struct clib_object *inObject, void**elem) {
 
 void replace_raw_clib_object(struct clib_object* current_object, void* elem, size_t elem_size) {
     free(current_object->raw_data);
-    current_object->raw_data = (void*)malloc(elem_size);
+    current_object->raw_data = (void*)calloc(1, elem_size);
     memcpy(current_object->raw_data, elem, elem_size);
 }
 
