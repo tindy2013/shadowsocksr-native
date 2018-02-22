@@ -117,21 +117,21 @@ struct clib_array {
     clib_destroy destruct_fn; /* Destructor function pointer*/
 };
 
-extern struct clib_array* new_c_array(int init_size, clib_compare fn_c, clib_destroy fn_d);
-extern clib_error push_back_c_array(struct clib_array* pArray, void* elem, size_t elem_size);
-extern clib_error element_at_c_array(struct clib_array* pArray, int pos, void**e);
-extern clib_error insert_at_c_array(struct clib_array* pArray, int index, void* elem, size_t elem_size);
-extern int size_c_array(struct clib_array* pArray);
-extern int capacity_c_array(struct clib_array* pArray);
-extern clib_bool  empty_c_array(struct clib_array* pArray);
-extern clib_error reserve_c_array(struct clib_array* pArray, int pos);
-extern clib_error front_c_array(struct clib_array* pArray, void* elem);
-extern clib_error back_c_array(struct clib_array* pArray, void* elem);
-extern clib_error remove_from_c_array(struct clib_array*, int pos);
-extern clib_error delete_c_array(struct clib_array* pArray);
+extern struct clib_array* c_array_new(int init_size, clib_compare fn_c, clib_destroy fn_d);
+extern clib_error c_array_push_back(struct clib_array* pArray, void* elem, size_t elem_size);
+extern clib_error c_array_element_at(struct clib_array* pArray, int pos, void**e);
+extern clib_error c_array_insert_at(struct clib_array* pArray, int index, void* elem, size_t elem_size);
+extern int c_array_size(struct clib_array* pArray);
+extern int c_array_capacity(struct clib_array* pArray);
+extern clib_bool  c_array_empty(struct clib_array* pArray);
+extern clib_error c_array_reserve(struct clib_array* pArray, int pos);
+extern clib_error c_array_front(struct clib_array* pArray, void* elem);
+extern clib_error c_array_back(struct clib_array* pArray, void* elem);
+extern clib_error c_array_remove_from(struct clib_array*, int pos);
+extern clib_error c_array_delete(struct clib_array* pArray);
 
-extern struct clib_iterator* new_iterator_c_array(struct clib_array* pArray);
-extern void delete_iterator_c_array(struct clib_iterator* pItr);
+extern struct clib_iterator* c_array_new_iterator(struct clib_array* pArray);
+extern void c_array_delete_iterator(struct clib_iterator* pItr);
 
 
 //==================== c_deque.h =============================================
@@ -147,21 +147,21 @@ struct clib_deque {
     clib_destroy destruct_fn;
 };
 
-extern struct clib_deque* new_c_deque(int deq_size, clib_compare fn_c, clib_destroy fn_d);
-extern clib_error     push_back_c_deque(struct clib_deque* pDeq, void* elem, size_t elem_size);
-extern clib_error     push_front_c_deque(struct clib_deque* pDeq, void* elem, size_t elem_size);
+extern struct clib_deque* c_deque_new(int deq_size, clib_compare fn_c, clib_destroy fn_d);
+extern clib_error     c_deque_push_back(struct clib_deque* pDeq, void* elem, size_t elem_size);
+extern clib_error     c_deque_push_front(struct clib_deque* pDeq, void* elem, size_t elem_size);
 
-extern clib_error     front_c_deque(struct clib_deque* pDeq, void*);
-extern clib_error     back_c_deque(struct clib_deque* pDeq, void*);
-extern clib_error     pop_back_c_deque(struct clib_deque* pDeq);
-extern clib_error     pop_front_c_deque(struct clib_deque* pDeq);
-extern clib_bool      empty_c_deque(struct clib_deque* pDeq);
-extern int            size_c_deque(struct clib_deque* pDeq);
-extern clib_error     delete_c_deque(struct clib_deque* pDeq);
-extern clib_error     element_at_c_deque(struct clib_deque* pDeq, int index, void**elem);
+extern clib_error     c_deque_front(struct clib_deque* pDeq, void*);
+extern clib_error     c_deque_back(struct clib_deque* pDeq, void*);
+extern clib_error     c_deque_pop_back(struct clib_deque* pDeq);
+extern clib_error     c_deque_pop_front(struct clib_deque* pDeq);
+extern clib_bool      c_deque_empty(struct clib_deque* pDeq);
+extern int            c_deque_size(struct clib_deque* pDeq);
+extern clib_error     c_deque_delete(struct clib_deque* pDeq);
+extern clib_error     c_deque_element_at(struct clib_deque* pDeq, int index, void**elem);
 
-extern struct clib_iterator* new_iterator_c_deque(struct clib_deque* pDeq);
-extern void delete_iterator_c_deque(struct clib_iterator* pItr);
+extern struct clib_iterator* c_deque_new_iterator(struct clib_deque* pDeq);
+extern void c_deque_delete_iterator(struct clib_iterator* pItr);
 
 
 //==================== c_rb.h =============================================
@@ -184,15 +184,15 @@ struct clib_rb {
     clib_compare compare_fn;
 };
 
-extern struct clib_rb* new_c_rb(clib_compare fn_c, clib_destroy fn_ed, clib_destroy fn_vd);
-extern clib_error  insert_c_rb(struct clib_rb* pTree, void* key, size_t key_size, void* value, size_t value_size);
-extern struct clib_rb_node*   find_c_rb(struct clib_rb* pTree, void* key);
-extern struct clib_rb_node* remove_c_rb(struct clib_rb* pTree, void* key);
-extern clib_error  delete_c_rb(struct clib_rb* pTree);
-extern clib_bool   empty_c_rb(struct clib_rb* pTree);
+extern struct clib_rb * c_rb_new(clib_compare fn_c, clib_destroy fn_ed, clib_destroy fn_vd);
+extern clib_error  c_rb_insert(struct clib_rb* pTree, void* key, size_t key_size, void* value, size_t value_size);
+extern struct clib_rb_node * c_rb_find(struct clib_rb* pTree, void* key);
+extern struct clib_rb_node * c_rb_remove(struct clib_rb* pTree, void* key);
+extern clib_error  c_rb_delete(struct clib_rb* pTree);
+extern clib_bool   c_rb_empty(struct clib_rb* pTree);
 
-extern struct clib_rb_node *minimum_c_rb(struct clib_rb* pTree, struct clib_rb_node* x);
-extern struct clib_rb_node* tree_successor(struct clib_rb* pTree, struct clib_rb_node* x);
+extern struct clib_rb_node * c_rb_minimum(struct clib_rb* pTree, struct clib_rb_node* x);
+extern struct clib_rb_node * c_rb_tree_successor(struct clib_rb* pTree, struct clib_rb_node* x);
 
 
 //==================== c_set.h =============================================
@@ -202,15 +202,15 @@ struct clib_set {
     struct clib_rb* root;
 };
 
-extern struct clib_set* new_c_set(clib_compare fn_c, clib_destroy fn_d);
-extern clib_error   insert_c_set(struct clib_set* pSet, void* key, size_t key_size);
-extern clib_bool    exists_c_set(struct clib_set* pSet, void* key);
-extern clib_error   remove_c_set(struct clib_set* pSet, void* key);
-extern clib_bool    find_c_set(struct clib_set* pSet, void* key, void* outKey);
-extern clib_error   delete_c_set(struct clib_set* pSet);
+extern struct clib_set* c_set_new(clib_compare fn_c, clib_destroy fn_d);
+extern clib_error   c_set_insert(struct clib_set* pSet, void* key, size_t key_size);
+extern clib_bool    c_set_exists(struct clib_set* pSet, void* key);
+extern clib_error   c_set_remove(struct clib_set* pSet, void* key);
+extern clib_bool    c_set_find(struct clib_set* pSet, void* key, void* outKey);
+extern clib_error   c_set_delete(struct clib_set* pSet);
 
-extern struct clib_iterator* new_iterator_c_set(struct clib_set* pSet);
-extern void delete_iterator_c_set(struct clib_iterator* pItr);
+extern struct clib_iterator* c_set_new_iterator(struct clib_set* pSet);
+extern void c_set_delete_iterator(struct clib_iterator* pItr);
 
 
 //==================== c_map.h =============================================
@@ -220,15 +220,15 @@ struct clib_map {
     struct clib_rb* root;
 };
 
-extern struct clib_map* new_c_map(clib_compare fn_c_k, clib_destroy fn_k_d, clib_destroy fn_v_d);
-extern clib_error   insert_c_map(struct clib_map* pMap, void* key, size_t key_size, void* value, size_t value_size);
-extern clib_bool    exists_c_map(struct clib_map* pMap, void* key);
-extern clib_error   remove_c_map(struct clib_map* pMap, void* key);
-extern clib_bool    find_c_map(struct clib_map* pMap, void* key, void**value);
-extern clib_error   delete_c_map(struct clib_map* pMap);
+extern struct clib_map* c_map_new(clib_compare fn_c_k, clib_destroy fn_k_d, clib_destroy fn_v_d);
+extern clib_error   c_map_insert(struct clib_map* pMap, void* key, size_t key_size, void* value, size_t value_size);
+extern clib_bool    c_map_exists(struct clib_map* pMap, void* key);
+extern clib_error   c_map_remove(struct clib_map* pMap, void* key);
+extern clib_bool    c_map_find(struct clib_map* pMap, void* key, void**value);
+extern clib_error   c_map_delete(struct clib_map* pMap);
 
-extern struct clib_iterator* new_iterator_c_map(struct clib_map* pMap);
-extern void delete_iterator_c_map(struct clib_iterator* pItr);
+extern struct clib_iterator* c_map_new_iterator(struct clib_map* pMap);
+extern void c_map_delete_iterator(struct clib_iterator* pItr);
 
 
 //==================== c_slist.h =============================================
@@ -246,16 +246,16 @@ struct clib_slist {
     int size;
 };
 
-extern struct clib_slist* new_c_slist(clib_destroy fn_d, clib_compare fn_c);
-extern void           delete_c_slist(struct clib_slist* pSlist);
-extern clib_error     insert_c_slist(struct clib_slist* pSlist, int pos, void* elem, size_t elem_size);
-extern clib_error     push_back_c_slist(struct clib_slist* pSlist, void* elem, size_t elem_size);
-extern void           remove_c_slist(struct clib_slist* pSlist, int pos);
-extern void           for_each_c_slist(struct clib_slist* pSlist, void(*fn)(void*));
-extern clib_bool      find_c_slist(struct clib_slist* pSlist, void* find_value, void**out_value);
+extern struct clib_slist* c_slist_new(clib_destroy fn_d, clib_compare fn_c);
+extern void           c_slist_delete(struct clib_slist* pSlist);
+extern clib_error     c_slist_insert(struct clib_slist* pSlist, int pos, void* elem, size_t elem_size);
+extern clib_error     c_slist_push_back(struct clib_slist* pSlist, void* elem, size_t elem_size);
+extern void           c_slist_remove(struct clib_slist* pSlist, int pos);
+extern void           c_slist_for_each(struct clib_slist* pSlist, void(*fn)(void*));
+extern clib_bool      c_slist_find(struct clib_slist* pSlist, void* find_value, void**out_value);
 
-extern struct clib_iterator* new_iterator_c_slist(struct clib_slist* pSlit);
-extern void delete_iterator_c_slist(struct clib_iterator* pItr);
+extern struct clib_iterator* c_slist_new_iterator(struct clib_slist* pSlit);
+extern void c_slist_delete_iterator(struct clib_iterator* pItr);
 
 
 //==================== c_algorithms.h =============================================
@@ -272,10 +272,10 @@ extern void  clib_copy(void* destination, void* source, size_t size);
 extern void  clib_get(void* destination, void* source, size_t size);
 extern char* clib_strdup(char *ptr);
 
-extern struct clib_object* new_clib_object(void* inObject, size_t obj_size);
-extern clib_error get_raw_clib_object(struct clib_object *inObject, void**elem);
-extern void  delete_clib_object(struct clib_object* inObject);
-extern void replace_raw_clib_object(struct clib_object* current_object, void* elem, size_t elem_size);
+extern struct clib_object* clib_object_new(void* inObject, size_t obj_size);
+extern clib_error clib_object_get_raw(struct clib_object *inObject, void**elem);
+extern void  clib_object_delete(struct clib_object* inObject);
+extern void clib_object_replace_raw(struct clib_object* current_object, void* elem, size_t elem_size);
 
 #if defined(__cplusplus)
 }
