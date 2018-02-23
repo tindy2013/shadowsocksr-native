@@ -261,7 +261,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             break;
         }
 
-        pr_info("listening on %s:%hu", addrbuf, cf->listen_port);
+        pr_info("listening on     %s:%hu", addrbuf, cf->listen_port);
 
 #if UDP_RELAY_ENABLE
         if (cf->udp) {
@@ -278,10 +278,6 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 #endif // UDP_RELAY_ENABLE
 
         n += 1;
-    }
-
-    if (cf->udp) {
-        pr_info("udprelay enabled");
     }
 
     uv_freeaddrinfo(addrs);

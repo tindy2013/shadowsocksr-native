@@ -37,6 +37,7 @@ static void usage(void);
 
 struct run_loop_state *g_state = NULL;
 void feedback_state(struct run_loop_state *state, void *p);
+void print_remote_info(const struct server_config *config);
 
 int main(int argc, char **argv) {
     struct server_config *config = NULL;
@@ -68,6 +69,8 @@ int main(int argc, char **argv) {
             break;
         }
 
+        print_remote_info(config);
+
         ssr_run_loop_begin(config, &feedback_state, NULL);
         g_state = NULL;
 
@@ -81,6 +84,37 @@ int main(int argc, char **argv) {
     }
 
     return 0;
+}
+
+void print_remote_info(const struct server_config *config) {
+    char remote_host[256] = { 0 };
+    strcpy(remote_host, config->remote_host);
+    if (strlen(remote_host) > 4) {
+        for (size_t i = 4; i < strlen(remote_host); i++) {
+            remote_host[i] = '*';
+        }
+    }
+
+    char password[256] = { 0 };
+    strcpy(password, config->password);
+    if (strlen(password) > 2) {
+        for (size_t i = 2; i < strlen(password); i++) {
+            password[i] = '*';
+        }
+    }
+
+    pr_info("remote server    %s:%hu", remote_host, config->remote_port);
+    pr_info("method           %s", config->method);
+    pr_info("password         %s", password);
+    pr_info("protocol         %s", config->protocol);
+    if (config->protocol_param && strlen(config->protocol_param)) {
+        pr_info("protocol_param   %s", config->protocol_param);
+    }
+    pr_info("obfs             %s", config->obfs);
+    if (config->obfs_param && strlen(config->obfs_param)) {
+        pr_info("obfs_param       %s", config->obfs_param);
+    }
+    pr_info("UDP relay        %s\n", config->udp ? "yes" : "no");
 }
 
 void feedback_state(struct run_loop_state *state, void *p) {
