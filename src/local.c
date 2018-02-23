@@ -1741,11 +1741,11 @@ main(int argc, char **argv)
         }
     }
 
-    struct udp_server_ctx_t *udp_server = NULL;
+    struct udp_listener_ctx_t *udp_server = NULL;
     // Setup UDP
     if (mode != TCP_ONLY) {
         LOGI("udprelay enabled");
-        udp_server = udprelay_begin(loop, local_addr, atoi(local_port), (union sockaddr_universal *)listen_ctx->servers[0].addr_udp,
+        udp_server = udprelay_begin(loop, local_addr, (uint16_t)atoi(local_port), (union sockaddr_universal *)listen_ctx->servers[0].addr_udp,
                       &tunnel_addr, mtu, listen_ctx->timeout, listener->iface, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
     }
 
