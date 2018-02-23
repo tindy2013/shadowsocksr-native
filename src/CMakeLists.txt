@@ -114,6 +114,10 @@ include_directories(${libsodium_include_dirs})
 include_directories(${LIB_JSON_C_DIR}/..)
 include_directories(${PCRE_INCLUDE_DIR})
 
+if(USE_CRYPTO_MBEDTLS)
+    include_directories(${MBEDTLS_ROOT_DIR}/include)
+endif()
+
 if (WIN32)
     list ( APPEND SOURCE_FILES_LOCAL win32.c )
     list ( APPEND SOURCE_FILES_TUNNEL win32.c )
@@ -146,13 +150,14 @@ set_target_properties(ssr-local PROPERTIES COMPILE_DEFINITIONS MODULE_LOCAL)
 
 set (ss_lib_common
         json-c
+        mbedtls
         uv
         m
         libcork)
 
 set (ss_lib_net
         ${ss_lib_common}
-        /usr/local/lib/libcrypto.a # libcrypto.a # ${LIBCRYPTO} # OpenSSL library
+        # /usr/local/lib/libcrypto.a # libcrypto.a # ${LIBCRYPTO} # OpenSSL library
         libipset
         pcre #${PCRE_LIBRARIES}
         udns

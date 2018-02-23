@@ -16,8 +16,9 @@ project(${PROJECT_NAME})
 set(VERSION 2.5.6)
 
 
-set(with_crypto_library "openssl" CACHE STRING "build with the given crypto library, TYPE=openssl")
+set(with_crypto_library "mbedtls" CACHE STRING "build with the given crypto library, TYPE=mbedtls")
 
+add_subdirectory(depends/mbedtls)
 add_subdirectory(depends/zlib/staticbuild)
 add_subdirectory(depends/pcre/staticbuild)
 

@@ -16,7 +16,7 @@ elseif(${with_crypto_library} STREQUAL "polarssl")
     find_package(polarssl REQUIRED)
     set(USE_CRYPTO_POLARSSL 1)
 elseif(${with_crypto_library} STREQUAL "mbedtls")
-    find_package(mbedtls REQUIRED)
+    #find_package(mbedtls REQUIRED)
     set(USE_CRYPTO_MBEDTLS 1)
 endif()
 
