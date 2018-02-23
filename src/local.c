@@ -35,8 +35,12 @@
 #include <getopt.h>
 #include <stddef.h>
 
+#if defined(USE_CRYPTO_OPENSSL)
 #include <openssl/opensslv.h>
 #define USING_CRYPTO OPENSSL_VERSION_TEXT
+#elif defined(USE_CRYPTO_MBEDTLS)
+#define USING_CRYPTO "MBEDTLS_VERSION_TEXT"
+#endif
 
 #ifndef __MINGW32__
 #include <errno.h>
