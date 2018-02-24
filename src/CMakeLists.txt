@@ -128,6 +128,11 @@ if (!APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 endif()
 
+if (UNIX)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static")
+    # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libstdc++ -static-libgcc")
+endif()
+
 add_definitions(-DUDP_RELAY_ENABLE)
 
 add_executable(ssr-client ${SOURCE_FILES_CLIENT})
@@ -150,14 +155,13 @@ set_target_properties(ssr-local PROPERTIES COMPILE_DEFINITIONS MODULE_LOCAL)
 
 set (ss_lib_common
         json-c
-        mbedtls
         uv
         m
         libcork)
 
 set (ss_lib_net
         ${ss_lib_common}
-        # /usr/local/lib/libcrypto.a # libcrypto.a # ${LIBCRYPTO} # OpenSSL library
+        mbedtls # /usr/local/lib/libcrypto.a # libcrypto.a # ${LIBCRYPTO} #
         libipset
         pcre #${PCRE_LIBRARIES}
         udns
