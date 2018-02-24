@@ -128,9 +128,8 @@ if (!APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 endif()
 
-if (UNIX)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static")
-    # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libstdc++ -static-libgcc")
+if (UNIX AND !APPLE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libstdc++ -static-libgcc -static")
 endif()
 
 add_definitions(-DUDP_RELAY_ENABLE)

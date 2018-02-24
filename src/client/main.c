@@ -114,7 +114,7 @@ void print_remote_info(const struct server_config *config) {
     if (config->obfs_param && strlen(config->obfs_param)) {
         pr_info("obfs_param       %s", config->obfs_param);
     }
-    pr_info("UDP relay        %s\n", config->udp ? "yes" : "no");
+    pr_info("udp relay        %s\n", config->udp ? "yes" : "no");
 }
 
 void feedback_state(struct run_loop_state *state, void *p) {

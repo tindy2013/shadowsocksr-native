@@ -164,6 +164,9 @@ void ssr_run_loop_shutdown(struct run_loop_state *state) {
     }
 
     cached_tunnel_traverse(state->env, &_do_shutdown_tunnel, NULL);
+
+    pr_info("\n");
+    pr_info("terminated.\n");
 }
 
 /* Bind a server to each address that getaddrinfo() reported. */
