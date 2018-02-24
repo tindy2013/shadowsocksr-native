@@ -234,9 +234,21 @@ cmake CMakeLists.txt && make
 
 ```bash
 # CentOS / Fedora / RHEL
-sudo yum install gcc autoconf libtool automake make zlib-devel openssl-devel asciidoc xmlto libuv1
-./configure && make
-sudo make install
+sudo su
+
+curl -L https://github.com/ShadowsocksR-Live/shadowsocksr-native/releases/download/0.3/ssr-native-linux-x64.tar.gz | tar zx
+chmod +x ./ssr-client
+
+mkdir /etc/ssr-native
+cp ./config.json /etc/ssr-native/
+chmod 777 /etc/ssr-native/config.json
+vi /etc/ssr-native/config.json
+
+./ssr-client
+
+#yum install gcc autoconf libtool automake make asciidoc xmlto
+#./configure && make
+#make install
 ```
 
 ### FreeBSD
