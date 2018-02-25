@@ -36,7 +36,7 @@
 #define MODULE_LOCAL
 #endif
 
-#include <libcork/ds.h>
+//#include <libcork/ds.h>
 
 #include "encrypt.h"
 #include "obfs/obfs.h"

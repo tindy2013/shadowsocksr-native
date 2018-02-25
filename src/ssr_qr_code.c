@@ -1,6 +1,6 @@
 
 #include "base64.h"
-#include "ssrcipher.h"
+#include "ssr_executive.h"
 #include "ssr_cipher_names.h"
 #include "obfs.h" // for SSR_BUFF_SIZE
 
@@ -166,10 +166,10 @@ struct server_config * decode_shadowsocks(const char *text) {
 
         const char *t;
 
-        t = ssr_protocol_name_from_index(ssr_protocol_origin);
+        t = ssr_protocol_name_of_type(ssr_protocol_origin);
         string_safe_assign(&config->protocol, t);
         
-        t = ssr_obfs_name_from_index(ssr_obfs_plain);
+        t = ssr_obfs_name_of_type(ssr_obfs_plain);
         string_safe_assign(&config->obfs, t);
     } while (0);
     
