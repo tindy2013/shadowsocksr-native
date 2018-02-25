@@ -26,13 +26,6 @@
 #include <uv.h>
 #include "util.h"
 
-#if defined(_WIN32)
-typedef ULONG uv_buf_len_t;
-#else
-typedef size_t uv_buf_len_t;
-#endif // defined(_WIN32)
-
-
 #include <assert.h>
 #include <stddef.h>      /* size_t, ssize_t */
 #include <stdint.h>
