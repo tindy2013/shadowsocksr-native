@@ -72,8 +72,8 @@ static const int MODE_IPV4_FIRST = 2;
 static const int MODE_IPV6_FIRST = 3;
 static int resolv_mode           = 0;
 
-static void resolv_sock_cb(struct ev_loop *, struct ev_io *, int);
-static void resolv_timeout_cb(struct ev_loop *, struct ev_timer *, int);
+static void resolv_sock_cb(struct uv_loop_s *, struct ev_io *, int);
+static void resolv_timeout_cb(struct uv_loop_s *, struct ev_timer *, int);
 static void dns_query_v4_cb(struct dns_ctx *, struct dns_rr_a4 *, void *);
 static void dns_query_v6_cb(struct dns_ctx *, struct dns_rr_a6 *, void *);
 static void dns_timer_setup_cb(struct dns_ctx *, int, void *);
@@ -234,7 +234,7 @@ resolv_cancel(struct resolv_query *query_handle)
  * DNS UDP socket activity callback
  */
 static void
-resolv_sock_cb(struct ev_loop *loop, struct ev_io *w, int revents)
+resolv_sock_cb(struct uv_loop_s *loop, struct ev_io *w, int revents)
 {
     struct dns_ctx *ctx = (struct dns_ctx *)w->data;
 
@@ -404,7 +404,7 @@ choose_any(struct resolv_query *cb_data)
  * DNS timeout callback
  */
 static void
-resolv_timeout_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
+resolv_timeout_cb(struct uv_loop_s *loop, struct ev_timer *w, int revents)
 {
     struct dns_ctx *ctx = (struct dns_ctx *)w->data;
 
@@ -419,7 +419,7 @@ resolv_timeout_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
 static void
 dns_timer_setup_cb(struct dns_ctx *ctx, int timeout, void *data)
 {
-    struct ev_loop *loop = (struct ev_loop *)data;
+    struct uv_loop_s *loop = (struct uv_loop_s *)data;
 
     if (ev_is_active(&resolv_timeout_watcher)) {
         ev_timer_stop(loop, &resolv_timeout_watcher);

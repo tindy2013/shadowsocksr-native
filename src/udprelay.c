@@ -106,9 +106,9 @@ struct udp_listener_ctx_t {
     union sockaddr_universal remote_addr;
     struct ss_host_port tunnel_addr;
 #endif
-#ifdef MODULE_REMOTE
-    struct ev_loop *loop;
-#endif
+//#ifdef MODULE_REMOTE
+//    struct uv_loop_s *loop;
+//#endif
     struct cipher_env_t *cipher_env;
     // SSR
     struct obfs_t *protocol;
@@ -117,7 +117,7 @@ struct udp_listener_ctx_t {
 };
 
 #ifdef MODULE_REMOTE
-typedef struct query_ctx {
+struct query_ctx {
     struct resolv_query *query;
     struct sockaddr_storage src_addr;
     struct buffer_t *buf;
@@ -125,7 +125,7 @@ typedef struct query_ctx {
     char addr_header[384];
     struct udp_listener_ctx_t *server_ctx;
     struct udp_remote_ctx_t *remote_ctx;
-} query_ctx_t;
+};
 #endif
 
 struct udp_remote_ctx_t {
@@ -259,8 +259,7 @@ hash_key(int af, const struct sockaddr_storage *addr)
 
 #if defined(MODULE_REDIR) || defined(MODULE_REMOTE)
 static int
-construct_udprealy_header(const struct sockaddr_storage *in_addr,
-                          char *addr_header)
+construct_udprealy_header(const struct sockaddr_storage *in_addr, char *addr_header)
 {
     int addr_header_len = 0;
     if (in_addr->ss_family == AF_INET) {
@@ -426,7 +425,6 @@ udp_create_remote_socket(bool ipv6, uv_loop_t *loop, uv_udp_t *udp)
         addr.sin_family      = AF_INET;
         addr.sin_addr.s_addr = INADDR_ANY;
         addr.sin_port        = 0;
-
         uv_udp_bind(udp, (const struct sockaddr *)&addr, 0);
     }
     return remote_sock;
@@ -495,49 +493,35 @@ udp_create_local_listener(const char *host, uint16_t port, uv_loop_t *loop, uv_u
 }
 
 #ifdef MODULE_REMOTE
-struct query_ctx *
-new_query_ctx(char *buf, size_t len)
-{
-    struct query_ctx *ctx = ss_malloc(sizeof(struct query_ctx));
-    memset(ctx, 0, sizeof(struct query_ctx));
-    ctx->buf = ss_malloc(sizeof(struct buffer_t));
-    buffer_alloc(ctx->buf, len);
-    memcpy(ctx->buf->buffer, buf, len);
-    ctx->buf->len = len;
+struct query_ctx * new_query_ctx(char *buf, size_t len) {
+    struct query_ctx *ctx = calloc(1, sizeof(struct query_ctx));
+    ctx->buf = buffer_alloc(len);
+    buffer_store(ctx->buf, buf, len);
     return ctx;
 }
 
-void
-close_and_free_query(EV_P_ struct query_ctx *ctx)
-{
+static void close_and_free_query(struct query_ctx *ctx) {
     if (ctx != NULL) {
         if (ctx->query != NULL) {
             resolv_cancel(ctx->query);
             ctx->query = NULL;
         }
-        if (ctx->buf != NULL) {
-            buffer_free(ctx->buf);
-        }
-        ss_free(ctx);
+        buffer_free(ctx->buf);
+        free(ctx);
     }
 }
 
 #endif
 
-static void
-udp_remote_close_done_cb(uv_handle_t* handle)
-{
+static void udp_remote_close_done_cb(uv_handle_t* handle) {
     struct udp_remote_ctx_t *ctx = (struct udp_remote_ctx_t *)handle->data;
     --ctx->ref_count;
     if (ctx->ref_count <= 0) {
-        ss_free(ctx);
+        free(ctx);
     }
 }
 
-
-void
-udp_remote_shutdown(struct udp_remote_ctx_t *ctx)
-{
+static void udp_remote_shutdown(struct udp_remote_ctx_t *ctx) {
     if (ctx != NULL) {
         ctx->watcher.data = ctx;
         uv_close((uv_handle_t *)&ctx->watcher, udp_remote_close_done_cb);
@@ -567,16 +551,14 @@ udp_remote_timeout_cb(uv_timer_t* handle)
 }
 
 #ifdef MODULE_REMOTE
-static void
-query_resolve_cb(struct sockaddr *addr, void *data)
-{
+static void query_resolve_cb(struct sockaddr *addr, void *data) {
     struct query_ctx *query_ctx = (struct query_ctx *)data;
-    struct ev_loop *loop        = query_ctx->server_ctx->loop;
-
+    struct uv_loop_s *loop = query_ctx->server_ctx->io.loop;
+    /*
     if (verbose) {
         LOGI("[udp] udns resolved");
     }
-
+    */
     query_ctx->query = NULL;
 
     if (addr == NULL) {
@@ -592,7 +574,8 @@ query_resolve_cb(struct sockaddr *addr, void *data)
         }
 
         if (remote_ctx == NULL) {
-            int remotefd = udp_create_remote_socket(addr->sa_family == AF_INET6);
+            bool ipv6 = (addr->sa_family == AF_INET6);
+            int remotefd = udp_create_remote_socket(ipv6, loop, &remote_ctx->io);
             if (remotefd != -1) {
                 setnonblocking(remotefd);
 #ifdef SO_BROADCAST
@@ -635,7 +618,7 @@ query_resolve_cb(struct sockaddr *addr, void *data)
             if (s == -1) {
                 ERROR("[udp] sendto_remote");
                 if (!cache_hit) {
-                    udp_remote_shutdown(EV_A_ remote_ctx);
+                    udp_remote_shutdown(remote_ctx);
                 }
             } else {
                 if (!cache_hit) {
@@ -650,7 +633,7 @@ query_resolve_cb(struct sockaddr *addr, void *data)
     }
 
     // clean up
-    close_and_free_query(EV_A_ query_ctx);
+    close_and_free_query(query_ctx);
 }
 
 #endif
@@ -1241,7 +1224,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         if (s == -1) {
             ERROR("[udp] sendto_remote");
             if (!cache_hit) {
-                udp_remote_shutdown(EV_A_ remote_ctx);
+                udp_remote_shutdown(remote_ctx);
             }
         } else {
             if (!cache_hit) {
@@ -1276,7 +1259,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
                                                  NULL, query_ctx, htons(atoi(port)));
         if (query == NULL) {
             ERROR("[udp] unable to create DNS query");
-            close_and_free_query(EV_A_ query_ctx);
+            close_and_free_query(query_ctx);
             goto CLEAN_UP;
         }
         query_ctx->query = query;
