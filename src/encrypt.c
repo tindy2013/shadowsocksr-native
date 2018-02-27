@@ -507,7 +507,7 @@ get_digest_type(const char *digest)
 }
 
 void
-cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, int enc)
+cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, bool encrypt)
 {
     enum ss_cipher_type method = env->enc_method;
 
@@ -531,7 +531,7 @@ cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, int enc)
         LOGE("Cipher %s not found in OpenSSL library", cipherName);
         FATAL("Cannot initialize cipher");
     }
-    if (!EVP_CipherInit_ex(core_ctx, cipher, NULL, NULL, NULL, enc)) {
+    if (!EVP_CipherInit_ex(core_ctx, cipher, NULL, NULL, NULL, encrypt)) {
         LOGE("Cannot initialize cipher %s", cipherName);
         exit(EXIT_FAILURE);
     }
@@ -543,19 +543,19 @@ cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, int enc)
     if (method > ss_cipher_rc4_md5) {
         EVP_CIPHER_CTX_set_padding(core_ctx, 1);
     }
-#elif defined(USE_CRYPTO_MBEDTLS)
-    ctx->core_ctx = ss_malloc(sizeof(cipher_core_ctx_t));
-    memset(ctx->core_ctx, 0, sizeof(cipher_core_ctx_t));
-    cipher_core_ctx_t *core_ctx = ctx->core_ctx;
+#endif
 
+#if defined(USE_CRYPTO_MBEDTLS)
     if (cipher == NULL) {
         LOGE("Cipher %s not found in mbed TLS library", cipherName);
         FATAL("Cannot initialize mbed TLS cipher");
     }
+    cipher_core_ctx_t *core_ctx = calloc(1, sizeof(cipher_core_ctx_t));
     mbedtls_cipher_init(core_ctx);
     if (mbedtls_cipher_setup(core_ctx, cipher) != 0) {
         FATAL("Cannot initialize mbed TLS cipher context");
     }
+    ctx->core_ctx = core_ctx;
 #endif
 }
 
@@ -1051,13 +1051,13 @@ const uint8_t * enc_ctx_get_iv(const struct enc_ctx *ctx) {
 }
 
 struct enc_ctx *
-enc_ctx_new_instance(struct cipher_env_t *env, int enc)
+enc_ctx_new_instance(struct cipher_env_t *env, bool encrypt)
 {
     struct enc_ctx *ctx = (struct enc_ctx *)calloc(1, sizeof(struct enc_ctx));
     sodium_memzero(ctx, sizeof(struct enc_ctx));
-    cipher_context_init(env, &ctx->cipher_ctx, enc);
+    cipher_context_init(env, &ctx->cipher_ctx, encrypt);
 
-    if (enc) {
+    if (encrypt) {
         rand_bytes(ctx->cipher_ctx.iv, env->enc_iv_len);
     }
     return ctx;

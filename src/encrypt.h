@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "ssr_cipher_names.h"
 
@@ -79,7 +80,7 @@ void cipher_env_release(struct cipher_env_t *env);
 
 const uint8_t * enc_ctx_get_iv(const struct enc_ctx *ctx);
 
-struct enc_ctx * enc_ctx_new_instance(struct cipher_env_t *env, int enc);
+struct enc_ctx * enc_ctx_new_instance(struct cipher_env_t *env, bool encrypt);
 void enc_ctx_release_instance(struct cipher_env_t* env, struct enc_ctx *ctx);
 int enc_get_iv_len(struct cipher_env_t* env);
 uint8_t* enc_get_key(struct cipher_env_t* env);

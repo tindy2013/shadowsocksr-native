@@ -44,11 +44,6 @@
 
 #include "ssrutils.h"
 
-#ifdef HAVE_SETRLIMIT
-#include <sys/time.h>
-#include <sys/resource.h>
-#endif
-
 #define INT_DIGITS 19           /* enough for 64 bit integer */
 
 #ifdef LIB_ONLY
@@ -456,6 +451,9 @@ daemonize(const char *path)
 }
 
 #ifdef HAVE_SETRLIMIT
+#include <sys/time.h>
+#include <sys/resource.h>
+
 int
 set_nofile(int nofile)
 {

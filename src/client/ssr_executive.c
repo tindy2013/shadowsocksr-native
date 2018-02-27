@@ -185,8 +185,8 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
 
     // init server cipher
     if (cipher_env_enc_method(env->cipher) > ss_cipher_table) {
-        tc->e_ctx = enc_ctx_new_instance(env->cipher, 1);
-        tc->d_ctx = enc_ctx_new_instance(env->cipher, 0);
+        tc->e_ctx = enc_ctx_new_instance(env->cipher, true);
+        tc->d_ctx = enc_ctx_new_instance(env->cipher, false);
     }
     // SSR beg
 

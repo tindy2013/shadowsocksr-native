@@ -383,8 +383,8 @@ int auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, int datalength,
     std_base64_encode(local->last_client_hash, 16, (unsigned char *)(password + strlen(password)));
     local->cipher_init_flag = 1;
     local->cipher = cipher_env_new_instance(password, "rc4");
-    local->cipher_client_ctx = enc_ctx_new_instance(local->cipher, 1);
-    local->cipher_server_ctx = enc_ctx_new_instance(local->cipher, 0);
+    local->cipher_client_ctx = enc_ctx_new_instance(local->cipher, true);
+    local->cipher_server_ctx = enc_ctx_new_instance(local->cipher, false);
 
     out_size += auth_chain_a_pack_data(obfs, data, datalength, outdata + out_size);
 
@@ -555,7 +555,7 @@ int auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
 
     {
         struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");
-        struct enc_ctx *ctx = enc_ctx_new_instance(cipher, 1);
+        struct enc_ctx *ctx = enc_ctx_new_instance(cipher, true);
         size_t out_len;
         ss_encrypt_buffer(cipher, ctx,
                 plaindata, (size_t)datalength, out_buffer, &out_len);
@@ -610,7 +610,7 @@ int auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
 
     {
         struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");
-        struct enc_ctx *ctx = enc_ctx_new_instance(cipher, 0);
+        struct enc_ctx *ctx = enc_ctx_new_instance(cipher, false);
         size_t out_len;
         ss_decrypt_buffer(cipher, ctx,
                 plaindata, (size_t)outlength, plaindata, &out_len);
