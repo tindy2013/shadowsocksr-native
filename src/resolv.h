@@ -38,13 +38,14 @@
 #include <sys/socket.h>
 #endif
 
+struct uv_loop_s;
 struct resolv_query;
 
-int resolv_init(struct ev_loop *, char **, int, int);
-struct resolv_query *resolv_query(const char *, void (*)(struct sockaddr *,
+int resolv_init(struct uv_loop_s *, char **, int, int);
+struct resolv_query * resolv_query(const char *, void (*)(struct sockaddr *,
                                                         void *), void (*)(
                                      void *), void *, uint16_t);
 void resolv_cancel(struct resolv_query *);
-void resolv_shutdown(struct ev_loop *);
+void resolv_shutdown(struct uv_loop_s *);
 
 #endif

@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include <ev.h>
+#include <uv.h>
 #include <udns.h>
 
 #ifdef __MINGW32__
@@ -84,7 +84,7 @@ static struct sockaddr *choose_ipv6_first(struct resolv_query *);
 static struct sockaddr *choose_any(struct resolv_query *);
 
 int
-resolv_init(struct ev_loop *loop, char **nameservers, int nameserver_num, int ipv6first)
+resolv_init(struct uv_loop_s *loop, char **nameservers, int nameserver_num, int ipv6first)
 {
     if (ipv6first)
         resolv_mode = MODE_IPV6_FIRST;
@@ -141,7 +141,7 @@ resolv_init(struct ev_loop *loop, char **nameservers, int nameserver_num, int ip
 }
 
 void
-resolv_shutdown(struct ev_loop *loop)
+resolv_shutdown(struct uv_loop_s *loop)
 {
     struct dns_ctx *ctx = (struct dns_ctx *)resolv_io_watcher.data;
 
