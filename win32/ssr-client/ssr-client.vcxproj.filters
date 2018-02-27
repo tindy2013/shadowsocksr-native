@@ -27,12 +27,6 @@
     <ClCompile Include="..\..\src\encrypt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\getopt.c">
-      <Filter>getopt</Filter>
-    </ClCompile>
-    <ClCompile Include="src\getopt_long.c">
-      <Filter>getopt</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\obfs\http_simple.c">
       <Filter>obfs</Filter>
     </ClCompile>
@@ -99,16 +93,19 @@
     <ClCompile Include="..\..\src\client\ssr_executive.c">
       <Filter>client</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\getopt_long.c">
+      <Filter>getopt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\strncasecmp.c">
+      <Filter>getopt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\getopt.c">
+      <Filter>getopt</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\encrypt.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\getopt.h">
-      <Filter>getopt</Filter>
-    </ClInclude>
-    <ClInclude Include="include\getopt_long.h">
-      <Filter>getopt</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\obfs\http_simple.h">
       <Filter>obfs</Filter>
@@ -175,6 +172,21 @@
     </ClInclude>
     <ClInclude Include="..\..\src\common.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\getopt_long.h">
+      <Filter>getopt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\stdbool.h">
+      <Filter>getopt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\strings.h">
+      <Filter>getopt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\unistd.h">
+      <Filter>getopt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\getopt.h">
+      <Filter>getopt</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
