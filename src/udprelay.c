@@ -81,10 +81,8 @@
 #define MAX_UDP_CONN_NUM 256
 #endif
 
-#ifdef MODULE_REMOTE
-#ifdef MODULE_
+#if defined(MODULE_REMOTE) && defined(MODULE_LOCAL)
 #error "MODULE_REMOTE and MODULE_LOCAL should not be both defined"
-#endif
 #endif
 
 #ifndef EAGAIN
@@ -120,7 +118,7 @@ struct udp_listener_ctx_t {
 
 #ifdef MODULE_REMOTE
 typedef struct query_ctx {
-    struct ResolvQuery *query;
+    struct resolv_query *query;
     struct sockaddr_storage src_addr;
     struct buffer_t *buf;
     int addr_header_len;
@@ -1274,7 +1272,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
             query_ctx->remote_ctx = remote_ctx;
         }
 
-        struct ResolvQuery *query = resolv_query(host, query_resolve_cb,
+        struct resolv_query *query = resolv_query(host, query_resolve_cb,
                                                  NULL, query_ctx, htons(atoi(port)));
         if (query == NULL) {
             ERROR("[udp] unable to create DNS query");
