@@ -42,9 +42,10 @@ struct uv_loop_s;
 struct resolv_query;
 
 int resolv_init(struct uv_loop_s *, char **, int, int);
-struct resolv_query * resolv_query(const char *, void (*)(struct sockaddr *,
-                                                        void *), void (*)(
-                                     void *), void *, uint16_t);
+struct resolv_query * resolv_query(const char *hostname,
+                                   void (*client_cb)(struct sockaddr *, void *),
+                                   void (*client_free_cb)(void *),
+                                   void *client_cb_data, uint16_t port);
 void resolv_cancel(struct resolv_query *);
 void resolv_shutdown(struct uv_loop_s *);
 

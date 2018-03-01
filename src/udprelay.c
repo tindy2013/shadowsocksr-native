@@ -594,7 +594,7 @@ static void query_resolve_cb(struct sockaddr *addr, void *data) {
             bool ipv6 = (addr->sa_family == AF_INET6);
             int remotefd = udp_create_remote_socket(ipv6, loop, &remote_ctx->io);
             if (remotefd != -1) {
-                setnonblocking(remotefd);
+                // setnonblocking(remotefd);
 #ifdef SO_BROADCAST
                 set_broadcast(remotefd);
 #endif
@@ -1224,7 +1224,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
             bool ipv6 = (dst_addr.ss_family == AF_INET6);
             int remotefd = udp_create_remote_socket(ipv6, server_ctx->io.loop, &remote_ctx->io);
             if (remotefd != -1) {
-                setnonblocking(remotefd);
+                // setnonblocking(remotefd);
 #ifdef SO_BROADCAST
                 set_broadcast(remotefd);
 #endif

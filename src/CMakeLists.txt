@@ -54,8 +54,8 @@ set(SOURCE_FILES_CLIENT
         client/main.c
         client/s5.c
         client/s5.h
-        client/ssr_executive.c
-        client/ssr_executive.h
+        ssr_executive.c
+        ssr_executive.h
         client/tunnel.c
         client/util.c
         client/util.h
@@ -73,7 +73,8 @@ set(SOURCE_FILES_TUNNEL
         tunnel.c)
 
 set(SOURCE_FILES_SERVER
-        utils.c
+        ssrutils.h
+        ssrutils.c
         jconf.c
         json.c
         encrypt.c
@@ -82,7 +83,10 @@ set(SOURCE_FILES_SERVER
         acl.c
         resolv.c
         netutils.c
-        server.c
+        ssr_executive.c
+        ssr_executive.h
+        server/server.c
+        server/server.h
         ${SOURCE_FILES_SNI})
 
 set(SOURCE_FILES_MANAGER
@@ -140,7 +144,7 @@ add_definitions(-DUDP_RELAY_ENABLE)
 add_executable(ssr-client ${SOURCE_FILES_CLIENT})
 add_executable(ssr-local ${SOURCE_FILES_LOCAL})
 #add_executable(ss_tunnel ${SOURCE_FILES_TUNNEL})
-#add_executable(ss_server ${SOURCE_FILES_SERVER})
+#add_executable(ssr-server ${SOURCE_FILES_SERVER})
 #add_executable(ss_manager ${SOURCE_FILES_MANAGER})
 #add_executable(ss_redir ${SOURCE_FILES_REDIR})
 #add_library(libssr-native ${SOURCE_FILES_LOCAL})
@@ -148,7 +152,7 @@ add_executable(ssr-local ${SOURCE_FILES_LOCAL})
 set_target_properties(ssr-client PROPERTIES COMPILE_DEFINITIONS MODULE_LOCAL)
 set_target_properties(ssr-local PROPERTIES COMPILE_DEFINITIONS MODULE_LOCAL)
 #set_target_properties(ss_tunnel PROPERTIES COMPILE_DEFINITIONS MODULE_TUNNEL)
-#set_target_properties(ss_server PROPERTIES COMPILE_DEFINITIONS MODULE_REMOTE)
+#set_target_properties(ssr-server PROPERTIES COMPILE_DEFINITIONS MODULE_REMOTE)
 #set_target_properties(ss_manager PROPERTIES COMPILE_DEFINITIONS MODULE_MANAGER)
 #set_target_properties(ss_redir PROPERTIES COMPILE_DEFINITIONS MODULE_REDIR)
 
@@ -180,6 +184,6 @@ target_link_libraries(ssr-client ${ss_lib_net})
 target_link_libraries(ssr-local ${ss_lib_net})
 
 #target_link_libraries(ss_tunnel ${ss_lib_net} )
-#target_link_libraries(ss_server ${ss_lib_net} )
+#target_link_libraries(ssr-server ${ss_lib_net})
 #target_link_libraries(ss_manager ${ss_lib_common} )
 #target_link_libraries(ss_redir ${ss_lib_net})

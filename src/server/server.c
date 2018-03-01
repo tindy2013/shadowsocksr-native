@@ -60,7 +60,7 @@
 
 #include "resolv.h"
 #include "netutils.h"
-#include "utils.h"
+#include "ssrutils.h"
 #include "acl.h"
 #include "server.h"
 #include "ssrutils.h"

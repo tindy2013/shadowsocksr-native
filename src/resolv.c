@@ -45,7 +45,7 @@
 #endif
 
 #include "resolv.h"
-#include "utils.h"
+#include "ssrutils.h"
 #include "netutils.h"
 
 /*

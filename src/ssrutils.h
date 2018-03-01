@@ -20,8 +20,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _UTILS_H
-#define _UTILS_H
+#ifndef __SSR_UTILS_H__
+#define __SSR_UTILS_H__
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -215,4 +215,4 @@ size_t ss_memory_size(void *ptr);
         ptr = NULL;      \
     } while (0)
 
-#endif // _UTILS_H
+#endif // __SSR_UTILS_H__

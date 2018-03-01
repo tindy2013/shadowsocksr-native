@@ -36,6 +36,7 @@ win32/ssr-server/x64/
 *.sdf
 
 build/
+.vscode/
 .deps/
 /Makefile
 src/Makefile
