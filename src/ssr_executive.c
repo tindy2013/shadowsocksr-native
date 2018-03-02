@@ -109,8 +109,7 @@ struct server_env_t * ssr_cipher_env_create(struct server_config *config) {
     // init obfs
     init_obfs(env, config->protocol, config->obfs);
 
-    // https://github.com/davinash/cstl/blob/master/test/t_c_set.c#L93
-    env->tunnel_set = c_set_new(c_set_compare_element, NULL);
+    env->tunnel_set = objects_container_create();
     
     return env;
 }
@@ -131,34 +130,41 @@ void ssr_cipher_env_release(struct server_env_t *env) {
     }
     cipher_env_release(env->cipher);
 
-    c_set_delete(env->tunnel_set);
+    objects_container_destroy(env->tunnel_set);
     
     object_safe_free((void **)&env);
 }
 
-void cached_tunnel_add(struct server_env_t *env, struct tunnel_ctx *tunnel) {
-    struct clib_set *tunnel_set = env->tunnel_set;
-    c_set_insert(tunnel_set, &tunnel, sizeof(struct clib_set *));
+struct clib_set * objects_container_create(void) {
+    // https://github.com/davinash/cstl/blob/master/test/t_c_set.c#L93
+    return c_set_new(c_set_compare_element, NULL);
 }
 
-void cached_tunnel_remove(struct server_env_t *env, struct tunnel_ctx *tunnel) {
-    struct clib_set *tunnel_set = env->tunnel_set;
-    
-    assert(clib_true == c_set_exists(tunnel_set, &tunnel));
-    c_set_remove(tunnel_set, &tunnel);
+void objects_container_destroy(struct clib_set *set) {
+    c_set_delete(set);
 }
 
-void cached_tunnel_traverse(struct server_env_t *env, void(*fn)(struct tunnel_ctx *tunnel, void *p), void *p) {
-    if (env==NULL || fn==NULL) {
+void objects_container_add(struct clib_set *set, void *obj) {
+    assert(set && obj);
+    c_set_insert(set, &obj, sizeof(void *));
+}
+
+void objects_container_remove(struct clib_set *set, void *obj) {
+    assert(clib_true == c_set_exists(set, &obj));
+    c_set_remove(set, &obj);
+}
+
+void objects_container_traverse(struct clib_set *set, void(*fn)(void *obj, void *p), void *p) {
+    if (set==NULL || fn==NULL) {
         return;
     }
-    struct clib_iterator *iterator = c_set_new_iterator(env->tunnel_set);
+    struct clib_iterator *iterator = c_set_new_iterator(set);
     struct clib_object *element;
     while( (element = iterator->get_next(iterator)) ) {
-        struct tunnel_ctx **tunnel = iterator->get_value(element);
-        if (tunnel) {
-            fn(*tunnel, p);
-            free(tunnel);
+        void **obj = iterator->get_value(element);
+        if (obj) {
+            fn(*obj, p);
+            free(obj);
         }
     }
     c_set_delete_iterator(iterator);

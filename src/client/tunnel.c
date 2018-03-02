@@ -109,7 +109,7 @@ static void tunnel_add_ref(struct tunnel_ctx *tunnel) {
 static void tunnel_release(struct tunnel_ctx *tunnel) {
     tunnel->ref_count--;
     if (tunnel->ref_count == 0) {
-        cached_tunnel_remove(tunnel->env, tunnel);
+        objects_container_remove(tunnel->env->tunnel_set, tunnel);
         if (tunnel->cipher) {
             tunnel_cipher_release(tunnel->cipher);
         }
@@ -158,7 +158,7 @@ void tunnel_initialize(uv_tcp_t *listener, struct server_env_t *env) {
     /* Wait for the initial packet. */
     socket_read(incoming);
 
-    cached_tunnel_add(tunnel->env, tunnel);
+    objects_container_add(tunnel->env->tunnel_set, tunnel);
 }
 
 /* This is the core state machine that drives the client <-> upstream proxy.
