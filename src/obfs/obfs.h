@@ -64,13 +64,13 @@ struct obfs_manager {
             char **pplaindata,
             int datalength,
             size_t* capacity);
-    int (*client_udp_pre_encrypt)(struct obfs_t *obfs,
+    ssize_t (*client_udp_pre_encrypt)(struct obfs_t *obfs,
             char **pplaindata,
-            int datalength,
+            size_t datalength,
             size_t* capacity);
-    int (*client_udp_post_decrypt)(struct obfs_t *obfs,
+    ssize_t (*client_udp_post_decrypt)(struct obfs_t *obfs,
             char **pplaindata,
-            int datalength,
+            size_t datalength,
             size_t* capacity);
 };
 

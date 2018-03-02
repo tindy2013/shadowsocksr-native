@@ -509,11 +509,11 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     return (ssize_t)len;
 }
 
-int auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity) {
+size_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity) {
     char *plaindata = *pplaindata;
     struct server_info_t *server = (struct server_info_t *)&obfs->server;
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
-    char *out_buffer = (char *) malloc(((size_t)datalength + (SSR_BUFF_SIZE / 2)) * sizeof(char));
+    char *out_buffer = (char *) malloc((datalength + (SSR_BUFF_SIZE / 2)) * sizeof(char));
 
     if (local->user_key == NULL) {
         if(obfs->server.param != NULL && obfs->server.param[0] != 0) {
@@ -547,7 +547,7 @@ int auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
     int rand_len = (int) udp_get_rand_len(&local->random_client, hash);
     uint8_t *rnd_data = (uint8_t *) malloc((size_t)rand_len * sizeof(uint8_t));
     rand_bytes(rnd_data, (int)rand_len);
-    int outlength = datalength + rand_len + 8;
+    size_t outlength = datalength + rand_len + 8;
 
     char password[256] = {0};
     std_base64_encode(local->user_key, local->user_key_len, (unsigned char *)password);
@@ -570,7 +570,7 @@ int auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
     memmove(out_buffer + outlength - 8, auth_data, 3);
     memmove(out_buffer + outlength - 5, uid, 4);
 
-    ss_md5_hmac_with_key((char*)hash, out_buffer, outlength - 1, local->user_key, local->user_key_len);
+    ss_md5_hmac_with_key((char*)hash, out_buffer, (int)(outlength - 1), local->user_key, local->user_key_len);
     memmove(out_buffer + outlength - 1, hash, 1);
 
     if ((int)*capacity < outlength) {
@@ -585,7 +585,7 @@ int auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
     return outlength;
 }
 
-int auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity) {
+ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity) {
     if (datalength <= 8) {
         return 0;
     }
@@ -594,7 +594,7 @@ int auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
 
     uint8_t hash[16];
-    ss_md5_hmac_with_key((char*)hash, plaindata, datalength - 1, local->user_key, local->user_key_len);
+    ss_md5_hmac_with_key((char*)hash, plaindata, (size_t)(datalength - 1), local->user_key, local->user_key_len);
 
     if (*hash != ((uint8_t*)plaindata)[datalength - 1]) {
         return 0;
@@ -602,7 +602,7 @@ int auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     ss_md5_hmac_with_key((char*)hash, plaindata + datalength - 8, 7, server->key, server->key_len);
 
     int rand_len = (int)udp_get_rand_len(&local->random_server, hash);
-    int outlength = datalength - rand_len - 8;
+    size_t outlength = datalength - rand_len - 8;
 
     char password[256] = {0};
     std_base64_encode(local->user_key, local->user_key_len, (unsigned char *)password);
@@ -618,7 +618,7 @@ int auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
         cipher_env_release(cipher);
     }
 
-    return outlength;
+    return (ssize_t)outlength;
 }
 
 

@@ -984,12 +984,12 @@ auth_aes128_sha1_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int
     return (ssize_t)len;
 }
 
-int
-auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity)
+size_t
+auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity)
 {
     char *plaindata = *pplaindata;
     auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
-    char * out_buffer = (char*)malloc((size_t)(datalength + 8));
+    char * out_buffer = (char*)malloc((datalength + 8));
 
     if (local->user_key == NULL) {
         if(obfs->server.param != NULL && obfs->server.param[0] != 0) {
@@ -1020,13 +1020,13 @@ auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
         }
     }
 
-    int outlength = datalength + 8;
+    size_t outlength = datalength + 8;
     memmove(out_buffer, plaindata, datalength);
     memmove(out_buffer + datalength, local->uid, 4);
 
     {
         char hash[20];
-        local->hmac(hash, out_buffer, outlength - 4, local->user_key, local->user_key_len);
+        local->hmac(hash, out_buffer, (int)(outlength - 4), local->user_key, local->user_key_len);
         memmove(out_buffer + outlength - 4, hash, 4);
     }
 
@@ -1039,8 +1039,8 @@ auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
     return outlength;
 }
 
-int
-auth_aes128_sha1_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity)
+ssize_t
+auth_aes128_sha1_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity)
 {
     if (datalength <= 4) {
         return 0;
@@ -1049,11 +1049,11 @@ auth_aes128_sha1_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
 
     char hash[20];
-    local->hmac(hash, plaindata, datalength - 4, obfs->server.key, (int)obfs->server.key_len);
+    local->hmac(hash, plaindata, (int)(datalength - 4), obfs->server.key, (int)obfs->server.key_len);
 
     if (memcmp(hash, plaindata + datalength - 4, 4)) {
         return 0;
     }
 
-    return datalength - 4;
+    return (ssize_t)(datalength - 4);
 }
