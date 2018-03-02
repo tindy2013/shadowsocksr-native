@@ -511,6 +511,7 @@ static void udp_remote_shutdown(struct udp_remote_ctx_t *ctx) {
         objects_container_remove(ctx->server_ctx->connections, ctx);
 
         ctx->watcher.data = ctx;
+        uv_timer_stop(&ctx->watcher);
         uv_close((uv_handle_t *)&ctx->watcher, udp_remote_close_done_cb);
         ++ctx->ref_count;
 
