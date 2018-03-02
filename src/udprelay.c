@@ -287,7 +287,7 @@ construct_udprealy_header(const struct sockaddr_storage *in_addr, char *addr_hea
 #endif
 
 static int
-udprelay_parse_header(const char *buf, const size_t buf_len,
+udprelay_parse_header(const char *buf, size_t buf_len,
                       char *host, char *port, struct sockaddr_storage *storage)
 {
     const uint8_t addr_type = *(uint8_t *)buf;
@@ -405,29 +405,28 @@ get_addr_str(const struct sockaddr *sa)
     return s;
 }
 
-int
-udp_create_remote_socket(bool ipv6, uv_loop_t *loop, uv_udp_t *udp)
-{
-    int remote_sock = 0;
+int udp_create_remote_socket(bool ipv6, uv_loop_t *loop, uv_udp_t *udp) {
+    int err = 0;
 
     uv_udp_init(loop, udp);
 
+    union sockaddr_universal addr = { 0 };
     if (ipv6) {
         // Try to bind IPv6 first
-        struct sockaddr_in6 addr = { 0 };
-        addr.sin6_family = AF_INET6;
-        addr.sin6_addr   = in6addr_any;
-        addr.sin6_port   = 0;
-        uv_udp_bind(udp, (const struct sockaddr *)&addr, 0);
+        addr.addr6.sin6_family = AF_INET6;
+        addr.addr6.sin6_addr   = in6addr_any;
+        addr.addr6.sin6_port   = 0;
     } else {
         // Or else bind to IPv4
-        struct sockaddr_in addr = { 0 };
-        addr.sin_family      = AF_INET;
-        addr.sin_addr.s_addr = INADDR_ANY;
-        addr.sin_port        = 0;
-        uv_udp_bind(udp, (const struct sockaddr *)&addr, 0);
+        addr.addr4.sin_family      = AF_INET;
+        addr.addr4.sin_addr.s_addr = INADDR_ANY;
+        addr.addr4.sin_port        = 0;
     }
-    return remote_sock;
+    err = uv_udp_bind(udp, &addr.addr, 0);
+    if (err != 0) {
+        LOGE("[udp] udp_create_remote_socket: %s\n", uv_strerror(err));
+    }
+    return err;
 }
 
 int
@@ -479,7 +478,7 @@ udp_create_local_listener(const char *host, uint16_t port, uv_loop_t *loop, uv_u
         if (r == 0) {
             break;
         }
-        LOGE("uv_udp_bind: %s\n", uv_strerror(r));
+        LOGE("[udp] udp_create_local_listener: %s\n", uv_strerror(r));
     }
 
     if (rp == NULL) {
@@ -1132,7 +1131,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
     const struct sockaddr *remote_addr = &server_ctx->remote_addr.addr;
 
     if (remote_ctx == NULL) {
-        remote_ctx = ss_malloc(sizeof(struct udp_remote_ctx_t));
+        remote_ctx = calloc(1, sizeof(struct udp_remote_ctx_t));
 
         // Bind to any port
         bool ipv6 = (remote_addr->sa_family == AF_INET6);
@@ -1184,7 +1183,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         goto CLEAN_UP;
     }
 
-    uv_udp_send_t *req = (uv_udp_send_t *)ss_malloc(sizeof(uv_udp_send_t));
+    uv_udp_send_t *req = (uv_udp_send_t *)calloc(1, sizeof(uv_udp_send_t));
     req->data = server_ctx;
     uv_buf_t tmp = uv_buf_init(buf->buffer, (unsigned int) buf->len);
     uv_udp_send(req, &remote_ctx->io, &tmp, 1, remote_addr, udp_send_done_cb);
@@ -1414,12 +1413,10 @@ static void udp_local_listener_close_done_cb(uv_handle_t* handle) {
     // SSR end
 #endif
 
-    ss_free(server_ctx);
+    free(server_ctx);
 }
 
-void
-udprelay_shutdown(struct udp_listener_ctx_t *server_ctx)
-{
+void udprelay_shutdown(struct udp_listener_ctx_t *server_ctx) {
     if (server_ctx == NULL) {
         return;
     }

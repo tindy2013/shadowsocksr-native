@@ -100,6 +100,7 @@ enum net_stage {
 };
 
 union sockaddr_universal {
+    struct sockaddr_storage addr_stor;
     struct sockaddr_in6 addr6;
     struct sockaddr_in addr4;
     struct sockaddr addr;
