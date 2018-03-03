@@ -506,19 +506,20 @@ static void udp_remote_close_done_cb(uv_handle_t* handle) {
 }
 
 static void udp_remote_shutdown(struct udp_remote_ctx_t *ctx) {
-    if (ctx != NULL) {
-        objects_container_remove(ctx->server_ctx->connections, ctx);
-
-        ctx->watcher.data = ctx;
-        uv_timer_stop(&ctx->watcher);
-        uv_close((uv_handle_t *)&ctx->watcher, udp_remote_close_done_cb);
-        ++ctx->ref_count;
-
-        uv_udp_recv_stop(&ctx->io);
-        ctx->io.data = ctx;
-        uv_close((uv_handle_t *)&ctx->io, udp_remote_close_done_cb);
-        ++ctx->ref_count;
+    if (ctx == NULL) {
+        return;
     }
+    objects_container_remove(ctx->server_ctx->connections, ctx);
+
+    ctx->watcher.data = ctx;
+    uv_timer_stop(&ctx->watcher);
+    uv_close((uv_handle_t *)&ctx->watcher, udp_remote_close_done_cb);
+    ++ctx->ref_count;
+
+    uv_udp_recv_stop(&ctx->io);
+    ctx->io.data = ctx;
+    uv_close((uv_handle_t *)&ctx->io, udp_remote_close_done_cb);
+    ++ctx->ref_count;
 }
 
 static void udp_remote_timeout_cb(uv_timer_t* handle) {
