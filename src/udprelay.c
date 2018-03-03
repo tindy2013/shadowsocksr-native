@@ -132,7 +132,6 @@ struct query_ctx {
 struct udp_remote_ctx_t {
     uv_udp_t io;
     uv_timer_t watcher;
-    int af;
     int addr_header_len;
     char addr_header[384];
     struct sockaddr_storage src_addr;
@@ -1107,7 +1106,6 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         // Init remote_ctx
         remote_ctx->server_ctx = server_ctx;
         remote_ctx->src_addr        = src_addr;
-        remote_ctx->af              = remote_addr->sa_family;
         remote_ctx->addr_header_len = addr_header_len;
         memcpy(remote_ctx->addr_header, addr_header, (size_t) addr_header_len);
 
