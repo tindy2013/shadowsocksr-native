@@ -35,7 +35,7 @@ struct udp_listener_ctx_t * udprelay_begin(uv_loop_t *loop, const char *server_h
     const union sockaddr_universal *remote_addr,
     const struct ss_host_port *tunnel_addr,
 #endif
-    int mtu, int timeout, const char *iface, struct cipher_env_t *cipher_env,
+    int mtu, int timeout, struct cipher_env_t *cipher_env,
     const char *protocol, const char *protocol_param);
 
 void udprelay_shutdown(struct udp_listener_ctx_t *server_ctx);

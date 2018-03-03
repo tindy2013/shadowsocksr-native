@@ -101,7 +101,6 @@
 struct udp_listener_ctx_t {
     uv_udp_t io;
     int timeout;
-    const char *iface;
     struct clib_set *connections;
 #ifdef MODULE_LOCAL
     union sockaddr_universal remote_addr;
@@ -1282,7 +1281,7 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     const union sockaddr_universal *remote_addr,
     const struct ss_host_port *tunnel_addr,
 #endif
-    int mtu, int timeout, const char *iface, struct cipher_env_t *cipher_env,
+    int mtu, int timeout, struct cipher_env_t *cipher_env,
     const char *protocol, const char *protocol_param)
 {
     // Initialize MTU
@@ -1307,7 +1306,6 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     //server_ctx->loop = loop;
 #endif
     server_ctx->timeout    = max(timeout, MIN_UDP_TIMEOUT);
-    server_ctx->iface      = iface;
     server_ctx->connections = objects_container_create();
 #ifdef MODULE_LOCAL
     server_ctx->remote_addr     = *remote_addr;
