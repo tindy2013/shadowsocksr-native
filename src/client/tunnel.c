@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <uv.h>
-#include "util.h"
+#include "dump_info.h"
 #include "ssr_executive.h"
 #include "encrypt.h"
 #include "ssrbuffer.h"

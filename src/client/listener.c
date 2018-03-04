@@ -23,7 +23,7 @@
 //#include <netinet/in.h>  /* INET6_ADDRSTRLEN */
 #include <stdlib.h>
 #include <string.h>
-#include "util.h"
+#include "dump_info.h"
 #include "ssr_executive.h"
 #if UDP_RELAY_ENABLE
 #include "udprelay.h"

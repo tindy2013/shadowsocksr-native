@@ -24,7 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <json-c/json.h>
-#include "util.h"
+#include "dump_info.h"
+#include "common.h"
 #include "ssr_executive.h"
 
 #if HAVE_UNISTD_H
@@ -45,7 +46,7 @@ int main(int argc, char **argv) {
     const char *config_path = NULL;
 
     do {
-        _setprogname(argv[0]);
+        set_app_name(argv[0]);
 
         config_path = DEFAULT_CONF_PATH;
         if (argc > 1) {
@@ -283,6 +284,6 @@ static void usage(void) {
         "                         Default: " DEFAULT_CONF_PATH "\n"
         "  -h                     Show this help message.\n"
         "",
-        _getprogname());
+        get_app_name());
     exit(1);
 }

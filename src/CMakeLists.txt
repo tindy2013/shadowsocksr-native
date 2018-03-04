@@ -63,8 +63,8 @@ set(SOURCE_FILES_CLIENT
         sockaddr_universal.h
         sockaddr_universal.c
         client/tunnel.c
-        client/util.c
-        client/util.h
+        dump_info.c
+        dump_info.h
         ${SOURCE_FILES_OBFS}
         )
 
@@ -79,6 +79,8 @@ set(SOURCE_FILES_TUNNEL
         tunnel.c)
 
 set(SOURCE_FILES_SERVER
+        dump_info.c
+        dump_info.h
         ssrutils.h
         ssrutils.c
         jconf.c

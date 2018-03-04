@@ -24,7 +24,7 @@
 
 #include "s5.h"
 #include <uv.h>
-#include "util.h"
+#include "dump_info.h"
 
 #include <assert.h>
 #include <stddef.h>      /* size_t, ssize_t */
