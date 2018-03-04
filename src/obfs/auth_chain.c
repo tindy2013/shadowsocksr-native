@@ -509,7 +509,7 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     return (ssize_t)len;
 }
 
-size_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity) {
+ssize_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity) {
     char *plaindata = *pplaindata;
     struct server_info_t *server = (struct server_info_t *)&obfs->server;
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
@@ -573,8 +573,8 @@ size_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindat
     ss_md5_hmac_with_key((char*)hash, out_buffer, (int)(outlength - 1), local->user_key, local->user_key_len);
     memmove(out_buffer + outlength - 1, hash, 1);
 
-    if ((int)*capacity < outlength) {
-        *pplaindata = (char*)realloc(*pplaindata, *capacity = (size_t)(outlength * 2));
+    if (*capacity < outlength) {
+        *pplaindata = (char*)realloc(*pplaindata, *capacity = (outlength * 2));
         plaindata = *pplaindata;
     }
     memmove(plaindata, out_buffer, outlength);
@@ -582,7 +582,7 @@ size_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindat
     free(out_buffer);
     free(rnd_data);
 
-    return outlength;
+    return (ssize_t)outlength;
 }
 
 ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity) {

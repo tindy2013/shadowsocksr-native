@@ -1297,7 +1297,7 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     // ////////////////////////////////////////////////
     // Setup server context
 
-    struct udp_listener_ctx_t *server_ctx = calloc(1, sizeof(struct udp_listener_ctx_t));
+    struct udp_listener_ctx_t *server_ctx = (struct udp_listener_ctx_t *)calloc(1, sizeof(struct udp_listener_ctx_t));
 
     // Bind to port
     int serverfd = udp_create_local_listener(server_host, server_port, loop, &server_ctx->io);

@@ -984,7 +984,7 @@ auth_aes128_sha1_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int
     return (ssize_t)len;
 }
 
-size_t
+ssize_t
 auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity)
 {
     char *plaindata = *pplaindata;
@@ -1030,13 +1030,13 @@ auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
         memmove(out_buffer + outlength - 4, hash, 4);
     }
 
-    if ((int)*capacity < outlength) {
-        *pplaindata = (char*)realloc(*pplaindata, *capacity = (size_t)(outlength * 2));
+    if (*capacity < outlength) {
+        *pplaindata = (char*)realloc(*pplaindata, *capacity = (outlength * 2));
         plaindata = *pplaindata;
     }
     memmove(plaindata, out_buffer, outlength);
     free(out_buffer);
-    return outlength;
+    return (ssize_t)outlength;
 }
 
 ssize_t
