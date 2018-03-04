@@ -4,7 +4,8 @@
 #if defined(_WIN32)
 //#include <winsock2.h>
 #include <WS2tcpip.h>
-#elif
+#else
+#include <netinet/in.h>
 #endif // defined(_WIN32)
 
 union sockaddr_universal {

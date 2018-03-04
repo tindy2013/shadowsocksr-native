@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <assert.h>
 
+#if !defined(_WIN32)
+#include <netdb.h>
+#endif // !defined(_WIN32)
+
 #include "sockaddr_universal.h"
 
 int convert_address(const char *addr_str, unsigned short port, union sockaddr_universal *addr)
