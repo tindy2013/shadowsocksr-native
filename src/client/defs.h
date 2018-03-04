@@ -38,6 +38,7 @@
 
 #include <stdbool.h>
 
+#include "sockaddr_universal.h"
 #include "obfs.h"
 
 struct server_config;

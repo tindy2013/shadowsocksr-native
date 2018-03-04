@@ -105,6 +105,9 @@
     <ClCompile Include="..\..\src\resolv.c">
       <Filter>server</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\sockaddr_universal.c">
+      <Filter>server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\encrypt.h">
@@ -195,6 +198,9 @@
       <Filter>getopt</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\resolv.h">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\sockaddr_universal.h">
       <Filter>server</Filter>
     </ClInclude>
   </ItemGroup>

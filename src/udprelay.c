@@ -74,6 +74,7 @@
 #endif
 
 #include "common.h"
+#include "sockaddr_universal.h"
 #include "ssr_executive.h"
 
 #ifdef MODULE_REMOTE

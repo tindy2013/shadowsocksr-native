@@ -23,6 +23,7 @@
     <ClCompile Include="..\..\src\client\listener.c" />
     <ClCompile Include="..\..\src\client\main.c" />
     <ClCompile Include="..\..\src\client\s5.c" />
+    <ClCompile Include="..\..\src\sockaddr_universal.c" />
     <ClCompile Include="..\..\src\ssr_executive.c" />
     <ClCompile Include="..\..\src\client\tunnel.c" />
     <ClCompile Include="..\..\src\client\util.c" />
@@ -50,6 +51,7 @@
     <ClInclude Include="..\..\src\cache.h" />
     <ClInclude Include="..\..\src\client\defs.h" />
     <ClInclude Include="..\..\src\client\s5.h" />
+    <ClInclude Include="..\..\src\sockaddr_universal.h" />
     <ClInclude Include="..\..\src\ssr_executive.h" />
     <ClInclude Include="..\..\src\client\util.h" />
     <ClInclude Include="..\..\src\common.h" />

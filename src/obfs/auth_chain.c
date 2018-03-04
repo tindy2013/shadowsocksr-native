@@ -594,7 +594,7 @@ ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaind
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
 
     uint8_t hash[16];
-    ss_md5_hmac_with_key((char*)hash, plaindata, (size_t)(datalength - 1), local->user_key, local->user_key_len);
+    ss_md5_hmac_with_key((char*)hash, plaindata, (int)(datalength - 1), local->user_key, local->user_key_len);
 
     if (*hash != ((uint8_t*)plaindata)[datalength - 1]) {
         return 0;

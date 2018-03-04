@@ -24,6 +24,8 @@ set(SOURCE_FILES_LOCAL
         ssrbuffer.h
         ssr_executive.c
         ssr_executive.h
+        sockaddr_universal.h
+        sockaddr_universal.c
         ssrutils.c
         jconf.c
         json.c
@@ -58,6 +60,8 @@ set(SOURCE_FILES_CLIENT
         client/s5.h
         ssr_executive.c
         ssr_executive.h
+        sockaddr_universal.h
+        sockaddr_universal.c
         client/tunnel.c
         client/util.c
         client/util.h
@@ -87,6 +91,8 @@ set(SOURCE_FILES_SERVER
         netutils.c
         ssr_executive.c
         ssr_executive.h
+        sockaddr_universal.h
+        sockaddr_universal.c
         server/server.c
         server/server.h
         ${SOURCE_FILES_SNI})
