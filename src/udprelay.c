@@ -539,11 +539,13 @@ static void udp_remote_send_done_cb(uv_udp_send_t* req, int status) {
         ERROR("[udp] sendto_remote");
         udp_remote_shutdown(remote_ctx);
     } else {
+        /*
         // Add to conn cache
         char *key = hash_key(AF_UNSPEC, &remote_ctx->src_addr);
         cache_insert(remote_ctx->server_ctx->conn_cache, key, HASH_KEY_LEN, (void *)remote_ctx);
         // ev_io_start(EV_A_ & remote_ctx->io);
         //ev_timer_start(EV_A_ & remote_ctx->watcher);
+        */
     }
 }
 
@@ -563,11 +565,13 @@ static void query_resolve_cb(struct sockaddr *addr, void *data) {
         struct udp_remote_ctx_t *remote_ctx = query_ctx->remote_ctx;
         int cache_hit            = 0;
 
+        /*
         // Lookup in the conn cache
         if (remote_ctx == NULL) {
             char *key = hash_key(AF_UNSPEC, &query_ctx->src_addr);
             cache_lookup(query_ctx->server_ctx->conn_cache, key, HASH_KEY_LEN, (void *)&remote_ctx);
         }
+        */
 
         if (remote_ctx == NULL) {
             remote_ctx = calloc(1, sizeof(struct udp_remote_ctx_t));
@@ -761,7 +765,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
     char *addr_header   = remote_ctx->addr_header;
     size_t addr_header_len = remote_ctx->addr_header_len;
 
-    if (remote_ctx->af == AF_INET || remote_ctx->af == AF_INET6) {
+    if (remote_ctx->dst_addr.ss_family == AF_INET || remote_ctx->dst_addr.ss_family == AF_INET6) {
         addr_header_len = construct_udprealy_header((const struct sockaddr_storage *)addr, addr_header_buf);
         addr_header     = addr_header_buf;
     }

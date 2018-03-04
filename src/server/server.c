@@ -127,10 +127,18 @@ static char *server_port     = NULL;
 static char *manager_address = NULL;
 uint64_t tx                  = 0;
 uint64_t rx                  = 0;
-ev_timer stat_update_watcher;
-ev_timer block_list_watcher;
+uv_timer_t stat_update_watcher;
+uv_timer_t block_list_watcher;
 
 static struct cork_dllist connections;
+
+#if defined(_WIN32)
+struct sockaddr_un {
+    uint16_t sun_family;               /* AF_UNIX */
+    uint8_t sun_path[108];            /* pathname */
+ };
+#endif // defined
+
 
 static void
 stat_update_cb(EV_P_ ev_timer *watcher, int revents)

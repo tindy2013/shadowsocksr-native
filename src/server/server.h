@@ -33,7 +33,7 @@
 #include "common.h"
 
 struct listen_ctx_t {
-    ev_io io;
+    uv_tcp_t io;
     int fd;
     int timeout;
     int method;
@@ -42,8 +42,8 @@ struct listen_ctx_t {
 };
 
 struct server_ctx_t {
-    ev_io io;
-    ev_timer watcher;
+    uv_tcp_t io;
+    uv_timer_t watcher;
     int connected;
     struct server_t *server;
 };
@@ -77,7 +77,7 @@ typedef struct query {
 } query_t;
 
 struct remote_ctx_t {
-    ev_io io;
+    uv_tcp_t io;
     int connected;
     struct remote_t *remote;
 };
