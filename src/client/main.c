@@ -139,7 +139,9 @@ static const char * parse_opts(int argc, char **argv) {
 }
 
 static void usage(void) {
-    printf("Usage:\n"
+    printf("ShadowsocksR native client\n"
+        "\n"
+        "Usage:\n"
         "\n"
         "  %s -c <config file> [-h]\n"
         "\n"
