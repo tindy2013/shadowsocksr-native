@@ -87,7 +87,7 @@
     <ClCompile Include="..\..\src\obfs\c_lib.c">
       <Filter>obfs</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\client\ssr_executive.c">
+    <ClCompile Include="..\..\src\ssr_executive.c">
       <Filter>server</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\server\server.c">
@@ -170,7 +170,7 @@
     <ClInclude Include="..\..\src\obfs\c_lib.h">
       <Filter>obfs</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\client\ssr_executive.h">
+    <ClInclude Include="..\..\src\ssr_executive.h">
       <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\common.h">

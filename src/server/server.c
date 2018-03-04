@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "common.h"
+
 void uv_alloc_buffer(uv_handle_t *handle, size_t size, uv_buf_t *buf);
 void uv_free_buffer(uv_buf_t *buf);
 void client_accept_cb(uv_stream_t *server, int status);
@@ -74,13 +76,13 @@ void client_read_done_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf
             // there is an error or EOF
             assert(nread == UV_EOF || nread == UV_ECONNRESET);
             if (nread != UV_EOF) {
-                fprintf(stderr, "Error on reading client stream: %s.\n", uv_strerror(nread));
+                fprintf(stderr, "Error on reading client stream: %s.\n", uv_strerror((int)nread));
             }
             uv_close((uv_handle_t *)stream, client_close_done_cb);
             break;
         }
 
-        ((uv_buf_t *)buf)->len = nread;
+        ((uv_buf_t *)buf)->len = (uv_buf_len_t)nread;
 
         // write sync the incoming buffer to the socket
         uv_write_t * req = (uv_write_t *)calloc(1, sizeof(uv_write_t));
