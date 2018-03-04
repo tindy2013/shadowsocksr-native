@@ -22,6 +22,8 @@ set(SOURCE_FILES_OBFS
 set(SOURCE_FILES_LOCAL
         ssrbuffer.c
         ssrbuffer.h
+        ssr_executive.c
+        ssr_executive.h
         ssrutils.c
         jconf.c
         json.c

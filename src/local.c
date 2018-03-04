@@ -272,7 +272,7 @@ free_connections(void)
     // foreach: tunnel_close_and_free(remote, local);
 }
 
-int tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
+int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
     assert(buf->capacity >= SSR_BUFF_SIZE);
 
     struct server_env_t *env = local->server_env;
@@ -297,7 +297,7 @@ int tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
     return 0;
 }
 
-int tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t **feedback)
+int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t **feedback)
 {
     assert(buf->len <= SSR_BUFF_SIZE);
 
@@ -397,7 +397,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             assert(remote);
 
             // insert shadowsocks header
-            int r = tunnel_encrypt(local, remote->buf);
+            int r = _tunnel_encrypt(local, remote->buf);
             if (r < 0) {
                 LOGE("local invalid password or cipher");
                 tunnel_close_and_free(remote, local);
@@ -954,7 +954,7 @@ remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
         }
 #endif
         struct buffer_t *feedback = NULL;
-        int r = tunnel_decrypt(local, local->buf, &feedback);
+        int r = _tunnel_decrypt(local, local->buf, &feedback);
         if (feedback != NULL) {
             buffer_store(remote->buf, feedback->buffer, feedback->len);
             buffer_free(feedback);
@@ -1750,7 +1750,7 @@ main(int argc, char **argv)
     if (mode != TCP_ONLY) {
         LOGI("udprelay enabled");
         udp_server = udprelay_begin(loop, local_addr, (uint16_t)atoi(local_port), (union sockaddr_universal *)listen_ctx->servers[0].addr_udp,
-                      &tunnel_addr, mtu, listen_ctx->timeout, listener->iface, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
+                      &tunnel_addr, mtu, listen_ctx->timeout, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
     }
 
 #ifdef HAVE_LAUNCHD
