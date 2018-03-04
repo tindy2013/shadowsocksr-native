@@ -60,6 +60,8 @@ set(SOURCE_FILES_CLIENT
         client/s5.h
         ssr_executive.c
         ssr_executive.h
+        config_json.c
+        config_json.h
         sockaddr_universal.h
         sockaddr_universal.c
         client/tunnel.c
@@ -93,6 +95,8 @@ set(SOURCE_FILES_SERVER
         netutils.c
         ssr_executive.c
         ssr_executive.h
+        config_json.c
+        config_json.h
         sockaddr_universal.h
         sockaddr_universal.c
         server/server.c

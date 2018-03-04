@@ -24,6 +24,7 @@
     <ClCompile Include="..\..\src\client\main.c" />
     <ClCompile Include="..\..\src\client\s5.c" />
     <ClCompile Include="..\..\src\dump_info.c" />
+    <ClCompile Include="..\..\src\config_json.c" />
     <ClCompile Include="..\..\src\sockaddr_universal.c" />
     <ClCompile Include="..\..\src\ssr_executive.c" />
     <ClCompile Include="..\..\src\client\tunnel.c" />
@@ -52,6 +53,7 @@
     <ClInclude Include="..\..\src\client\defs.h" />
     <ClInclude Include="..\..\src\client\s5.h" />
     <ClInclude Include="..\..\src\dump_info.h" />
+    <ClInclude Include="..\..\src\config_json.h" />
     <ClInclude Include="..\..\src\sockaddr_universal.h" />
     <ClInclude Include="..\..\src\ssr_executive.h" />
     <ClInclude Include="..\..\src\common.h" />

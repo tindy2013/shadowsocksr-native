@@ -108,6 +108,9 @@
     <ClCompile Include="..\..\src\dump_info.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\config_json.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\encrypt.h">
@@ -201,6 +204,9 @@
       <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\dump_info.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\config_json.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
