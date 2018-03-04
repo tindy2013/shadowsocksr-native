@@ -66,9 +66,6 @@
     <ClCompile Include="..\..\src\client\tunnel.c">
       <Filter>server</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\client\util.c">
-      <Filter>server</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\ssrutils.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -107,6 +104,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\sockaddr_universal.c">
       <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\dump_info.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -147,9 +147,6 @@
       <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\client\defs.h">
-      <Filter>server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\client\util.h">
       <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ssrutils.h">
@@ -202,6 +199,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\sockaddr_universal.h">
       <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\dump_info.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

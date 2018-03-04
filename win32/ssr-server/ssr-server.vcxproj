@@ -27,6 +27,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\src\client\s5.c" />
+    <ClCompile Include="..\..\src\dump_info.c" />
     <ClCompile Include="..\..\src\sockaddr_universal.c" />
     <ClCompile Include="..\..\src\ssr_executive.c" />
     <ClCompile Include="..\..\src\client\tunnel.c">
@@ -35,7 +36,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\..\src\client\util.c" />
     <ClCompile Include="..\..\src\encrypt.c" />
     <ClCompile Include="..\..\src\netutils.c" />
     <ClCompile Include="..\..\src\obfs\auth.c" />
@@ -72,9 +72,9 @@
     <ClInclude Include="..\..\src\cache.h" />
     <ClInclude Include="..\..\src\client\defs.h" />
     <ClInclude Include="..\..\src\client\s5.h" />
+    <ClInclude Include="..\..\src\dump_info.h" />
     <ClInclude Include="..\..\src\sockaddr_universal.h" />
     <ClInclude Include="..\..\src\ssr_executive.h" />
-    <ClInclude Include="..\..\src\client\util.h" />
     <ClInclude Include="..\..\src\common.h" />
     <ClInclude Include="..\..\src\encrypt.h" />
     <ClInclude Include="..\..\src\netutils.h" />
