@@ -8,6 +8,7 @@
 #include "dump_info.h"
 #include "ssr_executive.h"
 #include "config_json.h"
+#include "sockaddr_universal.h"
 
 static int ssr_server_run_loop(struct server_config *config);
 
@@ -73,14 +74,14 @@ static int ssr_server_run_loop(struct server_config *config) {
     uv_loop_t *loop = (uv_loop_t *) calloc(1, sizeof(uv_loop_t));
     uv_loop_init(loop);
 
-    uv_tcp_t *server = calloc(1, sizeof(uv_tcp_t));
-    uv_tcp_init(loop, server);
+    uv_tcp_t *listener = calloc(1, sizeof(uv_tcp_t));
+    uv_tcp_init(loop, listener);
 
-    struct sockaddr_in addr;
-    uv_ip4_addr("127.0.0.1", 3000, &addr);
-    uv_tcp_bind(server, (struct sockaddr *)&addr, 0);
+    union sockaddr_universal addr;
+    uv_ip4_addr(DEFAULT_BIND_HOST, config->remote_port, &addr.addr4);
+    uv_tcp_bind(listener, &addr.addr, 0);
 
-    int r = uv_listen((uv_stream_t *)server, 128, client_accept_cb);
+    int r = uv_listen((uv_stream_t *)listener, 128, client_accept_cb);
 
     if (r) {
         return fprintf(stderr, "Error on listening: %s.\n", uv_strerror(r));
@@ -88,7 +89,7 @@ static int ssr_server_run_loop(struct server_config *config) {
 
     r = uv_run(loop, UV_RUN_DEFAULT);
 
-    free(server);
+    free(listener);
 
     uv_loop_close(loop);
     free(loop);
