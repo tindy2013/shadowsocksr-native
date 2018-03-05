@@ -9,17 +9,32 @@
 #include "ssr_executive.h"
 #include "config_json.h"
 #include "sockaddr_universal.h"
+#include "udprelay.h"
+
+struct ssr_server_state {
+    struct server_env_t *env;
+
+    uv_signal_t *sigint_watcher;
+    uv_signal_t *sigterm_watcher;
+
+    bool shutting_down;
+
+    uv_tcp_t *tcp_listener;
+    struct udp_listener_ctx_t *udp_listener;
+};
 
 static int ssr_server_run_loop(struct server_config *config);
+void ssr_server_run_loop_shutdown(struct ssr_server_state *state);
 
 void uv_alloc_buffer(uv_handle_t *handle, size_t size, uv_buf_t *buf);
 void uv_free_buffer(uv_buf_t *buf);
+void signal_quit_cb(uv_signal_t *handle, int signum);
 void client_accept_cb(uv_stream_t *server, int status);
 void client_read_done_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 void client_close_done_cb(uv_handle_t* handle);
 void client_write_done_cb(uv_write_t* req, int status);
 
-void print_remote_info(const struct server_config *config);
+void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
 static void usage(void);
 
@@ -45,15 +60,17 @@ int main(int argc, char * const argv[]) {
             break;
         }
 
+        config_change_for_server(config);
+
 #ifndef UDP_RELAY_ENABLE
         config->udp = false;
 #endif // UDP_RELAY_ENABLE
 
-        if (config->method == NULL || config->password == NULL || config->remote_host == NULL) {
+        if (config->method == NULL || config->password == NULL) {
             break;
         }
 
-        print_remote_info(config);
+        print_server_info(config);
 
         ssr_server_run_loop(config);
 
@@ -70,37 +87,125 @@ int main(int argc, char * const argv[]) {
 }
 
 static int ssr_server_run_loop(struct server_config *config) {
+    struct ssr_server_state *svr_state = NULL;
+    int r = 0;
 
     uv_loop_t *loop = (uv_loop_t *) calloc(1, sizeof(uv_loop_t));
     uv_loop_init(loop);
 
-    uv_tcp_t *listener = calloc(1, sizeof(uv_tcp_t));
-    uv_tcp_init(loop, listener);
+    svr_state = (struct ssr_server_state *) calloc(1, sizeof(*svr_state));
+    svr_state->env = ssr_cipher_env_create(config);
 
-    union sockaddr_universal addr;
-    uv_ip4_addr(DEFAULT_BIND_HOST, config->remote_port, &addr.addr4);
-    uv_tcp_bind(listener, &addr.addr, 0);
+    {
+        uv_tcp_t *listener = calloc(1, sizeof(uv_tcp_t));
+        uv_tcp_init(loop, listener);
 
-    int r = uv_listen((uv_stream_t *)listener, 128, client_accept_cb);
+        union sockaddr_universal addr;
+        uv_ip4_addr(DEFAULT_BIND_HOST, config->listen_port, &addr.addr4);
+        uv_tcp_bind(listener, &addr.addr, 0);
 
-    if (r) {
-        return fprintf(stderr, "Error on listening: %s.\n", uv_strerror(r));
+        int error = uv_listen((uv_stream_t *)listener, 128, client_accept_cb);
+
+        if (error != 0) {
+            return fprintf(stderr, "Error on listening: %s.\n", uv_strerror(error));
+        }
+        svr_state->tcp_listener = listener;
     }
+
+    {
+        // Setup signal handler
+        svr_state->sigint_watcher = (uv_signal_t *)calloc(1, sizeof(uv_signal_t));
+        uv_signal_init(loop, svr_state->sigint_watcher);
+        uv_signal_start(svr_state->sigint_watcher, signal_quit_cb, SIGINT);
+
+        svr_state->sigterm_watcher = (uv_signal_t *)calloc(1, sizeof(uv_signal_t));
+        uv_signal_init(loop, svr_state->sigterm_watcher);
+        uv_signal_start(svr_state->sigterm_watcher, signal_quit_cb, SIGTERM);
+    }
+
+    loop->data = svr_state;
 
     r = uv_run(loop, UV_RUN_DEFAULT);
 
-    free(listener);
+    {
+        ssr_cipher_env_release(svr_state->env);
 
-    uv_loop_close(loop);
+        free(svr_state->sigint_watcher);
+        free(svr_state->sigterm_watcher);
+
+        free(svr_state);
+    }
+
     free(loop);
 
     return r;
+}
+
+static void listener_close_done_cb(uv_handle_t* handle) {
+    free((void *)((uv_tcp_t *)handle));
+}
+
+static void _do_shutdown_tunnel(void *obj, void *p) {
+#if 0
+    tunnel_shutdown((struct tunnel_ctx *)obj);
+    (void)p;
+#endif
+}
+
+void ssr_server_run_loop_shutdown(struct ssr_server_state *state) {
+    if (state == NULL) {
+        return;
+    }
+
+    if (state->shutting_down) {
+        return;
+    }
+    state->shutting_down = true;
+
+    uv_signal_stop(state->sigint_watcher);
+    uv_signal_stop(state->sigterm_watcher);
+
+    if (state->tcp_listener) {
+        uv_close((uv_handle_t *)state->tcp_listener, listener_close_done_cb);
+    }
+
+#if UDP_RELAY_ENABLE
+    if (state->udp_listener) {
+        // udprelay_shutdown(state->udp_listener);
+    }
+#endif // UDP_RELAY_ENABLE
+
+    objects_container_traverse(state->env->tunnel_set, &_do_shutdown_tunnel, NULL);
+
+    pr_info("\n");
+    pr_info("terminated.\n");
+}
+
+void signal_quit_cb(uv_signal_t *handle, int signum) {
+    struct ssr_server_state *state = (struct ssr_server_state *)handle->loop->data;
+    switch (signum) {
+    case SIGINT:
+    case SIGTERM:
+#ifndef __MINGW32__
+    case SIGUSR1:
+#endif
+    {
+        assert(state);
+        ssr_server_run_loop_shutdown(state);
+    }
+    break;
+    default:
+        assert(0);
+        break;
+    }
 }
 
 void client_accept_cb(uv_stream_t *server, int status) {
     do {
         uv_loop_t *loop = server->loop;
         int r = status;
+
+        // tunnel_initialize((uv_tcp_t *)server, (struct server_env_t *)server->data);
 
         if (r < 0) {
             fprintf(stderr, "Error on listening: %s.\n", uv_strerror(r));
@@ -173,26 +278,11 @@ void client_write_done_cb(uv_write_t* req, int status) {
     free(req);
 }
 
-void print_remote_info(const struct server_config *config) {
-    char remote_host[256] = { 0 };
-    strcpy(remote_host, config->remote_host);
-    if (strlen(remote_host) > 4) {
-        for (size_t i = 4; i < strlen(remote_host); i++) {
-            remote_host[i] = '*';
-        }
-    }
-
-    char password[256] = { 0 };
-    strcpy(password, config->password);
-    if (strlen(password) > 2) {
-        for (size_t i = 2; i < strlen(password); i++) {
-            password[i] = '*';
-        }
-    }
-
-    pr_info("remote server    %s:%hu", remote_host, config->remote_port);
+void print_server_info(const struct server_config *config) {
+    pr_info("ShadowsocksR native server\n");
+    pr_info("listen port      %hu", config->listen_port);
     pr_info("method           %s", config->method);
-    pr_info("password         %s", password);
+    pr_info("password         %s", config->password);
     pr_info("protocol         %s", config->protocol);
     if (config->protocol_param && strlen(config->protocol_param)) {
         pr_info("protocol_param   %s", config->protocol_param);

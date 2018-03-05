@@ -87,6 +87,14 @@ void config_release(struct server_config *cf) {
     object_safe_free((void **)&cf);
 }
 
+void config_change_for_server(struct server_config *config) {
+    string_safe_assign(&config->listen_host, config->remote_host);
+    object_safe_free((void **)&config->remote_host);
+
+    config->listen_port = config->remote_port;
+    config->remote_port = 0;
+}
+
 static int c_set_compare_element(void *left, void *right) {
     struct tunnel_ctx *l = *(struct tunnel_ctx **)left;
     struct tunnel_ctx *r = *(struct tunnel_ctx **)right;
