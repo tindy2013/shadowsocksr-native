@@ -143,7 +143,7 @@ static void usage(void) {
         "\n"
         "Usage:\n"
         "\n"
-        "  %s -c <config file> [-h]\n"
+        "  %s [-c <config file>] [-h]\n"
         "\n"
         "Options:\n"
         "\n"
