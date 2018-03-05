@@ -264,7 +264,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             break;
         }
 
-        pr_info("listening on     %s:%hu", addrbuf, cf->listen_port);
+        pr_info("listening on     %s:%hu\n", addrbuf, cf->listen_port);
 
 #if UDP_RELAY_ENABLE
         if (cf->udp) {

@@ -439,7 +439,7 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel) {
 
     err = socket_connect(outgoing);
     if (err != 0) {
-        pr_err("connect error: %s\n", uv_strerror(err));
+        pr_err("connect error: %s", uv_strerror(err));
         tunnel_shutdown(tunnel);
         return;
     }
@@ -485,7 +485,7 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
             uv_inet_ntop(AF_INET6, parser->daddr, ip_str, sizeof(ip_str));
             addr = ip_str;
         }
-        const char *fmt = "upstream connection \"%s\" error: %s\n";
+        const char *fmt = "upstream connection \"%s\" error: %s";
         pr_err(fmt, addr, uv_strerror((int)outgoing->result));
         /* Send a 'Connection refused' reply. */
         socket_write(incoming, "\5\5\0\1\0\0\0\0\0\0", 10);
