@@ -127,7 +127,7 @@ void tunnel_initialize(uv_tcp_t *listener, struct server_env_t *env) {
     //struct server_env_t *env = listener->data;
     struct server_config *config = env->config;
 
-    tunnel = calloc(1, sizeof(*tunnel));
+    tunnel = (struct tunnel_ctx *) calloc(1, sizeof(*tunnel));
 
     tunnel->env = env;
     tunnel->cipher = NULL;
@@ -820,7 +820,7 @@ static void socket_close_done_cb(uv_handle_t *handle) {
     struct socket_ctx *c;
     struct tunnel_ctx *tunnel;
 
-    c = handle->data;
+    c = (struct socket_ctx *) handle->data;
     tunnel = c->tunnel;
 
     tunnel_release(tunnel);
@@ -863,7 +863,7 @@ static struct buffer_t * initial_package_create(const s5_ctx *parser) {
 }
 
 static void ssr_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
-    buf->base = calloc(SSR_BUFF_SIZE, sizeof(char));
+    buf->base = (char *) calloc(SSR_BUFF_SIZE, sizeof(char));
     buf->len = SSR_BUFF_SIZE;
 }
 
@@ -934,7 +934,7 @@ static void ssr_write(struct socket_ctx *c, const void *data, size_t len) {
 static void ssr_write_done_cb(uv_write_t *req, int status) {
     struct socket_ctx *c;
     struct tunnel_ctx *tunnel;
-    c = req->data;
+    c = (struct socket_ctx *) req->data;
     tunnel = c->tunnel;
     free(req);
     if (tunnel_is_dead(tunnel)) {
