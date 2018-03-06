@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <uv.h>
+#include "common.h"
 #include "dump_info.h"
 #include "ssr_executive.h"
 #include "encrypt.h"
@@ -142,9 +143,9 @@ void tunnel_initialize(uv_tcp_t *listener, struct server_env_t *env) {
     incoming->rdstate = socket_stop;
     incoming->wrstate = socket_stop;
     incoming->idle_timeout = config->idle_timeout;
-    CHECK(0 == uv_tcp_init(loop, &incoming->handle.tcp));
-    CHECK(0 == uv_accept((uv_stream_t *)listener, &incoming->handle.stream));
-    CHECK(0 == uv_timer_init(loop, &incoming->timer_handle));
+    VERIFY(0 == uv_tcp_init(loop, &incoming->handle.tcp));
+    VERIFY(0 == uv_accept((uv_stream_t *)listener, &incoming->handle.stream));
+    VERIFY(0 == uv_timer_init(loop, &incoming->timer_handle));
 
     outgoing = &tunnel->outgoing;
     outgoing->tunnel = tunnel;
@@ -152,8 +153,8 @@ void tunnel_initialize(uv_tcp_t *listener, struct server_env_t *env) {
     outgoing->rdstate = socket_stop;
     outgoing->wrstate = socket_stop;
     outgoing->idle_timeout = config->idle_timeout;
-    CHECK(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
-    CHECK(0 == uv_timer_init(loop, &outgoing->timer_handle));
+    VERIFY(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
+    VERIFY(0 == uv_timer_init(loop, &outgoing->timer_handle));
 
     /* Wait for the initial packet. */
     socket_read(incoming);
@@ -545,8 +546,8 @@ static void do_proxy_start(struct tunnel_ctx *tunnel) {
         tunnel_shutdown(tunnel);
         return;
     }
-    CHECK(0 == uv_read_start(&outgoing->handle.stream, ssr_alloc_cb, ssr_outgoing_read_done_cb));
-    CHECK(0 == uv_read_start(&incoming->handle.stream, ssr_alloc_cb, ssr_incoming_read_done_cb));
+    VERIFY(0 == uv_read_start(&outgoing->handle.stream, ssr_alloc_cb, ssr_outgoing_read_done_cb));
+    VERIFY(0 == uv_read_start(&incoming->handle.stream, ssr_alloc_cb, ssr_incoming_read_done_cb));
 }
 
 /* Proxy incoming data back and forth. */
@@ -615,7 +616,7 @@ static int socket_cycle(const char *who, struct socket_ctx *a, struct socket_ctx
 }
 
 static void socket_timer_reset(struct socket_ctx *c) {
-    CHECK(0 == uv_timer_start(&c->timer_handle,
+    VERIFY(0 == uv_timer_start(&c->timer_handle,
         socket_timer_expire_cb,
         c->idle_timeout,
         0));
@@ -647,7 +648,7 @@ static void socket_getaddrinfo(struct socket_ctx *c, const char *hostname) {
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
-    CHECK(0 == uv_getaddrinfo(tunnel->listener->loop,
+    VERIFY(0 == uv_getaddrinfo(tunnel->listener->loop,
         &c->t.addrinfo_req,
         socket_getaddrinfo_done_cb,
         hostname,
@@ -717,7 +718,7 @@ static void socket_connect_done_cb(uv_connect_t *req, int status) {
 
 static void socket_read(struct socket_ctx *c) {
     ASSERT(c->rdstate == socket_stop);
-    CHECK(0 == uv_read_start(&c->handle.stream, socket_alloc_cb, socket_read_done_cb));
+    VERIFY(0 == uv_read_start(&c->handle.stream, socket_alloc_cb, socket_read_done_cb));
     c->rdstate = socket_busy;
     socket_timer_reset(c);
 }
@@ -775,7 +776,7 @@ static void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     */
     buf = uv_buf_init((char *)data, (unsigned int)len);
 
-    CHECK(0 == uv_write(&c->write_req, &c->handle.stream, &buf, 1, socket_write_done_cb));
+    VERIFY(0 == uv_write(&c->write_req, &c->handle.stream, &buf, 1, socket_write_done_cb));
     socket_timer_reset(c);
 }
 
@@ -851,7 +852,7 @@ static struct buffer_t * initial_package_create(const s5_ctx *parser) {
         iter += len;
         break;
     default:
-        assert(0);
+        ASSERT(0);
         break;
     }
     *((unsigned short *)iter) = htons(parser->dport);
@@ -912,7 +913,7 @@ static void ssr_outgoing_read_done_cb(uv_stream_t *handle, ssize_t nread, const 
             buffer_free(feedback);
 
             socket_read_stop(incoming);
-            CHECK(0 == uv_read_start(&incoming->handle.stream, ssr_alloc_cb, ssr_incoming_read_done_cb));
+            VERIFY(0 == uv_read_start(&incoming->handle.stream, ssr_alloc_cb, ssr_incoming_read_done_cb));
         }
 
         if (buf->len > 0) {
@@ -928,7 +929,7 @@ static void ssr_write(struct socket_ctx *c, const void *data, size_t len) {
     req->data = c;
     uv_buf_t buf;
     buf = uv_buf_init((char *)data, (unsigned int)len);
-    CHECK(0 == uv_write(req, &c->handle.stream, &buf, 1, ssr_write_done_cb));
+    VERIFY(0 == uv_write(req, &c->handle.stream, &buf, 1, ssr_write_done_cb));
 }
 
 static void ssr_write_done_cb(uv_write_t *req, int status) {

@@ -29,7 +29,6 @@
 #include <strings.h>
 #include <time.h>
 #include <unistd.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -857,7 +856,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
     }
 
     struct udp_listener_ctx_t *server_ctx = cork_container_of(handle, struct udp_listener_ctx_t, io);
-    assert(server_ctx);
+    ASSERT(server_ctx);
 
     struct sockaddr_storage src_addr = *(struct sockaddr_storage *)addr;
 

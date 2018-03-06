@@ -99,17 +99,23 @@ enum net_stage {
     STAGE_STREAM    = 5,  /* Stream between client and server */
 };
 
+/* ASSERT() is for debug checks, VERIFY() for run-time sanity checks.
+* DEBUG_VERIFIES is for expensive debug verifies that we only want to
+* enable in debug builds but still want type-checked by the compiler
+* in release builds.
+*/
 #if defined(NDEBUG)
 # define ASSERT(exp)
-# define CHECK(exp)   do { if (!(exp)) abort(); } while (0)
-# define DEBUG_CHECKS (0)
+# define VERIFY(exp)   do { if (!(exp)) { abort(); } } while (0)
+# define DEBUG_VERIFIES (0)
 #else
+#include <assert.h>
 # define ASSERT(exp)  assert(exp)
-# define CHECK(exp)   assert(exp)
-# define DEBUG_CHECKS (1)
+# define VERIFY(exp)   assert(exp)
+# define DEBUG_VERIFIES (1)
 #endif
 
-#define UNREACHABLE() CHECK(!"Unreachable code reached.")
+#define UNREACHABLE() VERIFY(!"Unreachable code reached.")
 
 #if !defined(CONTAINER_OF)
 #define CONTAINER_OF(ptr, type, field)                                        \

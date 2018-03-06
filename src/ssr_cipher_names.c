@@ -7,7 +7,6 @@
 //
 
 #include <ctype.h>
-#include <assert.h>
 #include "ssr_cipher_names.h"
 
 #ifndef SIZEOF_ARRAY

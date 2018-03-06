@@ -25,6 +25,7 @@
 #include <string.h>
 #include "dump_info.h"
 #include "ssr_executive.h"
+#include "common.h"
 #if UDP_RELAY_ENABLE
 #include "udprelay.h"
 #endif // UDP_RELAY_ENABLE
@@ -245,7 +246,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 
         listener->tcp_server = (uv_tcp_t *)calloc(1, sizeof(listener->tcp_server[0]));
         uv_tcp_t *tcp_server = listener->tcp_server;
-        CHECK(0 == uv_tcp_init(loop, tcp_server));
+        VERIFY(0 == uv_tcp_init(loop, tcp_server));
 
         what = "uv_tcp_bind";
         err = uv_tcp_bind(tcp_server, &s.addr, 0);
@@ -287,7 +288,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 }
 
 static void listen_incoming_connection_cb(uv_stream_t *server, int status) {
-    CHECK(status == 0);
+    VERIFY(status == 0);
     tunnel_initialize((uv_tcp_t *)server, (struct server_env_t *)server->data);
 }
 
@@ -341,14 +342,14 @@ static void signal_quit(uv_signal_t* handle, int signum) {
     case SIGUSR1:
 #endif
     {
-        assert(handle);
+        ASSERT(handle);
         struct run_loop_state *state = (struct run_loop_state *)handle->data;
-        assert(state);
+        ASSERT(state);
         ssr_run_loop_shutdown(state);
     }
         break;
     default:
-        assert(0);
+        ASSERT(0);
         break;
     }
 }

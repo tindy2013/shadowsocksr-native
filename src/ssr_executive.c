@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <assert.h>
+#include "common.h"
 #include "ssr_executive.h"
 #include "encrypt.h"
 #include "obfsutil.h"
@@ -153,12 +153,12 @@ void objects_container_destroy(struct clib_set *set) {
 }
 
 void objects_container_add(struct clib_set *set, void *obj) {
-    assert(set && obj);
+    ASSERT(set && obj);
     c_set_insert(set, &obj, sizeof(void *));
 }
 
 void objects_container_remove(struct clib_set *set, void *obj) {
-    assert(clib_true == c_set_exists(set, &obj));
+    ASSERT(clib_true == c_set_exists(set, &obj));
     c_set_remove(set, &obj);
 }
 
@@ -270,7 +270,7 @@ void tunnel_cipher_release(struct tunnel_cipher_ctx *tc) {
 
 // insert shadowsocks header
 enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) {
-    assert(buf->capacity >= SSR_BUFF_SIZE);
+    ASSERT(buf->capacity >= SSR_BUFF_SIZE);
 
     struct server_env_t *env = tc->env;
     // SSR beg
@@ -296,7 +296,7 @@ enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
 
 enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback)
 {
-    assert(buf->len <= SSR_BUFF_SIZE);
+    ASSERT(buf->len <= SSR_BUFF_SIZE);
 
     struct server_env_t *env = tc->env;
 
@@ -312,7 +312,7 @@ enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
         if (needsendback && obfs_plugin->client_encode) {
             struct buffer_t *sendback = buffer_alloc(SSR_BUFF_SIZE);
             sendback->len = obfs_plugin->client_encode(tc->obfs, &sendback->buffer, 0, &sendback->capacity);
-            assert(feedback);
+            ASSERT(feedback);
             *feedback = sendback;
         }
     }

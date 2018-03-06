@@ -1,7 +1,6 @@
 #include <uv.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <getopt.h>
 
 #include "common.h"
@@ -262,12 +261,12 @@ void signal_quit_cb(uv_signal_t *handle, int signum) {
     case SIGUSR1:
 #endif
     {
-        assert(state);
+        ASSERT(state);
         ssr_server_run_loop_shutdown(state);
     }
     break;
     default:
-        assert(0);
+        ASSERT(0);
         break;
     }
 }
@@ -405,9 +404,9 @@ void ssr_tunnel_initialize(uv_tcp_t *listener) {
     incoming->rdstate = socket_stop;
     incoming->wrstate = socket_stop;
     incoming->idle_timeout = config->idle_timeout;
-    assert(0 == uv_tcp_init(loop, &incoming->handle.tcp));
-    assert(0 == uv_accept((uv_stream_t *)listener, &incoming->handle.stream));
-    assert(0 == uv_timer_init(loop, &incoming->timer_handle));
+    VERIFY(0 == uv_tcp_init(loop, &incoming->handle.tcp));
+    VERIFY(0 == uv_accept((uv_stream_t *)listener, &incoming->handle.stream));
+    VERIFY(0 == uv_timer_init(loop, &incoming->timer_handle));
 
     outgoing = &tunnel->outgoing;
     outgoing->tunnel = tunnel;
@@ -415,8 +414,8 @@ void ssr_tunnel_initialize(uv_tcp_t *listener) {
     outgoing->rdstate = socket_stop;
     outgoing->wrstate = socket_stop;
     outgoing->idle_timeout = config->idle_timeout;
-    assert(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
-    assert(0 == uv_timer_init(loop, &outgoing->timer_handle));
+    VERIFY(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
+    VERIFY(0 == uv_timer_init(loop, &outgoing->timer_handle));
 
     socket_read(incoming);
 
@@ -463,7 +462,7 @@ static void tunnel_release(struct tunnel_ctx *tunnel) {
 
 static void socket_read(struct socket_ctx *c) {
     ASSERT(c->rdstate == socket_stop);
-    CHECK(0 == uv_read_start(&c->handle.stream, uv_alloc_buffer, client_read_done_cb));
+    VERIFY(0 == uv_read_start(&c->handle.stream, uv_alloc_buffer, client_read_done_cb));
     c->rdstate = socket_busy;
     socket_timer_reset(c);
 }
@@ -479,7 +478,7 @@ static void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     */
     buf = uv_buf_init((char *)data, (unsigned int)len);
 
-    CHECK(0 == uv_write(&c->write_req, &c->handle.stream, &buf, 1, socket_write_done_cb));
+    VERIFY(0 == uv_write(&c->write_req, &c->handle.stream, &buf, 1, socket_write_done_cb));
     socket_timer_reset(c);
 }
 
@@ -531,7 +530,7 @@ static void socket_close_done_cb(uv_handle_t *handle) {
 }
 
 static void socket_timer_reset(struct socket_ctx *c) {
-    CHECK(0 == uv_timer_start(&c->timer_handle,
+    VERIFY(0 == uv_timer_start(&c->timer_handle,
         socket_timer_expire_cb,
         c->idle_timeout,
         0));
