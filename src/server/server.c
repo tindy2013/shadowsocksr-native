@@ -339,14 +339,17 @@ void client_read_done_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf
         uv_read_stop(&c->handle.stream);
 
         if (tunnel_is_dead(tunnel)) {
-            return;
+            break;
         }
 
-        if (nread <= 0) {
-            // http://docs.libuv.org/en/v1.x/stream.html
+        // http://docs.libuv.org/en/v1.x/stream.html
+        if (nread == 0) {
+            break;
+        }
+        if (nread < 0) {
             ASSERT(nread == UV_EOF || nread == UV_ECONNRESET);
-            if (nread < 0) { ssr_tunnel_shutdown(tunnel); }
-            return;
+            ssr_tunnel_shutdown(tunnel);
+            break;
         }
 
         ASSERT(c->t.buf == (uint8_t *)buf->base);
