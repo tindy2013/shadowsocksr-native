@@ -87,14 +87,14 @@ int main(int argc, char * const argv[]) {
 }
 
 static int ssr_server_run_loop(struct server_config *config) {
-    struct ssr_server_state *svr_state = NULL;
+    struct ssr_server_state *state = NULL;
     int r = 0;
 
     uv_loop_t *loop = (uv_loop_t *) calloc(1, sizeof(uv_loop_t));
     uv_loop_init(loop);
 
-    svr_state = (struct ssr_server_state *) calloc(1, sizeof(*svr_state));
-    svr_state->env = ssr_cipher_env_create(config);
+    state = (struct ssr_server_state *) calloc(1, sizeof(*state));
+    state->env = ssr_cipher_env_create(config);
 
     {
         uv_tcp_t *listener = calloc(1, sizeof(uv_tcp_t));
@@ -109,31 +109,31 @@ static int ssr_server_run_loop(struct server_config *config) {
         if (error != 0) {
             return fprintf(stderr, "Error on listening: %s.\n", uv_strerror(error));
         }
-        svr_state->tcp_listener = listener;
+        state->tcp_listener = listener;
     }
 
     {
         // Setup signal handler
-        svr_state->sigint_watcher = (uv_signal_t *)calloc(1, sizeof(uv_signal_t));
-        uv_signal_init(loop, svr_state->sigint_watcher);
-        uv_signal_start(svr_state->sigint_watcher, signal_quit_cb, SIGINT);
+        state->sigint_watcher = (uv_signal_t *)calloc(1, sizeof(uv_signal_t));
+        uv_signal_init(loop, state->sigint_watcher);
+        uv_signal_start(state->sigint_watcher, signal_quit_cb, SIGINT);
 
-        svr_state->sigterm_watcher = (uv_signal_t *)calloc(1, sizeof(uv_signal_t));
-        uv_signal_init(loop, svr_state->sigterm_watcher);
-        uv_signal_start(svr_state->sigterm_watcher, signal_quit_cb, SIGTERM);
+        state->sigterm_watcher = (uv_signal_t *)calloc(1, sizeof(uv_signal_t));
+        uv_signal_init(loop, state->sigterm_watcher);
+        uv_signal_start(state->sigterm_watcher, signal_quit_cb, SIGTERM);
     }
 
-    loop->data = svr_state;
+    loop->data = state;
 
     r = uv_run(loop, UV_RUN_DEFAULT);
 
     {
-        ssr_cipher_env_release(svr_state->env);
+        ssr_cipher_env_release(state->env);
 
-        free(svr_state->sigint_watcher);
-        free(svr_state->sigterm_watcher);
+        free(state->sigint_watcher);
+        free(state->sigterm_watcher);
 
-        free(svr_state);
+        free(state);
     }
 
     free(loop);
