@@ -99,4 +99,21 @@ enum net_stage {
     STAGE_STREAM    = 5,  /* Stream between client and server */
 };
 
+#if defined(NDEBUG)
+# define ASSERT(exp)
+# define CHECK(exp)   do { if (!(exp)) abort(); } while (0)
+# define DEBUG_CHECKS (0)
+#else
+# define ASSERT(exp)  assert(exp)
+# define CHECK(exp)   assert(exp)
+# define DEBUG_CHECKS (1)
+#endif
+
+#define UNREACHABLE() CHECK(!"Unreachable code reached.")
+
+#if !defined(CONTAINER_OF)
+#define CONTAINER_OF(ptr, type, field)                                        \
+  ((type *) ((char *) (ptr) - ((char *) &((type *) 0)->field)))
+#endif // !defined(CONTAINER_OF)
+
 #endif // _COMMON_H

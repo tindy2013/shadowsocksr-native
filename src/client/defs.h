@@ -143,7 +143,9 @@ int getopt(int argc, char * const argv[], const char *options);
 * the address of A by taking the address of B and subtracting the
 * field offset of B in A.
 */
+#if !defined(CONTAINER_OF)
 #define CONTAINER_OF(ptr, type, field)                                        \
   ((type *) ((char *) (ptr) - ((char *) &((type *) 0)->field)))
+#endif // !defined(CONTAINER_OF)
 
 #endif  /* DEFS_H_ */
