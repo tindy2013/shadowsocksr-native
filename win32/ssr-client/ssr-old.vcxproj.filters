@@ -27,12 +27,6 @@
     <ClCompile Include="..\..\src\encrypt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\getopt.c">
-      <Filter>getopt</Filter>
-    </ClCompile>
-    <ClCompile Include="src\getopt_long.c">
-      <Filter>getopt</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\obfs\http_simple.c">
       <Filter>obfs</Filter>
     </ClCompile>
@@ -99,7 +93,7 @@
     <ClCompile Include="..\..\src\local.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\strncasecmp.c">
+    <ClCompile Include="..\src\strncasecmp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\ssrbuffer.c">
@@ -108,15 +102,27 @@
     <ClCompile Include="..\..\src\ssr_cipher_names.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\getopt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\getopt_long.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\obfs\c_lib.c">
+      <Filter>obfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ssr_executive.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\encrypt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\getopt.h">
+    <ClInclude Include="..\include\getopt.h">
       <Filter>getopt</Filter>
     </ClInclude>
-    <ClInclude Include="include\getopt_long.h">
+    <ClInclude Include="..\include\getopt_long.h">
       <Filter>getopt</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\obfs\http_simple.h">
@@ -199,6 +205,12 @@
     </ClInclude>
     <ClInclude Include="..\..\src\ssr_cipher_names.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\obfs\c_lib.h">
+      <Filter>obfs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ssr_executive.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
