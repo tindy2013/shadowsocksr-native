@@ -111,7 +111,7 @@ bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr);
 
 /* tunnel.c */
-void tunnel_initialize(uv_tcp_t *lx, struct server_env_t *env);
+void tunnel_initialize(uv_tcp_t *lx);
 void tunnel_shutdown(struct tunnel_ctx *tunnel);
 
 /* getopt.c */

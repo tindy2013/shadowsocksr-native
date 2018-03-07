@@ -107,12 +107,13 @@ static int c_set_compare_element(void *left, void *right) {
     }
 }
 
-struct server_env_t * ssr_cipher_env_create(struct server_config *config) {
+struct server_env_t * ssr_cipher_env_create(struct server_config *config, void *data) {
     srand((unsigned int)time(NULL));
 
     struct server_env_t *env = calloc(1, sizeof(struct server_env_t));
     env->cipher = cipher_env_new_instance(config->password, config->method);
     env->config = config;
+    env->data = data;
 
     // init obfs
     init_obfs(env, config->protocol, config->obfs);

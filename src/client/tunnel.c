@@ -120,12 +120,12 @@ static void tunnel_release(struct tunnel_ctx *tunnel) {
 }
 
 /* |incoming| has been initialized by listener.c when this is called. */
-void tunnel_initialize(uv_tcp_t *listener, struct server_env_t *env) {
+void tunnel_initialize(uv_tcp_t *listener) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
     struct tunnel_ctx *tunnel;
     uv_loop_t *loop = listener->loop;
-    //struct server_env_t *env = listener->data;
+    struct server_env_t *env = (struct server_env_t *)loop->data;
     struct server_config *config = env->config;
 
     tunnel = (struct tunnel_ctx *) calloc(1, sizeof(*tunnel));

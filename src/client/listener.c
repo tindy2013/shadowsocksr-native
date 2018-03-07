@@ -60,17 +60,17 @@ static void signal_quit(uv_signal_t* handle, int signum);
 int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct run_loop_state *state, void *p), void *p) {
     uv_loop_t * loop = NULL;
     struct addrinfo hints;
-    struct run_loop_state *svr_state;
+    struct run_loop_state *state;
     int err;
 
     loop = calloc(1, sizeof(uv_loop_t));
     uv_loop_init(loop);
 
-    svr_state = (struct run_loop_state *) calloc(1, sizeof(*svr_state));
-    svr_state->listeners = NULL;
-    svr_state->env = ssr_cipher_env_create(cf);
-    svr_state->sigint_watcher = (uv_signal_t *) calloc(1, sizeof(uv_signal_t));
-    svr_state->sigterm_watcher = (uv_signal_t *) calloc(1, sizeof(uv_signal_t));
+    state = (struct run_loop_state *) calloc(1, sizeof(*state));
+    state->listeners = NULL;
+    state->env = ssr_cipher_env_create(cf, state);
+
+    loop->data = state->env;
 
     /* Resolve the address of the interface that we should bind to.
     * The getaddrinfo callback starts the server and everything else.
@@ -81,7 +81,6 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ru
     hints.ai_protocol = IPPROTO_TCP;
 
     uv_getaddrinfo_t *req = (uv_getaddrinfo_t *)malloc(sizeof(*req));
-    req->data = svr_state;
 
     err = uv_getaddrinfo(loop, req, getaddrinfo_done_cb, cf->listen_host, NULL, &hints);
     if (err != 0) {
@@ -90,16 +89,16 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ru
     }
 
     // Setup signal handler
-    uv_signal_init(loop, svr_state->sigint_watcher);
-    uv_signal_start(svr_state->sigint_watcher, signal_quit, SIGINT);
-    svr_state->sigint_watcher->data = svr_state;
+    state->sigint_watcher = (uv_signal_t *) calloc(1, sizeof(uv_signal_t));
+    uv_signal_init(loop, state->sigint_watcher);
+    uv_signal_start(state->sigint_watcher, signal_quit, SIGINT);
 
-    uv_signal_init(loop, svr_state->sigterm_watcher);
-    uv_signal_start(svr_state->sigterm_watcher, signal_quit, SIGTERM);
-    svr_state->sigterm_watcher->data = svr_state;
+    state->sigterm_watcher = (uv_signal_t *) calloc(1, sizeof(uv_signal_t));
+    uv_signal_init(loop, state->sigterm_watcher);
+    uv_signal_start(state->sigterm_watcher, signal_quit, SIGTERM);
 
     if (feedback_state) {
-        feedback_state(svr_state, p);
+        feedback_state(state, p);
     }
 
     /* Start the event loop.  Control continues in getaddrinfo_done_cb(). */
@@ -108,16 +107,16 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ru
         pr_err("uv_run: %s", uv_strerror(err));
     }
 
-    ssr_cipher_env_release(svr_state->env);
+    ssr_cipher_env_release(state->env);
 
-    if (svr_state->listeners) {
-        free(svr_state->listeners);
+    if (state->listeners) {
+        free(state->listeners);
     }
 
-    free(svr_state->sigint_watcher);
-    free(svr_state->sigterm_watcher);
+    free(state->sigint_watcher);
+    free(state->sigterm_watcher);
     
-    free(svr_state);
+    free(state);
 
     free(loop);
     
@@ -188,9 +187,9 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 
     loop = req->loop;
 
-    state = (struct run_loop_state *) req->data;
+    env = (struct server_env_t *) loop->data;
+    state = (struct run_loop_state *) env->data;
     ASSERT(state);
-    env = state->env;
     cf = env->config;
 
     free(req);
@@ -252,7 +251,6 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
         err = uv_tcp_bind(tcp_server, &s.addr, 0);
         if (err == 0) {
             what = "uv_listen";
-            tcp_server->data = env;
             err = uv_listen((uv_stream_t *)tcp_server, 128, listen_incoming_connection_cb);
         }
 
@@ -289,7 +287,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 
 static void listen_incoming_connection_cb(uv_stream_t *server, int status) {
     VERIFY(status == 0);
-    tunnel_initialize((uv_tcp_t *)server, (struct server_env_t *)server->data);
+    tunnel_initialize((uv_tcp_t *)server);
 }
 
 bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {
@@ -343,7 +341,8 @@ static void signal_quit(uv_signal_t* handle, int signum) {
 #endif
     {
         ASSERT(handle);
-        struct run_loop_state *state = (struct run_loop_state *)handle->data;
+        struct server_env_t *env = (struct server_env_t *)handle->loop->data;
+        struct run_loop_state *state = (struct run_loop_state *)env->data;
         ASSERT(state);
         ssr_run_loop_shutdown(state);
     }
