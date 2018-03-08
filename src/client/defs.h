@@ -64,7 +64,6 @@ struct socket_ctx {
         uv_udp_t udp;
     } handle;
     uv_timer_t timer_handle;  /* For detecting timeouts. */
-    uv_write_t write_req;
     /* We only need one of these at a time so make them share memory. */
     union {
         uv_getaddrinfo_t addrinfo_req;

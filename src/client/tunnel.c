@@ -180,7 +180,9 @@ void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 }
 
 void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    do_next(tunnel, socket);
+    if (tunnel->state != session_proxy) {
+        do_next(tunnel, socket);
+    }
 }
 
 /* This is the core state machine that drives the client <-> upstream proxy.
@@ -568,7 +570,7 @@ static void do_proxy_start(struct tunnel_ctx *tunnel) {
         return;
     }
 
-#if 1
+#if 0
     VERIFY(0 == uv_read_start(&outgoing->handle.stream, ssr_alloc_cb, ssr_outgoing_read_done_cb));
     VERIFY(0 == uv_read_start(&incoming->handle.stream, ssr_alloc_cb, ssr_incoming_read_done_cb));
 #else
@@ -580,7 +582,7 @@ static void do_proxy_start(struct tunnel_ctx *tunnel) {
 
 /* Proxy incoming data back and forth. */
 static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-#if 1
+#if 0
     tunnel->state = session_proxy;
 
     if (socket_cycle("client", &tunnel->incoming, &tunnel->outgoing) != 0) {
@@ -599,6 +601,58 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     incoming = &tunnel->incoming;
     outgoing = &tunnel->outgoing;
     ASSERT(socket==incoming || socket==outgoing);
+
+    if (socket == outgoing) {
+        struct tunnel_cipher_ctx *tc;
+        struct buffer_t *buf = NULL;
+        do {
+            tc = tunnel->cipher;
+
+            buf = buffer_alloc(SSR_BUFF_SIZE);
+            buffer_store(buf, outgoing->t.buf, (size_t)outgoing->result);
+
+            struct buffer_t *feedback = NULL;
+            if (ssr_ok != tunnel_decrypt(tc, buf, &feedback)) {
+                tunnel_shutdown(tunnel);
+                break;
+            }
+            if (feedback) {
+                // SSR logic
+                ASSERT(buf->len == 0);
+                socket_write(outgoing, feedback->buffer, feedback->len);
+                buffer_free(feedback);
+
+                socket_read_stop(incoming);
+                socket_read(incoming);
+            }
+            if (buf->len > 0) {
+                socket_write(incoming, buf->buffer, buf->len);
+            }
+        } while (0);
+        buffer_free(buf);
+    }
+
+    if (socket == incoming) {
+        struct tunnel_cipher_ctx *tc;
+        struct buffer_t *buf = NULL;
+        do {
+            tc = tunnel->cipher;
+
+            buf = buffer_alloc(SSR_BUFF_SIZE);
+            buffer_store(buf, incoming->t.buf, (size_t)incoming->result);
+            if (ssr_ok != tunnel_encrypt(tc, buf)) {
+                tunnel_shutdown(tunnel);
+                break;
+            }
+            if (buf->len > 0) {
+                socket_write(outgoing, buf->buffer, buf->len);
+            } else if (buf->len == 0) {
+                // SSR logic
+                socket_read_stop(incoming);
+            }
+        } while (0);
+        buffer_free(buf);
+    }
 
 #endif // 0
 }
@@ -781,19 +835,26 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
         return;
     }
 
-    uv_read_stop(&c->handle.stream);
+    if (tunnel->state != session_proxy) {
+        uv_read_stop(&c->handle.stream);
+    }
 
     socket_timer_stop(c);
 
-    if (nread <= 0) {
+    if (nread == 0) {
+        return;
+    }
+    if (nread < 0) {
         // http://docs.libuv.org/en/v1.x/stream.html
         ASSERT(nread == UV_EOF || nread == UV_ECONNRESET);
-        if (nread < 0) { tunnel_shutdown(tunnel); }
+        tunnel_shutdown(tunnel);
         return;
     }
 
     ASSERT(c->t.buf == (uint8_t *) buf->base);
-    ASSERT(c->rdstate == socket_busy);
+    if (tunnel->state != session_proxy) {
+        ASSERT(c->rdstate == socket_busy);
+    }
     c->rdstate = socket_done;
     c->result = nread;
 
@@ -810,15 +871,21 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     struct socket_ctx *c;
 
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
-    ASSERT(c->rdstate == socket_busy);
+
+    if (c->tunnel->state != session_proxy) {
+        ASSERT(c->rdstate == socket_busy);
+    }
     buf->base = (char *) c->t.buf;
     buf->len = sizeof(c->t.buf);
 }
 
 static void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     uv_buf_t buf;
+    struct tunnel_ctx *tunnel = c->tunnel;
 
-    ASSERT(c->wrstate == socket_stop || c->wrstate == socket_done);
+    if (tunnel->state != session_proxy) {
+        ASSERT(c->wrstate == socket_stop || c->wrstate == socket_done);
+    }
     c->wrstate = socket_busy;
 
     /* It's okay to cast away constness here, uv_write() won't modify the
@@ -826,7 +893,10 @@ static void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     */
     buf = uv_buf_init((char *)data, (unsigned int)len);
 
-    VERIFY(0 == uv_write(&c->write_req, &c->handle.stream, &buf, 1, socket_write_done_cb));
+    uv_write_t *req = (uv_write_t *)calloc(1, sizeof(uv_write_t));
+    req->data = c;
+
+    VERIFY(0 == uv_write(req, &c->handle.stream, &buf, 1, socket_write_done_cb));
     socket_timer_start(c);
 }
 
@@ -834,7 +904,8 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
     struct socket_ctx *c;
     struct tunnel_ctx *tunnel;
 
-    c = CONTAINER_OF(req, struct socket_ctx, write_req);
+    c = (struct socket_ctx *)req->data;
+    free(req);
     tunnel = c->tunnel;
 
     if (tunnel_is_dead(tunnel)) {
@@ -848,7 +919,9 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
         return;  /* Handle has been closed. */
     }
 
-    ASSERT(c->wrstate == socket_busy);
+    if (tunnel->state != session_proxy) {
+        ASSERT(c->wrstate == socket_busy);
+    }
     c->wrstate = socket_done;
     c->result = status;
 
