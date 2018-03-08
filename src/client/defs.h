@@ -101,6 +101,9 @@ struct tunnel_ctx {
     struct socket_ctx incoming;  /* Connection with the SOCKS client. */
     struct socket_ctx outgoing;  /* Connection with upstream. */
     int ref_count;
+
+    void(*tunnel_read_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+    void(*tunnel_write_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 };
 
 /* listener.c */

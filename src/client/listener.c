@@ -256,10 +256,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 
         if (err != 0) {
             pr_err("%s(\"%s:%hu\"): %s", what, addrbuf, cf->listen_port, uv_strerror(err));
-            while (n > 0) {
-                n -= 1;
-                uv_close((uv_handle_t *)tcp_server, NULL);
-            }
+            ssr_run_loop_shutdown(state);
             break;
         }
 

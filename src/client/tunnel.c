@@ -62,6 +62,9 @@
  * reads in the future.
  */
 
+void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel);
 static void tunnel_add_ref(struct tunnel_ctx *tunnel);
 static void tunnel_release(struct tunnel_ctx *tunnel);
@@ -160,6 +163,17 @@ void tunnel_initialize(uv_tcp_t *listener) {
     socket_read(incoming);
 
     objects_container_add(tunnel->env->tunnel_set, tunnel);
+
+    tunnel->tunnel_read_done = &tunnel_read_done;
+    tunnel->tunnel_write_done = &tunnel_write_done;
+}
+
+void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    do_next(tunnel);
+}
+
+void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    do_next(tunnel);
 }
 
 /* This is the core state machine that drives the client <-> upstream proxy.
@@ -748,7 +762,8 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     c->rdstate = socket_done;
     c->result = nread;
 
-    do_next(tunnel);
+    ASSERT(tunnel->tunnel_read_done);
+    tunnel->tunnel_read_done(tunnel, c);
 }
 
 static void socket_read_stop(struct socket_ctx *c) {
@@ -799,7 +814,9 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
     ASSERT(c->wrstate == socket_busy);
     c->wrstate = socket_done;
     c->result = status;
-    do_next(tunnel);
+
+    ASSERT(tunnel->tunnel_write_done);
+    tunnel->tunnel_write_done(tunnel, c);
 }
 
 static void socket_close(struct socket_ctx *c) {
