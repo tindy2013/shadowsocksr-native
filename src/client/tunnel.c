@@ -62,13 +62,14 @@
  * reads in the future.
  */
 
+void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel);
 static void tunnel_add_ref(struct tunnel_ctx *tunnel);
 static void tunnel_release(struct tunnel_ctx *tunnel);
-static void do_next(struct tunnel_ctx *tunnel);
+static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_handshake(struct tunnel_ctx *tunnel);
 static void do_handshake_auth(struct tunnel_ctx *tunnel);
 static void do_req_start(struct tunnel_ctx *tunnel);
@@ -78,9 +79,10 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel);
 static void do_req_connect(struct tunnel_ctx *tunnel);
 static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
 static void do_proxy_start(struct tunnel_ctx *tunnel);
-static void do_proxy(struct tunnel_ctx *tunnel);
+static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static int socket_cycle(const char *who, struct socket_ctx *a, struct socket_ctx *b);
-static void socket_timer_reset(struct socket_ctx *c);
+static void socket_timer_start(struct socket_ctx *c);
+static void socket_timer_stop(struct socket_ctx *c);
 static void socket_timer_expire_cb(uv_timer_t *handle);
 static void socket_getaddrinfo(struct socket_ctx *c, const char *hostname);
 static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrinfo *ai);
@@ -164,16 +166,21 @@ void tunnel_initialize(uv_tcp_t *listener) {
 
     objects_container_add(tunnel->env->tunnel_set, tunnel);
 
+    tunnel->tunnel_connected_done = &tunnel_connected_done;
     tunnel->tunnel_read_done = &tunnel_read_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
 }
 
+void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    do_next(tunnel, socket);
+}
+
 void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    do_next(tunnel);
+    do_next(tunnel, socket);
 }
 
 void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    do_next(tunnel);
+    do_next(tunnel, socket);
 }
 
 /* This is the core state machine that drives the client <-> upstream proxy.
@@ -181,7 +188,7 @@ void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
  * end up (if all goes well) in the proxy state where we're just proxying
  * data between the client and upstream.
  */
-static void do_next(struct tunnel_ctx *tunnel) {
+static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     switch (tunnel->state) {
     case session_handshake:
         do_handshake(tunnel);
@@ -211,7 +218,7 @@ static void do_next(struct tunnel_ctx *tunnel) {
         do_proxy_start(tunnel);
         break;
     case session_proxy:
-        do_proxy(tunnel);
+        do_proxy(tunnel, socket);
         break;
     case session_kill:
         tunnel_shutdown(tunnel);
@@ -560,12 +567,20 @@ static void do_proxy_start(struct tunnel_ctx *tunnel) {
         tunnel_shutdown(tunnel);
         return;
     }
+
+#if 1
     VERIFY(0 == uv_read_start(&outgoing->handle.stream, ssr_alloc_cb, ssr_outgoing_read_done_cb));
     VERIFY(0 == uv_read_start(&incoming->handle.stream, ssr_alloc_cb, ssr_incoming_read_done_cb));
+#else
+    socket_read(incoming);
+    socket_read(outgoing);
+    tunnel->state = session_proxy;
+#endif // 0
 }
 
 /* Proxy incoming data back and forth. */
-static void do_proxy(struct tunnel_ctx *tunnel) {
+static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+#if 1
     tunnel->state = session_proxy;
 
     if (socket_cycle("client", &tunnel->incoming, &tunnel->outgoing) != 0) {
@@ -577,6 +592,15 @@ static void do_proxy(struct tunnel_ctx *tunnel) {
         tunnel_shutdown(tunnel);
         return;
     }
+#else
+    struct socket_ctx *incoming;
+    struct socket_ctx *outgoing;
+
+    incoming = &tunnel->incoming;
+    outgoing = &tunnel->outgoing;
+    ASSERT(socket==incoming || socket==outgoing);
+
+#endif // 0
 }
 
 void tunnel_shutdown(struct tunnel_ctx *tunnel) {
@@ -629,11 +653,15 @@ static int socket_cycle(const char *who, struct socket_ctx *a, struct socket_ctx
     return 0;
 }
 
-static void socket_timer_reset(struct socket_ctx *c) {
+static void socket_timer_start(struct socket_ctx *c) {
     VERIFY(0 == uv_timer_start(&c->timer_handle,
         socket_timer_expire_cb,
         c->idle_timeout,
         0));
+}
+
+static void socket_timer_stop(struct socket_ctx *c) {
+    VERIFY(0 == uv_timer_stop(&c->timer_handle));
 }
 
 static void socket_timer_expire_cb(uv_timer_t *handle) {
@@ -668,7 +696,7 @@ static void socket_getaddrinfo(struct socket_ctx *c, const char *hostname) {
         hostname,
         NULL,
         &hints));
-    socket_timer_reset(c);
+    socket_timer_start(c);
 }
 
 static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrinfo *ai) {
@@ -684,6 +712,8 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
         return;
     }
 
+    socket_timer_stop(c);
+
     if (status == 0) {
         /* FIXME(bnoordhuis) Should try all addresses. */
         if (ai->ai_family == AF_INET) {
@@ -696,13 +726,13 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
     }
 
     uv_freeaddrinfo(ai);
-    do_next(tunnel);
+    do_next(tunnel, c);
 }
 
 /* Assumes that c->t.sa contains a valid AF_INET or AF_INET6 address. */
 static int socket_connect(struct socket_ctx *c) {
     ASSERT(c->t.addr.addr.sa_family == AF_INET || c->t.addr.addr.sa_family == AF_INET6);
-    socket_timer_reset(c);
+    socket_timer_start(c);
     return uv_tcp_connect(&c->t.connect_req,
         &c->handle.tcp,
         &c->t.addr.addr,
@@ -722,19 +752,22 @@ static void socket_connect_done_cb(uv_connect_t *req, int status) {
         return;
     }
 
+    socket_timer_stop(c);
+
     if (status == UV_ECANCELED || status == UV_ECONNREFUSED) {
         tunnel_shutdown(tunnel);
         return;  /* Handle has been closed. */
     }
 
-    do_next(tunnel);
+    ASSERT(tunnel->tunnel_connected_done);
+    tunnel->tunnel_connected_done(tunnel, c);
 }
 
 static void socket_read(struct socket_ctx *c) {
     ASSERT(c->rdstate == socket_stop);
     VERIFY(0 == uv_read_start(&c->handle.stream, socket_alloc_cb, socket_read_done_cb));
     c->rdstate = socket_busy;
-    socket_timer_reset(c);
+    socket_timer_start(c);
 }
 
 static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
@@ -744,11 +777,13 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
     tunnel = c->tunnel;
 
-    uv_read_stop(&c->handle.stream);
-
     if (tunnel_is_dead(tunnel)) {
         return;
     }
+
+    uv_read_stop(&c->handle.stream);
+
+    socket_timer_stop(c);
 
     if (nread <= 0) {
         // http://docs.libuv.org/en/v1.x/stream.html
@@ -792,7 +827,7 @@ static void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     buf = uv_buf_init((char *)data, (unsigned int)len);
 
     VERIFY(0 == uv_write(&c->write_req, &c->handle.stream, &buf, 1, socket_write_done_cb));
-    socket_timer_reset(c);
+    socket_timer_start(c);
 }
 
 static void socket_write_done_cb(uv_write_t *req, int status) {
@@ -805,6 +840,8 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
     if (tunnel_is_dead(tunnel)) {
         return;
     }
+
+    socket_timer_stop(c);
 
     if (status == UV_ECANCELED) {
         tunnel_shutdown(tunnel);
@@ -907,7 +944,7 @@ static void ssr_outgoing_read_done_cb(uv_stream_t *handle, ssize_t nread, const 
             break;
         }
 
-        socket_timer_reset(outgoing);
+        socket_timer_start(outgoing);
 
         if (nread <= 0) {
             ASSERT(nread == 0 || nread == UV_EOF || nread == UV_ECONNRESET);
@@ -979,7 +1016,7 @@ static void ssr_incoming_read_done_cb(uv_stream_t *handle, ssize_t nread, const 
             break;
         }
 
-        socket_timer_reset(incoming);
+        socket_timer_start(incoming);
 
         if (nread <= 0) {
             ASSERT(nread == 0 || nread == UV_EOF || nread == UV_ECONNRESET);
