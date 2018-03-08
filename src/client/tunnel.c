@@ -143,9 +143,9 @@ void tunnel_initialize(uv_tcp_t *listener) {
     incoming->rdstate = socket_stop;
     incoming->wrstate = socket_stop;
     incoming->idle_timeout = config->idle_timeout;
+    VERIFY(0 == uv_timer_init(loop, &incoming->timer_handle));
     VERIFY(0 == uv_tcp_init(loop, &incoming->handle.tcp));
     VERIFY(0 == uv_accept((uv_stream_t *)listener, &incoming->handle.stream));
-    VERIFY(0 == uv_timer_init(loop, &incoming->timer_handle));
 
     outgoing = &tunnel->outgoing;
     outgoing->tunnel = tunnel;
@@ -153,8 +153,8 @@ void tunnel_initialize(uv_tcp_t *listener) {
     outgoing->rdstate = socket_stop;
     outgoing->wrstate = socket_stop;
     outgoing->idle_timeout = config->idle_timeout;
-    VERIFY(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
     VERIFY(0 == uv_timer_init(loop, &outgoing->timer_handle));
+    VERIFY(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
 
     /* Wait for the initial packet. */
     socket_read(incoming);
