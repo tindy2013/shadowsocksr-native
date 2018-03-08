@@ -47,7 +47,7 @@
  * When the connection with upstream has been established, the struct tunnel_ctx
  * moves into a state where incoming data from the client is sent upstream
  * and vice versa, incoming data from upstream is sent to the client.  In
- * other words, we're just piping data back and forth.  See socket_cycle()
+ * other words, we're just piping data back and forth.  See do_proxy()
  * for details.
  *
  * An interesting deviation from libuv's I/O model is that reads are discrete
@@ -80,7 +80,6 @@ static void do_req_connect(struct tunnel_ctx *tunnel);
 static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
 static void do_proxy_start(struct tunnel_ctx *tunnel);
 static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static int socket_cycle(const char *who, struct socket_ctx *a, struct socket_ctx *b);
 static void socket_timer_start(struct socket_ctx *c);
 static void socket_timer_stop(struct socket_ctx *c);
 static void socket_timer_expire_cb(uv_timer_t *handle);
@@ -97,11 +96,6 @@ static void socket_write_done_cb(uv_write_t *req, int status);
 static void socket_close(struct socket_ctx *c);
 static void socket_close_done_cb(uv_handle_t *handle);
 static struct buffer_t * initial_package_create(const s5_ctx *parser);
-static void ssr_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf);
-static void ssr_outgoing_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf0);
-static void ssr_write(struct socket_ctx *c, const void *data, size_t len);
-static void ssr_write_done_cb(uv_write_t *req, int status);
-static void ssr_incoming_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf0);
 uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len);
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
@@ -570,31 +564,13 @@ static void do_proxy_start(struct tunnel_ctx *tunnel) {
         return;
     }
 
-#if 0
-    VERIFY(0 == uv_read_start(&outgoing->handle.stream, ssr_alloc_cb, ssr_outgoing_read_done_cb));
-    VERIFY(0 == uv_read_start(&incoming->handle.stream, ssr_alloc_cb, ssr_incoming_read_done_cb));
-#else
     socket_read(incoming);
     socket_read(outgoing);
     tunnel->state = session_proxy;
-#endif // 0
 }
 
 /* Proxy incoming data back and forth. */
 static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-#if 0
-    tunnel->state = session_proxy;
-
-    if (socket_cycle("client", &tunnel->incoming, &tunnel->outgoing) != 0) {
-        tunnel_shutdown(tunnel);
-        return;
-    }
-
-    if (socket_cycle("upstream", &tunnel->outgoing, &tunnel->incoming) != 0) {
-        tunnel_shutdown(tunnel);
-        return;
-    }
-#else
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
@@ -653,8 +629,6 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         } while (0);
         buffer_free(buf);
     }
-
-#endif // 0
 }
 
 void tunnel_shutdown(struct tunnel_ctx *tunnel) {
@@ -673,38 +647,6 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
     socket_close(&tunnel->outgoing);
 
     tunnel->state = session_dead;
-}
-
-static int socket_cycle(const char *who, struct socket_ctx *a, struct socket_ctx *b) {
-    if (a->result < 0) {
-        if (a->result != UV_EOF) {
-            pr_err("%s error: %s", who, uv_strerror((int)a->result));
-        }
-        return -1;
-    }
-
-    if (b->result < 0) {
-        return -1;
-    }
-
-    if (a->wrstate == socket_done) {
-        a->wrstate = socket_stop;
-    }
-
-    /* The logic is as follows: read when we don't write and write when we don't
-    * read.  That gives us back-pressure handling for free because if the peer
-    * sends data faster than we consume it, TCP congestion control kicks in.
-    */
-    if (a->wrstate == socket_stop) {
-        if (b->rdstate == socket_stop) {
-            socket_read(b);
-        } else if (b->rdstate == socket_done) {
-            socket_write(a, b->t.buf, b->result);
-            b->rdstate = socket_stop;  /* Triggers the call to socket_read() above. */
-        }
-    }
-
-    return 0;
 }
 
 static void socket_timer_start(struct socket_ctx *c) {
@@ -888,9 +830,7 @@ static void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     }
     c->wrstate = socket_busy;
 
-    /* It's okay to cast away constness here, uv_write() won't modify the
-    * memory.
-    */
+    // It's okay to cast away constness here, uv_write() won't modify the memory.
     buf = uv_buf_init((char *)data, (unsigned int)len);
 
     uv_write_t *req = (uv_write_t *)calloc(1, sizeof(uv_write_t));
@@ -988,130 +928,6 @@ static struct buffer_t * initial_package_create(const s5_ctx *parser) {
     buffer->len = iter - buffer->buffer;
 
     return buffer;
-}
-
-static void ssr_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
-    buf->base = (char *) calloc(SSR_BUFF_SIZE, sizeof(char));
-    buf->len = SSR_BUFF_SIZE;
-}
-
-void do_dealloc_uv_buffer(uv_buf_t *buf) {
-    free(buf->base);
-    buf->base = NULL;
-    buf->len = 0;
-}
-
-static void ssr_outgoing_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf0) {
-    struct socket_ctx *outgoing;
-    struct socket_ctx *incoming;
-    struct tunnel_ctx *tunnel;
-    struct tunnel_cipher_ctx *tc;
-    struct buffer_t *buf = NULL;
-    do {
-        outgoing = CONTAINER_OF(handle, struct socket_ctx, handle);
-        tunnel = outgoing->tunnel;
-        incoming = &tunnel->incoming;
-        tc = tunnel->cipher;
-
-        if (tunnel_is_dead(tunnel)) {
-            break;
-        }
-
-        socket_timer_start(outgoing);
-
-        if (nread <= 0) {
-            ASSERT(nread == 0 || nread == UV_EOF || nread == UV_ECONNRESET);
-            if (nread < 0) { tunnel_shutdown(tunnel); }
-            break;
-        }
-
-        buf = buffer_alloc(SSR_BUFF_SIZE);
-        buffer_store(buf, buf0->base, (size_t)nread);
-
-        struct buffer_t *feedback = NULL;
-        if (ssr_ok != tunnel_decrypt(tc, buf, &feedback)) {
-            tunnel_shutdown(tunnel);
-            break;
-        }
-        if (feedback) {
-            // SSR logic
-            ASSERT(buf->len == 0);
-            ssr_write(outgoing, feedback->buffer, feedback->len);
-            buffer_free(feedback);
-
-            socket_read_stop(incoming);
-            VERIFY(0 == uv_read_start(&incoming->handle.stream, ssr_alloc_cb, ssr_incoming_read_done_cb));
-        }
-
-        if (buf->len > 0) {
-            ssr_write(incoming, buf->buffer, buf->len);
-        }
-    } while (0);
-    buffer_free(buf);
-    do_dealloc_uv_buffer((uv_buf_t *)buf0);
-}
-
-static void ssr_write(struct socket_ctx *c, const void *data, size_t len) {
-    uv_write_t *req = (uv_write_t *)calloc(1, sizeof(uv_write_t));
-    req->data = c;
-    uv_buf_t buf;
-    buf = uv_buf_init((char *)data, (unsigned int)len);
-    VERIFY(0 == uv_write(req, &c->handle.stream, &buf, 1, ssr_write_done_cb));
-}
-
-static void ssr_write_done_cb(uv_write_t *req, int status) {
-    struct socket_ctx *c;
-    struct tunnel_ctx *tunnel;
-    c = (struct socket_ctx *) req->data;
-    tunnel = c->tunnel;
-    free(req);
-    if (tunnel_is_dead(tunnel)) {
-        return;
-    }
-    if (status < 0) {
-        tunnel_shutdown(tunnel);
-    }
-}
-
-static void ssr_incoming_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf0) {
-    struct socket_ctx *outgoing;
-    struct socket_ctx *incoming;
-    struct tunnel_ctx *tunnel;
-    struct tunnel_cipher_ctx *tc;
-    struct buffer_t *buf = NULL;
-    do {
-        incoming = CONTAINER_OF(handle, struct socket_ctx, handle);
-        tunnel = incoming->tunnel;
-        outgoing = &tunnel->outgoing;
-        tc = tunnel->cipher;
-
-        if (tunnel_is_dead(tunnel)) {
-            break;
-        }
-
-        socket_timer_start(incoming);
-
-        if (nread <= 0) {
-            ASSERT(nread == 0 || nread == UV_EOF || nread == UV_ECONNRESET);
-            if (nread < 0) { tunnel_shutdown(tunnel); }
-            break;
-        }
-
-        buf = buffer_alloc(SSR_BUFF_SIZE);
-        buffer_store(buf, buf0->base, (size_t)nread);
-        if (ssr_ok != tunnel_encrypt(tc, buf)) {
-            tunnel_shutdown(tunnel);
-            break;
-        }
-        if (buf->len > 0) {
-            ssr_write(outgoing, buf->buffer, buf->len);
-        } else if (buf->len == 0) {
-            // SSR logic
-            socket_read_stop(incoming);
-        }
-    } while (0);
-    buffer_free(buf);
-    do_dealloc_uv_buffer((uv_buf_t *)buf0);
 }
 
 uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len) {
