@@ -73,11 +73,9 @@ void tunnel_initialize(uv_tcp_t *listener, void(*init_done_cb)(struct tunnel_ctx
     tunnel = (struct tunnel_ctx *) calloc(1, sizeof(*tunnel));
 
     tunnel->env = env;
-    tunnel->cipher = NULL;
     tunnel->listener = listener;
     tunnel->state = session_handshake;
     tunnel->ref_count = 0;
-    s5_init(&tunnel->parser);
 
     incoming = &tunnel->incoming;
     incoming->tunnel = tunnel;

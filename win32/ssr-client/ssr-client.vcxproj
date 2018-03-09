@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\cache.c" />
+    <ClCompile Include="..\..\src\client\client.c" />
     <ClCompile Include="..\..\src\client\listener.c" />
     <ClCompile Include="..\..\src\client\main.c" />
     <ClCompile Include="..\..\src\client\s5.c" />
@@ -52,6 +53,7 @@
     <ClInclude Include="..\..\src\cache.h" />
     <ClInclude Include="..\..\src\client\defs.h" />
     <ClInclude Include="..\..\src\client\s5.h" />
+    <ClInclude Include="..\..\src\client\tunnel.h" />
     <ClInclude Include="..\..\src\dump_info.h" />
     <ClInclude Include="..\..\src\config_json.h" />
     <ClInclude Include="..\..\src\sockaddr_universal.h" />

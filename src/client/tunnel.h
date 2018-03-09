@@ -61,8 +61,8 @@ struct tunnel_ctx {
     struct server_env_t *env; // __weak_ptr
     struct tunnel_cipher_ctx *cipher;
     struct buffer_t *init_pkg;
-    uv_tcp_t *listener;  /* Backlink to owning listener context. */
     s5_ctx parser;  /* The SOCKS protocol parser. */
+    uv_tcp_t *listener;  /* Backlink to owning listener context. */
     struct socket_ctx incoming;  /* Connection with the SOCKS client. */
     struct socket_ctx outgoing;  /* Connection with upstream. */
     int ref_count;

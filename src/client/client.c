@@ -64,6 +64,9 @@ void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_read_done = &tunnel_read_done;
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
+
+    s5_init(&tunnel->parser);
+    tunnel->cipher = NULL;
 }
 
 void client_initialize(uv_tcp_t *lx) {
