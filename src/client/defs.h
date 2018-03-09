@@ -116,6 +116,9 @@ bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct so
 /* tunnel.c */
 void tunnel_initialize(uv_tcp_t *lx);
 void tunnel_shutdown(struct tunnel_ctx *tunnel);
+int socket_connect(struct socket_ctx *c);
+void socket_read(struct socket_ctx *c);
+void socket_write(struct socket_ctx *c, const void *data, size_t len);
 
 /* getopt.c */
 #if !HAVE_UNISTD_H
