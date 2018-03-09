@@ -65,6 +65,8 @@ void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
 
+    objects_container_add(tunnel->env->tunnel_set, tunnel);
+
     s5_init(&tunnel->parser);
     tunnel->cipher = NULL;
 }
@@ -562,6 +564,7 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 }
 
 void tunnel_dying(struct tunnel_ctx *tunnel) {
+    objects_container_remove(tunnel->env->tunnel_set, tunnel);
     if (tunnel->cipher) {
         tunnel_cipher_release(tunnel->cipher);
     }

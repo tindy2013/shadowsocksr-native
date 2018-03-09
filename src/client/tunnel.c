@@ -53,7 +53,6 @@ static void tunnel_add_ref(struct tunnel_ctx *tunnel) {
 static void tunnel_release(struct tunnel_ctx *tunnel) {
     tunnel->ref_count--;
     if (tunnel->ref_count == 0) {
-        objects_container_remove(tunnel->env->tunnel_set, tunnel);
         if (tunnel->tunnel_dying) {
             tunnel->tunnel_dying(tunnel);
         }
@@ -98,8 +97,6 @@ void tunnel_initialize(uv_tcp_t *listener, void(*init_done_cb)(struct tunnel_ctx
 
     /* Wait for the initial packet. */
     socket_read(incoming);
-
-    objects_container_add(tunnel->env->tunnel_set, tunnel);
 
     if (init_done_cb) {
         init_done_cb(tunnel, p);
