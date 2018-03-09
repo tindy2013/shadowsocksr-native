@@ -65,6 +65,8 @@ set(SOURCE_FILES_CLIENT
         sockaddr_universal.h
         sockaddr_universal.c
         client/tunnel.c
+        client/tunnel.h
+        client/client.c
         dump_info.c
         dump_info.h
         ${SOURCE_FILES_OBFS}

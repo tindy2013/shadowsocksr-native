@@ -284,7 +284,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 
 static void listen_incoming_connection_cb(uv_stream_t *server, int status) {
     VERIFY(status == 0);
-    tunnel_initialize((uv_tcp_t *)server);
+    client_initialize((uv_tcp_t *)server);
 }
 
 bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {
