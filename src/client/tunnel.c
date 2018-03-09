@@ -96,7 +96,6 @@ static void socket_write_done_cb(uv_write_t *req, int status);
 static void socket_close(struct socket_ctx *c);
 static void socket_close_done_cb(uv_handle_t *handle);
 static struct buffer_t * initial_package_create(const s5_ctx *parser);
-uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len);
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
     return (tunnel->state == session_dead);
@@ -928,54 +927,4 @@ static struct buffer_t * initial_package_create(const s5_ctx *parser) {
     buffer->len = iter - buffer->buffer;
 
     return buffer;
-}
-
-uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len) {
-    if (addr_str == NULL || buf==NULL || buf_len==NULL) {
-        return NULL;
-    }
-
-    bool ipV6 = false;
-
-    union sockaddr_universal addr;
-    if (uv_ip4_addr(addr_str, port, &addr.addr4) != 0) {
-        if (uv_ip6_addr(addr_str, port, &addr.addr6) != 0) {
-            return NULL;
-        }
-        ipV6 = true;
-    }
-
-    if (ipV6) {
-        if (*buf_len < 22) {
-            return NULL;
-        }
-    } else {
-        if (*buf_len < 10) {
-            return NULL;
-        }
-    }
-
-    buf[0] = 5;  // Version.
-    if (allow) {
-        buf[1] = 0;  // Success.
-    } else {
-        buf[1] = 0x07;  // Command not supported.
-    }
-    buf[2] = 0;  // Reserved.
-    buf[3] = (uint8_t) (ipV6 ? 0x04 : 0x01);  // atyp
-
-    size_t in6_addr_w = sizeof(addr.addr6.sin6_addr);
-    size_t in4_addr_w = sizeof(addr.addr4.sin_addr);
-    size_t port_w = sizeof(addr.addr4.sin_port);
-
-    if (ipV6) {
-        *buf_len = 4 + in6_addr_w + port_w;
-        memcpy(buf + 4, &addr.addr6.sin6_addr, in6_addr_w);
-        memcpy(buf + 4 + in6_addr_w, &addr.addr6.sin6_port, port_w);
-    } else {
-        *buf_len = 4 + in4_addr_w + port_w;
-        memcpy(buf + 4, &addr.addr4.sin_addr, in4_addr_w);
-        memcpy(buf + 4 + in4_addr_w, &addr.addr4.sin_port, port_w);
-    }
-    return buf;
 }

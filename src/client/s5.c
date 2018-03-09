@@ -266,3 +266,50 @@ const char *s5_strerror(s5_err err) {
 #undef S5_ERR_GEN
     return "Unknown error.";
 }
+
+#include <sockaddr_universal.h>
+uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len) {
+    if (addr_str == NULL || buf == NULL || buf_len == NULL) {
+        return NULL;
+    }
+
+    union sockaddr_universal addr;
+    if (convert_address(addr_str, port, &addr) != 0) {
+        return NULL;
+    }
+    bool ipV6 = (addr.addr.sa_family == AF_INET6);
+
+    if (ipV6) {
+        if (*buf_len < 22) {
+            return NULL;
+        }
+    } else {
+        if (*buf_len < 10) {
+            return NULL;
+        }
+    }
+
+    buf[0] = 5;  // Version.
+    if (allow) {
+        buf[1] = 0;  // Success.
+    } else {
+        buf[1] = 0x07;  // Command not supported.
+    }
+    buf[2] = 0;  // Reserved.
+    buf[3] = (uint8_t)(ipV6 ? 0x04 : 0x01);  // atyp
+
+    size_t in6_addr_w = sizeof(addr.addr6.sin6_addr);
+    size_t in4_addr_w = sizeof(addr.addr4.sin_addr);
+    size_t port_w = sizeof(addr.addr4.sin_port);
+
+    if (ipV6) {
+        *buf_len = 4 + in6_addr_w + port_w;
+        memcpy(buf + 4, &addr.addr6.sin6_addr, in6_addr_w);
+        memcpy(buf + 4 + in6_addr_w, &addr.addr6.sin6_port, port_w);
+    } else {
+        *buf_len = 4 + in4_addr_w + port_w;
+        memcpy(buf + 4, &addr.addr4.sin_addr, in4_addr_w);
+        memcpy(buf + 4 + in4_addr_w, &addr.addr4.sin_port, port_w);
+    }
+    return buf;
+}

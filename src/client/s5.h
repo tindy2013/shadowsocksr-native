@@ -24,6 +24,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define S5_ERR_MAP(V)                                                         \
   V(-1, bad_version, "Bad protocol version.")                                 \
@@ -105,5 +106,7 @@ enum s5_auth_method s5_auth_methods(const s5_ctx *cx);
 int s5_select_auth(s5_ctx *cx, s5_auth_method method);
 
 const char *s5_strerror(s5_err err);
+
+uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len);
 
 #endif  /* S5_H_ */
