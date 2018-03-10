@@ -41,7 +41,7 @@ struct listener_t {
     struct udp_listener_ctx_t *udp_server;
 };
 
-struct run_loop_state {
+struct ssr_client_state {
     struct server_env_t *env;
 
     uv_signal_t *sigint_watcher;
@@ -57,16 +57,16 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
 static void signal_quit(uv_signal_t* handle, int signum);
 
-int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct run_loop_state *state, void *p), void *p) {
+int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, void *p), void *p) {
     uv_loop_t * loop = NULL;
     struct addrinfo hints;
-    struct run_loop_state *state;
+    struct ssr_client_state *state;
     int err;
 
     loop = calloc(1, sizeof(uv_loop_t));
     uv_loop_init(loop);
 
-    state = (struct run_loop_state *) calloc(1, sizeof(*state));
+    state = (struct ssr_client_state *) calloc(1, sizeof(*state));
     state->listeners = NULL;
     state->env = ssr_cipher_env_create(cf, state);
 
@@ -127,7 +127,7 @@ static void tcp_close_done_cb(uv_handle_t* handle) {
     free((void *)((uv_tcp_t *)handle));
 }
 
-void ssr_run_loop_shutdown(struct run_loop_state *state) {
+void ssr_run_loop_shutdown(struct ssr_client_state *state) {
     if (state==NULL) {
         return;
     }
@@ -169,7 +169,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
     char addrbuf[INET6_ADDRSTRLEN + 1];
     unsigned int ipv4_naddrs;
     unsigned int ipv6_naddrs;
-    struct run_loop_state *state;
+    struct ssr_client_state *state;
     struct server_env_t *env;
     const struct server_config *cf;
     struct addrinfo *ai;
@@ -183,7 +183,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
     loop = req->loop;
 
     env = (struct server_env_t *) loop->data;
-    state = (struct run_loop_state *) env->data;
+    state = (struct ssr_client_state *) env->data;
     ASSERT(state);
     cf = env->config;
 
@@ -337,7 +337,7 @@ static void signal_quit(uv_signal_t* handle, int signum) {
     {
         ASSERT(handle);
         struct server_env_t *env = (struct server_env_t *)handle->loop->data;
-        struct run_loop_state *state = (struct run_loop_state *)env->data;
+        struct ssr_client_state *state = (struct ssr_client_state *)env->data;
         ASSERT(state);
         ssr_run_loop_shutdown(state);
     }
