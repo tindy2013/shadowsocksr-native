@@ -37,25 +37,10 @@ struct socket_ctx {
     size_t buf_size;
 };
 
-/* Session states. */
-enum session_state {
-    session_handshake,        /* Wait for client handshake. */
-    session_handshake_auth,   /* Wait for client authentication data. */
-    session_req_start,        /* Start waiting for request data. */
-    session_req_parse,        /* Wait for request data. */
-    session_req_udp_accoc,
-    session_req_lookup,       /* Wait for upstream hostname DNS lookup to complete. */
-    session_req_connect,      /* Wait for uv_tcp_connect() to complete. */
-    session_ssr_auth_sent,
-    session_proxy_start,      /* Connected. Start piping data. */
-    session_proxy,            /* Connected. Pipe data back and forth. */
-    session_kill,             /* Tear down session. */
-    session_dead,             /* Dead. Safe to free now. */
-};
-
 struct tunnel_ctx {
     void *data;
-    enum session_state state;
+    bool terminated;
+    bool getaddrinfo_pending;
     uv_tcp_t *listener;  /* Backlink to owning listener context. */
     struct socket_ctx *incoming;  /* Connection with the SOCKS client. */
     struct socket_ctx *outgoing;  /* Connection with upstream. */
@@ -67,6 +52,7 @@ struct tunnel_ctx {
     void(*tunnel_getaddrinfo_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
     void(*tunnel_write_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
     size_t(*tunnel_alloc_size)(struct tunnel_ctx *tunnel, size_t suggested_size);
+    bool(*tunnel_is_on_the_fly)(struct tunnel_ctx *tunnel);
 };
 
 void tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout, void(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);

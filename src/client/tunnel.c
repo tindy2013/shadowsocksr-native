@@ -43,7 +43,7 @@ static void socket_close(struct socket_ctx *c);
 static void socket_close_done_cb(uv_handle_t *handle);
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
-    return (tunnel->state == session_dead);
+    return (tunnel->terminated != false);
 }
 
 static void tunnel_add_ref(struct tunnel_ctx *tunnel) {
@@ -77,7 +77,6 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, void(*init
     tunnel = (struct tunnel_ctx *) calloc(1, sizeof(*tunnel));
 
     tunnel->listener = listener;
-    tunnel->state = session_handshake;
     tunnel->ref_count = 0;
 
     incoming = (struct socket_ctx *) calloc(1, sizeof(*incoming));
@@ -117,14 +116,14 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
     /* Try to cancel the request. The callback still runs but if the
     * cancellation succeeded, it gets called with status=UV_ECANCELED.
     */
-    if (tunnel->state == session_req_lookup) {
+    if (tunnel->getaddrinfo_pending) {
         uv_cancel(&tunnel->outgoing->t.req);
     }
 
     socket_close(tunnel->incoming);
     socket_close(tunnel->outgoing);
 
-    tunnel->state = session_dead;
+    tunnel->terminated = true;
 }
 
 static void socket_timer_start(struct socket_ctx *c) {
@@ -206,7 +205,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
         return;
     }
 
-    if (tunnel->state != session_proxy) {
+    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
         uv_read_stop(&c->handle.stream);
     }
 
@@ -223,7 +222,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     }
 
     ASSERT(c->buf == (uint8_t *)buf->base);
-    if (tunnel->state != session_proxy) {
+    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
         ASSERT(c->rdstate == socket_busy);
     }
     c->rdstate = socket_done;
@@ -245,7 +244,7 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
     tunnel = c->tunnel;
 
-    if (tunnel->state != session_proxy) {
+    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
         ASSERT(c->rdstate == socket_busy);
     }
 
@@ -276,6 +275,7 @@ void socket_getaddrinfo(struct socket_ctx *c, const char *hostname) {
         NULL,
         &hints));
     socket_timer_start(c);
+    tunnel->getaddrinfo_pending = true;
 }
 
 static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrinfo *ai) {
@@ -286,6 +286,7 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
     c->result = status;
 
     tunnel = c->tunnel;
+    tunnel->getaddrinfo_pending = false;
 
     if (tunnel_is_dead(tunnel)) {
         return;
@@ -314,7 +315,7 @@ void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     uv_buf_t buf;
     struct tunnel_ctx *tunnel = c->tunnel;
 
-    if (tunnel->state != session_proxy) {
+    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
         ASSERT(c->wrstate == socket_stop || c->wrstate == socket_done);
     }
     c->wrstate = socket_busy;
@@ -348,7 +349,7 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
         return;  /* Handle has been closed. */
     }
 
-    if (tunnel->state != session_proxy) {
+    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
         ASSERT(c->wrstate == socket_busy);
     }
     c->wrstate = socket_done;

@@ -40,11 +40,28 @@
  * reads in the future.
  */
 
+ /* Session states. */
+enum session_state {
+    session_handshake,        /* Wait for client handshake. */
+    session_handshake_auth,   /* Wait for client authentication data. */
+    session_req_start,        /* Start waiting for request data. */
+    session_req_parse,        /* Wait for request data. */
+    session_req_udp_accoc,
+    session_req_lookup,       /* Wait for upstream hostname DNS lookup to complete. */
+    session_req_connect,      /* Wait for uv_tcp_connect() to complete. */
+    session_ssr_auth_sent,
+    session_proxy_start,      /* Connected. Start piping data. */
+    session_proxy,            /* Connected. Pipe data back and forth. */
+    session_kill,             /* Tear down session. */
+    session_dead,             /* Dead. Safe to free now. */
+};
+
 struct client_ctx {
     struct server_env_t *env; // __weak_ptr
     struct tunnel_cipher_ctx *cipher;
     struct buffer_t *init_pkg;
     s5_ctx parser;  /* The SOCKS protocol parser. */
+    enum session_state state;
 };
 
 static struct buffer_t * initial_package_create(const s5_ctx *parser);
@@ -65,6 +82,7 @@ static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static size_t tunnel_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size);
+static bool tunnel_is_on_the_fly(struct tunnel_ctx *tunnel);
 
 void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     struct server_env_t *env = (struct server_env_t *)p;
@@ -79,11 +97,13 @@ void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
     tunnel->tunnel_alloc_size = &tunnel_alloc_size;
+    tunnel->tunnel_is_on_the_fly = &tunnel_is_on_the_fly;
 
     objects_container_add(ctx->env->tunnel_set, tunnel);
 
     s5_init(&ctx->parser);
     ctx->cipher = NULL;
+    ctx->state = session_handshake;
 }
 
 void client_initialize(uv_tcp_t *lx, unsigned int idle_timeout) {
@@ -144,7 +164,8 @@ static struct buffer_t * initial_package_create(const s5_ctx *parser) {
 * data between the client and upstream.
 */
 static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    switch (tunnel->state) {
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+    switch (ctx->state) {
     case session_handshake:
         do_handshake(tunnel);
         break;
@@ -210,7 +231,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
     err = s5_parse(parser, &data, &size);
     if (err == s5_ok) {
         socket_read(incoming);
-        tunnel->state = session_handshake;  /* Need more data. */
+        ctx->state = session_handshake;  /* Need more data. */
         return;
     }
 
@@ -234,7 +255,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
     if ((methods & s5_auth_none) && can_auth_none(tunnel->listener, tunnel)) {
         s5_select_auth(parser, s5_auth_none);
         socket_write(incoming, "\5\0", 2);  /* No auth required. */
-        tunnel->state = session_req_start;
+        ctx->state = session_req_start;
         return;
     }
 
@@ -245,7 +266,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
     }
 
     socket_write(incoming, "\5\377", 2);  /* No acceptable auth. */
-    tunnel->state = session_kill;
+    ctx->state = session_kill;
 }
 
 /* TODO(bnoordhuis) Implement username/password auth. */
@@ -255,6 +276,7 @@ static void do_handshake_auth(struct tunnel_ctx *tunnel) {
 }
 
 static void do_req_start(struct tunnel_ctx *tunnel) {
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
     struct socket_ctx *incoming;
 
     incoming = tunnel->incoming;
@@ -269,7 +291,7 @@ static void do_req_start(struct tunnel_ctx *tunnel) {
     }
 
     socket_read(incoming);
-    tunnel->state = session_req_parse;
+    ctx->state = session_req_parse;
 }
 
 static void do_req_parse(struct tunnel_ctx *tunnel) {
@@ -308,7 +330,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     err = s5_parse(parser, &data, &size);
     if (err == s5_ok) {
         socket_read(incoming);
-        tunnel->state = session_req_parse;  /* Need more data. */
+        ctx->state = session_req_parse;  /* Need more data. */
         return;
     }
 
@@ -337,7 +359,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
         uint8_t *buf = build_udp_assoc_package(config->udp, config->listen_host, config->listen_port,
             (uint8_t *)incoming->buf, &len);
         socket_write(incoming, buf, len);
-        tunnel->state = session_req_udp_accoc;
+        ctx->state = session_req_udp_accoc;
         return;
     }
 
@@ -349,7 +371,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     union sockaddr_universal remote_addr = { 0 };
     if (convert_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
         socket_getaddrinfo(outgoing, config->remote_host);
-        tunnel->state = session_req_lookup;
+        ctx->state = session_req_lookup;
         return;
     }
 
@@ -380,7 +402,7 @@ static void do_req_lookup(struct tunnel_ctx *tunnel) {
             uv_strerror((int)outgoing->result));
         /* Send back a 'Host unreachable' reply. */
         socket_write(incoming, "\5\4\0\1\0\0\0\0\0\0", 10);
-        tunnel->state = session_kill;
+        ctx->state = session_kill;
         return;
     }
 
@@ -401,6 +423,7 @@ static void do_req_lookup(struct tunnel_ctx *tunnel) {
 
 /* Assumes that cx->outgoing.t.sa contains a valid AF_INET/AF_INET6 address. */
 static void do_req_connect_start(struct tunnel_ctx *tunnel) {
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
     int err;
@@ -416,7 +439,7 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel) {
         pr_warn("connection not allowed by ruleset");
         /* Send a 'Connection not allowed by ruleset' reply. */
         socket_write(incoming, "\5\2\0\1\0\0\0\0\0\0", 10);
-        tunnel->state = session_kill;
+        ctx->state = session_kill;
         return;
     }
 
@@ -427,7 +450,7 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    tunnel->state = session_req_connect;
+    ctx->state = session_req_connect;
 }
 
 static void do_req_connect(struct tunnel_ctx *tunnel) {
@@ -454,7 +477,7 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
         socket_write(outgoing, tmp->buffer, tmp->len);
         buffer_free(tmp);
 
-        tunnel->state = session_ssr_auth_sent;
+        ctx->state = session_ssr_auth_sent;
         return;
     } else {
         s5_ctx *parser = &ctx->parser;
@@ -474,7 +497,7 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
         pr_err(fmt, addr, uv_strerror((int)outgoing->result));
         /* Send a 'Connection refused' reply. */
         socket_write(incoming, "\5\5\0\1\0\0\0\0\0\0", 10);
-        tunnel->state = session_kill;
+        ctx->state = session_kill;
         return;
     }
 
@@ -512,10 +535,11 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
     buf[2] = 0;  // Reserved.
     memcpy(buf + 3, init_pkg->buffer, init_pkg->len);
     socket_write(incoming, buf, 3 + init_pkg->len);
-    tunnel->state = session_proxy_start;
+    ctx->state = session_proxy_start;
 }
 
 static void do_proxy_start(struct tunnel_ctx *tunnel) {
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
@@ -535,7 +559,7 @@ static void do_proxy_start(struct tunnel_ctx *tunnel) {
 
     socket_read(incoming);
     socket_read(outgoing);
-    tunnel->state = session_proxy;
+    ctx->state = session_proxy;
 }
 
 /* Proxy incoming data back and forth. */
@@ -626,7 +650,7 @@ static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx
 }
 
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    if (tunnel->state != session_proxy) {
+    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
         do_next(tunnel, socket);
     }
 }
@@ -635,4 +659,9 @@ static size_t tunnel_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size
     (void)tunnel;
     (void)suggested_size;
     return SSR_BUFF_SIZE;
+}
+
+static bool tunnel_is_on_the_fly(struct tunnel_ctx *tunnel) {
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+    return (ctx->state == session_proxy);
 }
