@@ -57,8 +57,11 @@ static void tunnel_release(struct tunnel_ctx *tunnel) {
             tunnel->tunnel_dying(tunnel);
         }
 
-        free(tunnel->incoming.buf);
-        free(tunnel->outgoing.buf);
+        free(tunnel->incoming->buf);
+        free(tunnel->incoming);
+
+        free(tunnel->outgoing->buf);
+        free(tunnel->outgoing);
 
         free(tunnel);
     }
@@ -77,7 +80,7 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, void(*init
     tunnel->state = session_handshake;
     tunnel->ref_count = 0;
 
-    incoming = &tunnel->incoming;
+    incoming = (struct socket_ctx *) calloc(1, sizeof(*incoming));
     incoming->tunnel = tunnel;
     incoming->result = 0;
     incoming->rdstate = socket_stop;
@@ -86,8 +89,9 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, void(*init
     VERIFY(0 == uv_timer_init(loop, &incoming->timer_handle));
     VERIFY(0 == uv_tcp_init(loop, &incoming->handle.tcp));
     VERIFY(0 == uv_accept((uv_stream_t *)listener, &incoming->handle.stream));
+    tunnel->incoming = incoming;
 
-    outgoing = &tunnel->outgoing;
+    outgoing = (struct socket_ctx *) calloc(1, sizeof(*outgoing));
     outgoing->tunnel = tunnel;
     outgoing->result = 0;
     outgoing->rdstate = socket_stop;
@@ -95,6 +99,7 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, void(*init
     outgoing->idle_timeout = idle_timeout;
     VERIFY(0 == uv_timer_init(loop, &outgoing->timer_handle));
     VERIFY(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
+    tunnel->outgoing = outgoing;
 
     /* Wait for the initial packet. */
     socket_read(incoming);
@@ -113,11 +118,11 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
     * cancellation succeeded, it gets called with status=UV_ECANCELED.
     */
     if (tunnel->state == session_req_lookup) {
-        uv_cancel(&tunnel->outgoing.t.req);
+        uv_cancel(&tunnel->outgoing->t.req);
     }
 
-    socket_close(&tunnel->incoming);
-    socket_close(&tunnel->outgoing);
+    socket_close(tunnel->incoming);
+    socket_close(tunnel->outgoing);
 
     tunnel->state = session_dead;
 }
@@ -248,6 +253,7 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
         size = tunnel->tunnel_alloc_size(tunnel, size);
     }
     c->buf = realloc(c->buf, size);
+    c->buf_size = size;
 
     buf->base = (char *)c->buf;
     buf->len = (uv_buf_len_t)size;

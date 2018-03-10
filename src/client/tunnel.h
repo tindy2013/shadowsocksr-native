@@ -34,6 +34,7 @@ struct socket_ctx {
         union sockaddr_universal addr;
     } t;
     uint8_t *buf; /* Scratch space. Used to read data into. */
+    size_t buf_size;
 };
 
 /* Session states. */
@@ -56,8 +57,8 @@ struct tunnel_ctx {
     void *data;
     enum session_state state;
     uv_tcp_t *listener;  /* Backlink to owning listener context. */
-    struct socket_ctx incoming;  /* Connection with the SOCKS client. */
-    struct socket_ctx outgoing;  /* Connection with upstream. */
+    struct socket_ctx *incoming;  /* Connection with the SOCKS client. */
+    struct socket_ctx *outgoing;  /* Connection with upstream. */
     int ref_count;
 
     void(*tunnel_dying)(struct tunnel_ctx *tunnel);

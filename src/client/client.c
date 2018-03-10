@@ -194,7 +194,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
 
     parser = &ctx->parser;
-    incoming = &tunnel->incoming;
+    incoming = tunnel->incoming;
     ASSERT(incoming->rdstate == socket_done);
     ASSERT(incoming->wrstate == socket_stop);
     incoming->rdstate = socket_stop;
@@ -257,7 +257,7 @@ static void do_handshake_auth(struct tunnel_ctx *tunnel) {
 static void do_req_start(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming;
 
-    incoming = &tunnel->incoming;
+    incoming = tunnel->incoming;
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_done);
     incoming->wrstate = socket_stop;
@@ -288,8 +288,8 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     config = env->config;
 
     parser = &ctx->parser;
-    incoming = &tunnel->incoming;
-    outgoing = &tunnel->outgoing;
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
 
     ASSERT(incoming->rdstate == socket_done);
     ASSERT(incoming->wrstate == socket_stop);
@@ -333,7 +333,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
 
     if (parser->cmd == s5_cmd_udp_assoc) {
         // UDP ASSOCIATE requests
-        size_t len = sizeof(incoming->buf);
+        size_t len = incoming->buf_size;
         uint8_t *buf = build_udp_assoc_package(config->udp, config->listen_host, config->listen_port,
             (uint8_t *)incoming->buf, &len);
         socket_write(incoming, buf, len);
@@ -366,8 +366,8 @@ static void do_req_lookup(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
 
     parser = &ctx->parser;
-    incoming = &tunnel->incoming;
-    outgoing = &tunnel->outgoing;
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     ASSERT(outgoing->rdstate == socket_stop);
@@ -405,8 +405,8 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel) {
     struct socket_ctx *outgoing;
     int err;
 
-    incoming = &tunnel->incoming;
-    outgoing = &tunnel->outgoing;
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     ASSERT(outgoing->rdstate == socket_stop);
@@ -436,8 +436,8 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
 
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
 
-    incoming = &tunnel->incoming;
-    outgoing = &tunnel->outgoing;
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
 
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
@@ -488,8 +488,8 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
 
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
 
-    incoming = &tunnel->incoming;
-    outgoing = &tunnel->outgoing;
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     ASSERT(outgoing->rdstate == socket_stop);
@@ -519,8 +519,8 @@ static void do_proxy_start(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
-    incoming = &tunnel->incoming;
-    outgoing = &tunnel->outgoing;
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_done);
     ASSERT(outgoing->rdstate == socket_stop);
@@ -545,8 +545,8 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
 
-    incoming = &tunnel->incoming;
-    outgoing = &tunnel->outgoing;
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
     ASSERT(socket == incoming || socket == outgoing);
 
     if (socket == outgoing) {
