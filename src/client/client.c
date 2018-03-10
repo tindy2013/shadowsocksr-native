@@ -40,6 +40,13 @@
  * reads in the future.
  */
 
+struct client_ctx {
+    struct server_env_t *env; // __weak_ptr
+    struct tunnel_cipher_ctx *cipher;
+    struct buffer_t *init_pkg;
+    s5_ctx parser;  /* The SOCKS protocol parser. */
+};
+
 static struct buffer_t * initial_package_create(const s5_ctx *parser);
 static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_handshake(struct tunnel_ctx *tunnel);
@@ -59,20 +66,38 @@ void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
 void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
+    struct server_env_t *env = (struct server_env_t *)p;
+
+    struct client_ctx *ctx = (struct client_ctx *) calloc(1, sizeof(struct client_ctx));
+    ctx->env = env;
+    tunnel->data = ctx;
+
     tunnel->tunnel_dying = &tunnel_dying;
     tunnel->tunnel_connected_done = &tunnel_connected_done;
     tunnel->tunnel_read_done = &tunnel_read_done;
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
 
-    objects_container_add(tunnel->env->tunnel_set, tunnel);
+    objects_container_add(ctx->env->tunnel_set, tunnel);
 
-    s5_init(&tunnel->parser);
-    tunnel->cipher = NULL;
+    s5_init(&ctx->parser);
+    ctx->cipher = NULL;
 }
 
-void client_initialize(uv_tcp_t *lx) {
-    tunnel_initialize(lx, &init_done_cb, NULL);
+void client_initialize(uv_tcp_t *lx, unsigned int idle_timeout) {
+    uv_loop_t *loop = lx->loop;
+    struct server_env_t *env = (struct server_env_t *)loop->data;
+
+    tunnel_initialize(lx, idle_timeout, &init_done_cb, env);
+}
+
+static void _do_shutdown_tunnel(void *obj, void *p) {
+    tunnel_shutdown((struct tunnel_ctx *)obj);
+    (void)p;
+}
+
+void client_shutdown(struct server_env_t *env) {
+    objects_container_traverse(env->tunnel_set, &_do_shutdown_tunnel, NULL);
 }
 
 static struct buffer_t * initial_package_create(const s5_ctx *parser) {
@@ -164,7 +189,9 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
     size_t size;
     enum s5_err err;
 
-    parser = &tunnel->parser;
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+
+    parser = &ctx->parser;
     incoming = &tunnel->incoming;
     ASSERT(incoming->rdstate == socket_done);
     ASSERT(incoming->wrstate == socket_stop);
@@ -253,10 +280,12 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     struct server_env_t *env;
     struct server_config *config;
 
-    env = tunnel->env;
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+
+    env = ctx->env;
     config = env->config;
 
-    parser = &tunnel->parser;
+    parser = &ctx->parser;
     incoming = &tunnel->incoming;
     outgoing = &tunnel->outgoing;
 
@@ -312,8 +341,8 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
 
     ASSERT(parser->cmd == s5_cmd_tcp_connect);
 
-    tunnel->init_pkg = initial_package_create(parser);
-    tunnel->cipher = tunnel_cipher_create(tunnel->env, tunnel->init_pkg);
+    ctx->init_pkg = initial_package_create(parser);
+    ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg);
 
     union sockaddr_universal remote_addr = { 0 };
     if (convert_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
@@ -332,7 +361,9 @@ static void do_req_lookup(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
-    parser = &tunnel->parser;
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+
+    parser = &ctx->parser;
     incoming = &tunnel->incoming;
     outgoing = &tunnel->outgoing;
     ASSERT(incoming->rdstate == socket_stop);
@@ -401,6 +432,8 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+
     incoming = &tunnel->incoming;
     outgoing = &tunnel->outgoing;
 
@@ -410,8 +443,8 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
     ASSERT(outgoing->wrstate == socket_stop);
 
     if (outgoing->result == 0) {
-        struct buffer_t *tmp = buffer_clone(tunnel->init_pkg);
-        if (ssr_ok != tunnel_encrypt(tunnel->cipher, tmp)) {
+        struct buffer_t *tmp = buffer_clone(ctx->init_pkg);
+        if (ssr_ok != tunnel_encrypt(ctx->cipher, tmp)) {
             buffer_free(tmp);
             tunnel_shutdown(tunnel);
             return;
@@ -422,7 +455,7 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
         tunnel->state = session_ssr_auth_sent;
         return;
     } else {
-        s5_ctx *parser = &tunnel->parser;
+        s5_ctx *parser = &ctx->parser;
         char *addr = NULL;
         char ip_str[INET6_ADDRSTRLEN] = { 0 };
 
@@ -451,6 +484,8 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+
     incoming = &tunnel->incoming;
     outgoing = &tunnel->outgoing;
     ASSERT(incoming->rdstate == socket_stop);
@@ -468,7 +503,7 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
     uint8_t *buf;
     struct buffer_t *init_pkg;
     buf = (uint8_t *)incoming->t.buf;
-    init_pkg = tunnel->init_pkg;
+    init_pkg = ctx->init_pkg;
 
     buf[0] = 5;  // Version.
     buf[1] = 0;  // Success.
@@ -506,6 +541,8 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+
     incoming = &tunnel->incoming;
     outgoing = &tunnel->outgoing;
     ASSERT(socket == incoming || socket == outgoing);
@@ -514,7 +551,7 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         struct tunnel_cipher_ctx *tc;
         struct buffer_t *buf = NULL;
         do {
-            tc = tunnel->cipher;
+            tc = ctx->cipher;
 
             buf = buffer_alloc(SSR_BUFF_SIZE);
             buffer_store(buf, outgoing->t.buf, (size_t)outgoing->result);
@@ -544,7 +581,7 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         struct tunnel_cipher_ctx *tc;
         struct buffer_t *buf = NULL;
         do {
-            tc = tunnel->cipher;
+            tc = ctx->cipher;
 
             buf = buffer_alloc(SSR_BUFF_SIZE);
             buffer_store(buf, incoming->t.buf, (size_t)incoming->result);
@@ -564,11 +601,14 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 }
 
 void tunnel_dying(struct tunnel_ctx *tunnel) {
-    objects_container_remove(tunnel->env->tunnel_set, tunnel);
-    if (tunnel->cipher) {
-        tunnel_cipher_release(tunnel->cipher);
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+
+    objects_container_remove(ctx->env->tunnel_set, tunnel);
+    if (ctx->cipher) {
+        tunnel_cipher_release(ctx->cipher);
     }
-    buffer_free(tunnel->init_pkg);
+    buffer_free(ctx->init_pkg);
+    free(ctx);
 }
 
 void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {

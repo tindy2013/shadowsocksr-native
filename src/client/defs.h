@@ -52,7 +52,8 @@ bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr);
 
 /* client.c */
-void client_initialize(uv_tcp_t *lx);
+void client_initialize(uv_tcp_t *lx, unsigned int idle_timeout);
+void client_shutdown(struct server_env_t *env);
 
 /* getopt.c */
 #if !HAVE_UNISTD_H

@@ -61,17 +61,14 @@ static void tunnel_release(struct tunnel_ctx *tunnel) {
 }
 
 /* |incoming| has been initialized by listener.c when this is called. */
-void tunnel_initialize(uv_tcp_t *listener, void(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p) {
+void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, void(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
     struct tunnel_ctx *tunnel;
     uv_loop_t *loop = listener->loop;
-    struct server_env_t *env = (struct server_env_t *)loop->data;
-    struct server_config *config = env->config;
 
     tunnel = (struct tunnel_ctx *) calloc(1, sizeof(*tunnel));
 
-    tunnel->env = env;
     tunnel->listener = listener;
     tunnel->state = session_handshake;
     tunnel->ref_count = 0;
@@ -81,7 +78,7 @@ void tunnel_initialize(uv_tcp_t *listener, void(*init_done_cb)(struct tunnel_ctx
     incoming->result = 0;
     incoming->rdstate = socket_stop;
     incoming->wrstate = socket_stop;
-    incoming->idle_timeout = config->idle_timeout;
+    incoming->idle_timeout = idle_timeout;
     VERIFY(0 == uv_timer_init(loop, &incoming->timer_handle));
     VERIFY(0 == uv_tcp_init(loop, &incoming->handle.tcp));
     VERIFY(0 == uv_accept((uv_stream_t *)listener, &incoming->handle.stream));
@@ -91,7 +88,7 @@ void tunnel_initialize(uv_tcp_t *listener, void(*init_done_cb)(struct tunnel_ctx
     outgoing->result = 0;
     outgoing->rdstate = socket_stop;
     outgoing->wrstate = socket_stop;
-    outgoing->idle_timeout = config->idle_timeout;
+    outgoing->idle_timeout = idle_timeout;
     VERIFY(0 == uv_timer_init(loop, &outgoing->timer_handle));
     VERIFY(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
 

@@ -57,11 +57,8 @@ enum session_state {
 };
 
 struct tunnel_ctx {
+    void *data;
     enum session_state state;
-    struct server_env_t *env; // __weak_ptr
-    struct tunnel_cipher_ctx *cipher;
-    struct buffer_t *init_pkg;
-    s5_ctx parser;  /* The SOCKS protocol parser. */
     uv_tcp_t *listener;  /* Backlink to owning listener context. */
     struct socket_ctx incoming;  /* Connection with the SOCKS client. */
     struct socket_ctx outgoing;  /* Connection with upstream. */
@@ -74,7 +71,7 @@ struct tunnel_ctx {
     void(*tunnel_write_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 };
 
-void tunnel_initialize(uv_tcp_t *lx, void(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);
+void tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout, void(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);
 void tunnel_shutdown(struct tunnel_ctx *tunnel);
 int socket_connect(struct socket_ctx *c);
 void socket_read(struct socket_ctx *c);

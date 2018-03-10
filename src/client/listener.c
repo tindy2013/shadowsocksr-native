@@ -127,11 +127,6 @@ static void tcp_close_done_cb(uv_handle_t* handle) {
     free((void *)((uv_tcp_t *)handle));
 }
 
-static void _do_shutdown_tunnel(void *obj, void *p) {
-    tunnel_shutdown((struct tunnel_ctx *)obj);
-    (void)p;
-}
-
 void ssr_run_loop_shutdown(struct run_loop_state *state) {
     if (state==NULL) {
         return;
@@ -163,7 +158,7 @@ void ssr_run_loop_shutdown(struct run_loop_state *state) {
         }
     }
 
-    objects_container_traverse(state->env->tunnel_set, &_do_shutdown_tunnel, NULL);
+    client_shutdown(state->env);
 
     pr_info("\n");
     pr_info("terminated.\n");
@@ -283,8 +278,11 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
 }
 
 static void listen_incoming_connection_cb(uv_stream_t *server, int status) {
+    uv_loop_t *loop = server->loop;
+    struct server_env_t *env = (struct server_env_t *)loop->data;
+
     VERIFY(status == 0);
-    client_initialize((uv_tcp_t *)server);
+    client_initialize((uv_tcp_t *)server, env->config->idle_timeout);
 }
 
 bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {
