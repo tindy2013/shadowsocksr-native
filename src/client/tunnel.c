@@ -19,13 +19,12 @@
  * IN THE SOFTWARE.
  */
 
-#include "defs.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <uv.h>
 #include "common.h"
-#include "ssr_executive.h"
+#include "sockaddr_universal.h"
 #include "tunnel.h"
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel);
