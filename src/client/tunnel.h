@@ -3,12 +3,8 @@
 
 #include <uv.h>
 #include <stdbool.h>
-#include "sockaddr_universal.h"
 
 struct tunnel_ctx;
-struct server_env_t;
-struct tunnel_cipher_ctx;
-struct buffer_t;
 
 enum socket_state {
     socket_stop,  /* Stopped. */
@@ -36,8 +32,8 @@ struct socket_ctx {
         uv_connect_t connect_req;
         uv_req_t req;
         union sockaddr_universal addr;
-        uint8_t buf[SSR_BUFF_SIZE];  /* Scratch space. Used to read data into. */
     } t;
+    uint8_t *buf; /* Scratch space. Used to read data into. */
 };
 
 /* Session states. */
@@ -69,6 +65,7 @@ struct tunnel_ctx {
     void(*tunnel_read_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
     void(*tunnel_getaddrinfo_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
     void(*tunnel_write_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+    size_t(*tunnel_alloc_size)(struct tunnel_ctx *tunnel, size_t suggested_size);
 };
 
 void tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout, void(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);

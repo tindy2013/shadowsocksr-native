@@ -59,11 +59,12 @@ static void do_req_connect(struct tunnel_ctx *tunnel);
 static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
 static void do_proxy_start(struct tunnel_ctx *tunnel);
 static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-void tunnel_dying(struct tunnel_ctx *tunnel);
-void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void tunnel_dying(struct tunnel_ctx *tunnel);
+static void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static size_t tunnel_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size);
 
 void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     struct server_env_t *env = (struct server_env_t *)p;
@@ -77,6 +78,7 @@ void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_read_done = &tunnel_read_done;
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
+    tunnel->tunnel_alloc_size = &tunnel_alloc_size;
 
     objects_container_add(ctx->env->tunnel_set, tunnel);
 
@@ -203,7 +205,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    data = (uint8_t *)incoming->t.buf;
+    data = (uint8_t *)incoming->buf;
     size = (size_t)incoming->result;
     err = s5_parse(parser, &data, &size);
     if (err == s5_ok) {
@@ -301,7 +303,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    data = (uint8_t *)incoming->t.buf;
+    data = (uint8_t *)incoming->buf;
     size = (size_t)incoming->result;
     err = s5_parse(parser, &data, &size);
     if (err == s5_ok) {
@@ -331,9 +333,9 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
 
     if (parser->cmd == s5_cmd_udp_assoc) {
         // UDP ASSOCIATE requests
-        size_t len = sizeof(incoming->t.buf);
+        size_t len = sizeof(incoming->buf);
         uint8_t *buf = build_udp_assoc_package(config->udp, config->listen_host, config->listen_port,
-            (uint8_t *)incoming->t.buf, &len);
+            (uint8_t *)incoming->buf, &len);
         socket_write(incoming, buf, len);
         tunnel->state = session_req_udp_accoc;
         return;
@@ -502,7 +504,7 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
 
     uint8_t *buf;
     struct buffer_t *init_pkg;
-    buf = (uint8_t *)incoming->t.buf;
+    buf = (uint8_t *)incoming->buf;
     init_pkg = ctx->init_pkg;
 
     buf[0] = 5;  // Version.
@@ -554,7 +556,7 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             tc = ctx->cipher;
 
             buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, outgoing->t.buf, (size_t)outgoing->result);
+            buffer_store(buf, outgoing->buf, (size_t)outgoing->result);
 
             struct buffer_t *feedback = NULL;
             if (ssr_ok != tunnel_decrypt(tc, buf, &feedback)) {
@@ -584,7 +586,7 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             tc = ctx->cipher;
 
             buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, incoming->t.buf, (size_t)incoming->result);
+            buffer_store(buf, incoming->buf, (size_t)incoming->result);
             if (ssr_ok != tunnel_encrypt(tc, buf)) {
                 tunnel_shutdown(tunnel);
                 break;
@@ -600,7 +602,7 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     }
 }
 
-void tunnel_dying(struct tunnel_ctx *tunnel) {
+static void tunnel_dying(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
 
     objects_container_remove(ctx->env->tunnel_set, tunnel);
@@ -611,20 +613,26 @@ void tunnel_dying(struct tunnel_ctx *tunnel) {
     free(ctx);
 }
 
-void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     do_next(tunnel, socket);
 }
 
-void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     do_next(tunnel, socket);
 }
 
-void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     do_next(tunnel, socket);
 }
 
-void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     if (tunnel->state != session_proxy) {
         do_next(tunnel, socket);
     }
+}
+
+static size_t tunnel_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size) {
+    (void)tunnel;
+    (void)suggested_size;
+    return SSR_BUFF_SIZE;
 }

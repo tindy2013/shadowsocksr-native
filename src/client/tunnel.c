@@ -56,6 +56,10 @@ static void tunnel_release(struct tunnel_ctx *tunnel) {
         if (tunnel->tunnel_dying) {
             tunnel->tunnel_dying(tunnel);
         }
+
+        free(tunnel->incoming.buf);
+        free(tunnel->outgoing.buf);
+
         free(tunnel);
     }
 }
@@ -213,7 +217,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
         return;
     }
 
-    ASSERT(c->t.buf == (uint8_t *)buf->base);
+    ASSERT(c->buf == (uint8_t *)buf->base);
     if (tunnel->state != session_proxy) {
         ASSERT(c->rdstate == socket_busy);
     }
@@ -231,14 +235,22 @@ void socket_read_stop(struct socket_ctx *c) {
 
 static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     struct socket_ctx *c;
+    struct tunnel_ctx *tunnel;
 
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
+    tunnel = c->tunnel;
 
-    if (c->tunnel->state != session_proxy) {
+    if (tunnel->state != session_proxy) {
         ASSERT(c->rdstate == socket_busy);
     }
-    buf->base = (char *)c->t.buf;
-    buf->len = sizeof(c->t.buf);
+
+    if (tunnel->tunnel_alloc_size) {
+        size = tunnel->tunnel_alloc_size(tunnel, size);
+    }
+    c->buf = realloc(c->buf, size);
+
+    buf->base = (char *)c->buf;
+    buf->len = (uv_buf_len_t)size;
 }
 
 void socket_getaddrinfo(struct socket_ctx *c, const char *hostname) {
