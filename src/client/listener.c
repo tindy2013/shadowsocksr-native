@@ -160,7 +160,7 @@ void ssr_run_loop_shutdown(struct run_loop_state *state) {
 
     client_shutdown(state->env);
 
-    pr_info("\n");
+    pr_info("");
     pr_info("terminated.\n");
 }
 

@@ -103,6 +103,7 @@ void print_remote_info(const struct server_config *config) {
         }
     }
 
+    pr_info("ShadowsocksR native client\n");
     pr_info("remote server    %s:%hu", remote_host, config->remote_port);
     pr_info("method           %s", config->method);
     pr_info("password         %s", password);
