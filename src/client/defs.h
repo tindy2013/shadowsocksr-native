@@ -43,6 +43,7 @@
 
 struct server_config;
 struct ssr_client_state;
+struct server_env_t;
 
 /* listener.c */
 int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, void *p), void *p);
