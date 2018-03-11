@@ -47,9 +47,6 @@ struct ssr_client_state;
 /* listener.c */
 int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, void *p), void *p);
 void ssr_run_loop_shutdown(struct ssr_client_state *state);
-bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
-bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
-bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr);
 
 /* client.c */
 void client_initialize(uv_tcp_t *lx, unsigned int idle_timeout);

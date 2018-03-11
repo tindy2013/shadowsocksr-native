@@ -285,48 +285,6 @@ static void listen_incoming_connection_cb(uv_stream_t *server, int status) {
     client_initialize((uv_tcp_t *)server, env->config->idle_timeout);
 }
 
-bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {
-    return true;
-}
-
-bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {
-    return false;
-}
-
-bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr) {
-    const struct sockaddr_in6 *addr6;
-    const struct sockaddr_in *addr4;
-    const uint32_t *p;
-    uint32_t a, b, c, d;
-
-    /* TODO(bnoordhuis) Implement proper access checks.  For now, just reject
-    * traffic to localhost.
-    */
-    if (addr->sa_family == AF_INET) {
-        addr4 = (const struct sockaddr_in *) addr;
-        d = ntohl(addr4->sin_addr.s_addr);
-        return (d >> 24) != 0x7F;
-    }
-
-    if (addr->sa_family == AF_INET6) {
-        addr6 = (const struct sockaddr_in6 *) addr;
-        p = (const uint32_t *)&addr6->sin6_addr.s6_addr;
-        a = ntohl(p[0]);
-        b = ntohl(p[1]);
-        c = ntohl(p[2]);
-        d = ntohl(p[3]);
-        if (a == 0 && b == 0 && c == 0 && d == 1) {
-            return false;  /* "::1" style address. */
-        }
-        if (a == 0 && b == 0 && c == 0xFFFF && (d >> 24) == 0x7F) {
-            return false;  /* "::ffff:127.x.x.x" style address. */
-        }
-        return true;
-    }
-
-    return false;
-}
-
 static void signal_quit(uv_signal_t* handle, int signum) {
     switch (signum) {
     case SIGINT:
