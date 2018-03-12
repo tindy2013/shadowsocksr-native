@@ -20,23 +20,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\cache.c" />
-    <ClCompile Include="..\..\src\client\listener.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\..\src\client\s5.c" />
     <ClCompile Include="..\..\src\config_json.c" />
     <ClCompile Include="..\..\src\dump_info.c" />
     <ClCompile Include="..\..\src\sockaddr_universal.c" />
     <ClCompile Include="..\..\src\ssr_executive.c" />
-    <ClCompile Include="..\..\src\client\tunnel.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="..\..\src\client\tunnel.c" />
     <ClCompile Include="..\..\src\encrypt.c" />
     <ClCompile Include="..\..\src\netutils.c" />
     <ClCompile Include="..\..\src\obfs\auth.c" />
@@ -73,6 +62,7 @@
     <ClInclude Include="..\..\src\cache.h" />
     <ClInclude Include="..\..\src\client\defs.h" />
     <ClInclude Include="..\..\src\client\s5.h" />
+    <ClInclude Include="..\..\src\client\tunnel.h" />
     <ClInclude Include="..\..\src\config_json.h" />
     <ClInclude Include="..\..\src\dump_info.h" />
     <ClInclude Include="..\..\src\sockaddr_universal.h" />

@@ -57,9 +57,6 @@
     <ClCompile Include="..\..\src\cache.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\client\listener.c">
-      <Filter>server</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\client\s5.c">
       <Filter>server</Filter>
     </ClCompile>
@@ -208,6 +205,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\config_json.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\client\tunnel.h">
+      <Filter>server</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
