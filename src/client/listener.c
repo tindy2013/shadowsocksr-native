@@ -282,7 +282,7 @@ static void listen_incoming_connection_cb(uv_stream_t *server, int status) {
     struct server_env_t *env = (struct server_env_t *)loop->data;
 
     VERIFY(status == 0);
-    client_initialize((uv_tcp_t *)server, env->config->idle_timeout);
+    client_tunnel_initialize((uv_tcp_t *)server, env->config->idle_timeout);
 }
 
 static void signal_quit(uv_signal_t* handle, int signum) {

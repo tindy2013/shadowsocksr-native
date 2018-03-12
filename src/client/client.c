@@ -109,7 +109,7 @@ void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     ctx->state = session_handshake;
 }
 
-void client_initialize(uv_tcp_t *lx, unsigned int idle_timeout) {
+void client_tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout) {
     uv_loop_t *loop = lx->loop;
     struct server_env_t *env = (struct server_env_t *)loop->data;
 

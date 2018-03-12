@@ -50,7 +50,7 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ss
 void ssr_run_loop_shutdown(struct ssr_client_state *state);
 
 /* client.c */
-void client_initialize(uv_tcp_t *lx, unsigned int idle_timeout);
+void client_tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout);
 void client_shutdown(struct server_env_t *env);
 
 /* getopt.c */
