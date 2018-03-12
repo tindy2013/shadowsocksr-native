@@ -52,7 +52,7 @@ void server_tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout);
 void server_shutdown(struct server_env_t *env);
 
 void signal_quit_cb(uv_signal_t *handle, int signum);
-void client_accept_cb(uv_stream_t *server, int status);
+void tunnel_establish_init_cb(uv_stream_t *server, int status);
 
 static void tunnel_dying(struct tunnel_ctx *tunnel);
 static void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -134,7 +134,7 @@ static int ssr_server_run_loop(struct server_config *config) {
         uv_ip4_addr(DEFAULT_BIND_HOST, config->listen_port, &addr.addr4);
         uv_tcp_bind(listener, &addr.addr, 0);
 
-        int error = uv_listen((uv_stream_t *)listener, 128, client_accept_cb);
+        int error = uv_listen((uv_stream_t *)listener, 128, tunnel_establish_init_cb);
 
         if (error != 0) {
             return fprintf(stderr, "Error on listening: %s.\n", uv_strerror(error));
@@ -260,7 +260,7 @@ void signal_quit_cb(uv_signal_t *handle, int signum) {
     }
 }
 
-void client_accept_cb(uv_stream_t *server, int status) {
+void tunnel_establish_init_cb(uv_stream_t *server, int status) {
     uv_loop_t *loop = server->loop;
     struct server_env_t *env = (struct server_env_t *)loop->data;
 
@@ -291,7 +291,8 @@ static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 }
 
 static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    do_next(tunnel, socket);
+    UNREACHABLE();
+    tunnel_shutdown(tunnel);
 }
 
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
