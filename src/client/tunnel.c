@@ -67,7 +67,7 @@ static void tunnel_release(struct tunnel_ctx *tunnel) {
 }
 
 /* |incoming| has been initialized by listener.c when this is called. */
-void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, void(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p) {
+void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, bool(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
     struct tunnel_ctx *tunnel;
@@ -99,11 +99,16 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, void(*init
     VERIFY(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
     tunnel->outgoing = outgoing;
 
-    /* Wait for the initial packet. */
-    socket_read(incoming);
-
+    bool success = false;
     if (init_done_cb) {
-        init_done_cb(tunnel, p);
+        success = init_done_cb(tunnel, p);
+    }
+
+    if (success) {
+        /* Wait for the initial packet. */
+        socket_read(incoming);
+    } else {
+        tunnel_shutdown(tunnel);
     }
 }
 

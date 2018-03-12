@@ -87,7 +87,7 @@ static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 static bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 static bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr);
 
-void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
+static bool init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     struct server_env_t *env = (struct server_env_t *)p;
 
     struct client_ctx *ctx = (struct client_ctx *) calloc(1, sizeof(struct client_ctx));
@@ -107,6 +107,8 @@ void init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     s5_init(&ctx->parser);
     ctx->cipher = NULL;
     ctx->state = session_handshake;
+
+    return true;
 }
 
 void client_tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout) {

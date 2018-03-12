@@ -62,6 +62,7 @@ static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *sock
 static size_t tunnel_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size);
 static bool tunnel_is_on_the_fly(struct tunnel_ctx *tunnel);
 
+static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel);
 void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
 static void usage(void);
@@ -202,7 +203,7 @@ void ssr_server_run_loop_shutdown(struct ssr_server_state *state) {
     pr_info("terminated.\n");
 }
 
-void _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
+bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     struct server_env_t *env = (struct server_env_t *)p;
 
     struct server_ctx *ctx = (struct server_ctx *) calloc(1, sizeof(*ctx));
@@ -221,6 +222,8 @@ void _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
 
     ctx->cipher = NULL;
     ctx->state = session_handshake;
+
+    return is_incoming_ip_legal(tunnel);
 }
 
 void server_tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout) {
@@ -310,6 +313,12 @@ static size_t tunnel_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size
 static bool tunnel_is_on_the_fly(struct tunnel_ctx *tunnel) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     return (ctx->state == session_proxy);
+}
+
+static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel) {
+    uv_tcp_t *tcp = &tunnel->incoming->handle.tcp;
+    // TODO: check incoming ip.
+    return true;
 }
 
 void print_server_info(const struct server_config *config) {

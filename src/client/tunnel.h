@@ -55,7 +55,7 @@ struct tunnel_ctx {
     bool(*tunnel_is_on_the_fly)(struct tunnel_ctx *tunnel);
 };
 
-void tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout, void(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);
+void tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout, bool(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);
 void tunnel_shutdown(struct tunnel_ctx *tunnel);
 int socket_connect(struct socket_ctx *c);
 void socket_read(struct socket_ctx *c);
