@@ -692,7 +692,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
     if (server_ctx->protocol_plugin) {
         struct obfs_manager *protocol_plugin = server_ctx->protocol_plugin;
         if (protocol_plugin->client_udp_post_decrypt) {
-            buf->len = (ssize_t) protocol_plugin->client_udp_post_decrypt(server_ctx->protocol, &buf->buffer, buf->len, &buf->capacity);
+            buf->len = (ssize_t) protocol_plugin->client_udp_post_decrypt(server_ctx->protocol, (char **)&buf->buffer, buf->len, &buf->capacity);
             if ((ssize_t)buf->len < 0) {
                 LOGE("client_udp_post_decrypt");
                 udp_remote_shutdown(remote_ctx);
@@ -1130,7 +1130,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
     if (server_ctx->protocol_plugin) {
         struct obfs_manager *protocol_plugin = server_ctx->protocol_plugin;
         if (protocol_plugin->client_udp_pre_encrypt) {
-            buf->len = (size_t) protocol_plugin->client_udp_pre_encrypt(server_ctx->protocol, &buf->buffer, buf->len, &buf->capacity);
+            buf->len = (size_t) protocol_plugin->client_udp_pre_encrypt(server_ctx->protocol, (char **)&buf->buffer, buf->len, &buf->capacity);
         }
     }
     //SSR end

@@ -279,7 +279,7 @@ enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
 
     if (protocol_plugin && protocol_plugin->client_pre_encrypt) {
         buf->len = (size_t)protocol_plugin->client_pre_encrypt(
-            tc->protocol, &buf->buffer, (int)buf->len, &buf->capacity);
+            tc->protocol, (char **)&buf->buffer, (int)buf->len, &buf->capacity);
     }
     int err = ss_encrypt(env->cipher, buf, tc->e_ctx, SSR_BUFF_SIZE);
     if (err != 0) {
@@ -289,7 +289,7 @@ enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
     struct obfs_manager *obfs_plugin = env->obfs_plugin;
     if (obfs_plugin && obfs_plugin->client_encode) {
         buf->len = obfs_plugin->client_encode(
-            tc->obfs, &buf->buffer, buf->len, &buf->capacity);
+            tc->obfs, (char **)&buf->buffer, buf->len, &buf->capacity);
     }
     // SSR end
     return ssr_ok;
@@ -305,14 +305,14 @@ enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
     struct obfs_manager *obfs_plugin = env->obfs_plugin;
     if (obfs_plugin && obfs_plugin->client_decode) {
         int needsendback = 0;
-        ssize_t len = obfs_plugin->client_decode(tc->obfs, &buf->buffer, buf->len, &buf->capacity, &needsendback);
+        ssize_t len = obfs_plugin->client_decode(tc->obfs, (char **)&buf->buffer, buf->len, &buf->capacity, &needsendback);
         if (len < 0) {
             return ssr_error_client_decode;
         }
         buf->len = (size_t)len;
         if (needsendback && obfs_plugin->client_encode) {
             struct buffer_t *sendback = buffer_alloc(SSR_BUFF_SIZE);
-            sendback->len = obfs_plugin->client_encode(tc->obfs, &sendback->buffer, 0, &sendback->capacity);
+            sendback->len = obfs_plugin->client_encode(tc->obfs, (char **)&sendback->buffer, 0, &sendback->capacity);
             ASSERT(feedback);
             *feedback = sendback;
         }
@@ -326,7 +326,7 @@ enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
     struct obfs_manager *protocol_plugin = env->protocol_plugin;
     if (protocol_plugin && protocol_plugin->client_post_decrypt) {
         ssize_t len = protocol_plugin->client_post_decrypt(
-            tc->protocol, &buf->buffer, (int)buf->len, &buf->capacity);
+            tc->protocol, (char **)&buf->buffer, (int)buf->len, &buf->capacity);
         if (len < 0) {
             return ssr_error_client_post_decrypt;
         }

@@ -281,7 +281,7 @@ int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
 
     if (protocol_plugin && protocol_plugin->client_pre_encrypt) {
         buf->len = (size_t)protocol_plugin->client_pre_encrypt(
-            local->protocol, &buf->buffer, (int)buf->len, &buf->capacity);
+            local->protocol, (char **)&buf->buffer, (int)buf->len, &buf->capacity);
     }
     int err = ss_encrypt(env->cipher, buf, local->e_ctx, SSR_BUFF_SIZE);
     if (err != 0) {
@@ -291,7 +291,7 @@ int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
     struct obfs_manager *obfs_plugin = env->obfs_plugin;
     if (obfs_plugin && obfs_plugin->client_encode) {
         buf->len = obfs_plugin->client_encode(
-            local->obfs, &buf->buffer, buf->len, &buf->capacity);
+            local->obfs, (char **)&buf->buffer, buf->len, &buf->capacity);
     }
     // SSR end
     return 0;
@@ -307,14 +307,14 @@ int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t
     struct obfs_manager *obfs_plugin = env->obfs_plugin;
     if (obfs_plugin && obfs_plugin->client_decode) {
         int needsendback = 0;
-        ssize_t len = obfs_plugin->client_decode(local->obfs, &buf->buffer, buf->len, &buf->capacity, &needsendback);
+        ssize_t len = obfs_plugin->client_decode(local->obfs, (char **)&buf->buffer, buf->len, &buf->capacity, &needsendback);
         if (len < 0) {
             return -1;
         }
         buf->len = (size_t)len;
         if (needsendback && obfs_plugin->client_encode) {
             struct buffer_t *sendback = buffer_alloc(SSR_BUFF_SIZE);
-            sendback->len = obfs_plugin->client_encode(local->obfs, &sendback->buffer, 0, &sendback->capacity);
+            sendback->len = obfs_plugin->client_encode(local->obfs, (char **)&sendback->buffer, 0, &sendback->capacity);
             assert(feedback);
             *feedback = sendback;
         }
@@ -328,7 +328,7 @@ int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t
     struct obfs_manager *protocol_plugin = env->protocol_plugin;
     if (protocol_plugin && protocol_plugin->client_post_decrypt) {
         ssize_t len = (size_t)protocol_plugin->client_post_decrypt(
-            local->protocol, &buf->buffer, (int)buf->len, &buf->capacity);
+            local->protocol, (char **)&buf->buffer, (int)buf->len, &buf->capacity);
         if (len < 0) {
             return -1;
         }

@@ -130,8 +130,8 @@ void client_shutdown(struct server_env_t *env) {
 static struct buffer_t * initial_package_create(const s5_ctx *parser) {
     struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
 
-    char *iter = buffer->buffer;
-    char len;
+    uint8_t *iter = buffer->buffer;
+    uint8_t len;
     iter[0] = (char)parser->atyp;
     iter++;
 
@@ -145,7 +145,7 @@ static struct buffer_t * initial_package_create(const s5_ctx *parser) {
         iter += sizeof(struct in6_addr);
         break;
     case s5_atyp_host:
-        len = (char)strlen((char *)parser->daddr);
+        len = (uint8_t)strlen((char *)parser->daddr);
         iter[0] = len;
         iter++;
         memcpy(iter, parser->daddr, len);
