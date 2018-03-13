@@ -40,6 +40,13 @@ struct buffer_t * buffer_alloc(size_t capacity) {
     return ptr;
 }
 
+void buffer_reset(struct buffer_t *ptr) {
+    if (ptr && ptr->buffer) {
+        ptr->len = 0;
+        memset(ptr->buffer, 0, ptr->capacity);
+    }
+}
+
 struct buffer_t * buffer_clone(struct buffer_t *ptr) {
     if (ptr == NULL) {
         return NULL;
@@ -50,7 +57,7 @@ struct buffer_t * buffer_clone(struct buffer_t *ptr) {
     return result;
 }
 
-int buffer_realloc(struct buffer_t *ptr, size_t capacity) {
+size_t buffer_realloc(struct buffer_t *ptr, size_t capacity) {
     if (ptr == NULL) {
         return -1;
     }
@@ -59,14 +66,21 @@ int buffer_realloc(struct buffer_t *ptr, size_t capacity) {
         ptr->buffer = realloc(ptr->buffer, real_capacity);
         ptr->capacity = real_capacity;
     }
-    return (int)real_capacity;
+    return real_capacity;
 }
 
-int buffer_store(struct buffer_t *ptr, const char *data, size_t size) {
-    int result = buffer_realloc(ptr, size);
+size_t buffer_store(struct buffer_t *ptr, const uint8_t *data, size_t size) {
+    size_t result = buffer_realloc(ptr, size);
     memcpy(ptr->buffer, data, size);
     ptr->len = size;
-    return min((int)size, result);
+    return min(size, result);
+}
+
+size_t buffer_concatenate(struct buffer_t *ptr, const uint8_t *data, size_t size) {
+    size_t result = buffer_realloc(ptr, ptr->len + size);
+    memcpy(ptr->buffer + ptr->len, data, size);
+    ptr->len += size;
+    return min(ptr->len, result);
 }
 
 void buffer_free(struct buffer_t *ptr) {

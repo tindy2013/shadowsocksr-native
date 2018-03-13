@@ -28,13 +28,15 @@
 struct buffer_t {
     size_t len;
     size_t capacity;
-    char   *buffer;
+    uint8_t *buffer;
 };
 
 struct buffer_t * buffer_alloc(size_t capacity);
+void buffer_reset(struct buffer_t *ptr);
 struct buffer_t * buffer_clone(struct buffer_t *ptr);
-int buffer_realloc(struct buffer_t *ptr, size_t capacity);
-int buffer_store(struct buffer_t *ptr, const char *data, size_t size);
+size_t buffer_realloc(struct buffer_t *ptr, size_t capacity);
+size_t buffer_store(struct buffer_t *ptr, const uint8_t *data, size_t size);
+size_t buffer_concatenate(struct buffer_t *ptr, const uint8_t *data, size_t size);
 void buffer_free(struct buffer_t *ptr);
 
 #endif // __SSR_BUFFER_H__
