@@ -90,15 +90,6 @@ int protect_socket(int fd);
 int send_traffic_stat(uint64_t tx, uint64_t rx);
 #endif
 
-enum net_stage {
-    STAGE_ERROR     = -1, /* Error detected                   */
-    STAGE_INIT      = 0,  /* Initial stage                    */
-    STAGE_HANDSHAKE = 1,  /* Handshake with client            */
-    STAGE_PARSE     = 2,  /* Parse the header                 */
-    STAGE_RESOLVE   = 4,  /* Resolve the hostname             */
-    STAGE_STREAM    = 5,  /* Stream between client and server */
-};
-
 /* ASSERT() is for debug checks, VERIFY() for run-time sanity checks.
 * DEBUG_VERIFIES is for expensive debug verifies that we only want to
 * enable in debug builds but still want type-checked by the compiler

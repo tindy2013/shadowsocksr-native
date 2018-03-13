@@ -24,16 +24,13 @@ struct ssr_server_state {
 };
 
 enum session_state {
-    session_handshake,        // Wait for client handshake.
-    session_handshake_auth,   // Wait for client authentication data.
-    session_req_start,        // Start waiting for request data.
-    session_req_parse,        // Wait for request data.
-    session_req_udp_accoc,
-    session_req_lookup,       // Wait for upstream hostname DNS lookup to complete.
-    session_req_connect,      // Wait for uv_tcp_connect() to complete.
-    session_ssr_auth_sent,
-    session_proxy_start,      // Connected. Start piping data.
-    session_proxy,            // Connected. Pipe data back and forth.
+    STAGE_ERROR = -1, /* Error detected                   */
+    STAGE_INIT = 0,  /* Initial stage                    */
+    STAGE_HANDSHAKE = 1,  /* Handshake with client            */
+    STAGE_PARSE = 2,  /* Parse the header                 */
+    STAGE_RESOLVE = 4,  /* Resolve the hostname             */
+    STAGE_STREAM = 5,  /* Stream between client and server */
+    session_proxy = STAGE_STREAM, // Connected. Pipe data back and forth.
     session_kill,             // Tear down session.
     session_dead,             // Dead. Safe to free now.
 };
@@ -131,8 +128,10 @@ static int ssr_server_run_loop(struct server_config *config) {
         uv_tcp_t *listener = calloc(1, sizeof(uv_tcp_t));
         uv_tcp_init(loop, listener);
 
-        union sockaddr_universal addr;
-        uv_ip4_addr(DEFAULT_BIND_HOST, config->listen_port, &addr.addr4);
+        union sockaddr_universal addr = { 0 };
+        addr.addr4.sin_family = AF_INET;
+        addr.addr4.sin_port = htons(config->listen_port);
+        addr.addr4.sin_addr.s_addr = htonl(INADDR_ANY);
         uv_tcp_bind(listener, &addr.addr, 0);
 
         int error = uv_listen((uv_stream_t *)listener, 128, tunnel_establish_init_cb);
@@ -221,7 +220,7 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     objects_container_add(ctx->env->tunnel_set, tunnel);
 
     ctx->cipher = NULL;
-    ctx->state = session_handshake;
+    ctx->state = STAGE_INIT;
 
     return is_incoming_ip_legal(tunnel);
 }
@@ -273,6 +272,8 @@ void tunnel_establish_init_cb(uv_stream_t *server, int status) {
 
 static void tunnel_dying(struct tunnel_ctx *tunnel) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+
+    // resolv_cancel(server->query);
 
     objects_container_remove(ctx->env->tunnel_set, tunnel);
     if (ctx->cipher) {
