@@ -34,6 +34,15 @@
 
 #define SECONDS_PER_MINUTE    1000
 
+enum net_stage {
+    STAGE_ERROR     = -1, /* Error detected                   */
+    STAGE_INIT      = 0,  /* Initial stage                    */
+    STAGE_HANDSHAKE = 1,  /* Handshake with client            */
+    STAGE_PARSE     = 2,  /* Parse the header                 */
+    STAGE_RESOLVE   = 4,  /* Resolve the hostname             */
+    STAGE_STREAM    = 5,  /* Stream between client and server */
+};
+
 // use this as a listener or environment
 struct listener_t {
     uv_tcp_t socket;
