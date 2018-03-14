@@ -47,7 +47,8 @@ struct tunnel_ctx {
     int ref_count;
 
     void(*tunnel_dying)(struct tunnel_ctx *tunnel);
-    void(*tunnel_connected_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+    void(*tunnel_timeout_expire_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+    void(*tunnel_outgoing_connected_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
     void(*tunnel_read_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
     void(*tunnel_getaddrinfo_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
     void(*tunnel_write_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);

@@ -154,6 +154,10 @@ static void socket_timer_expire_cb(uv_timer_t *handle) {
         return;
     }
 
+    if (tunnel->tunnel_timeout_expire_done) {
+        tunnel->tunnel_timeout_expire_done(tunnel, c);
+    }
+
     tunnel_shutdown(tunnel);
 }
 
@@ -187,8 +191,8 @@ static void socket_connect_done_cb(uv_connect_t *req, int status) {
         return;  /* Handle has been closed. */
     }
 
-    ASSERT(tunnel->tunnel_connected_done);
-    tunnel->tunnel_connected_done(tunnel, c);
+    ASSERT(tunnel->tunnel_outgoing_connected_done);
+    tunnel->tunnel_outgoing_connected_done(tunnel, c);
 }
 
 void socket_read(struct socket_ctx *c) {

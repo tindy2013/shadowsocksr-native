@@ -77,7 +77,8 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
 static void do_proxy_start(struct tunnel_ctx *tunnel);
 static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_dying(struct tunnel_ctx *tunnel);
-static void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void tunnel_outgoing_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -95,7 +96,8 @@ static bool init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->data = ctx;
 
     tunnel->tunnel_dying = &tunnel_dying;
-    tunnel->tunnel_connected_done = &tunnel_connected_done;
+    tunnel->tunnel_timeout_expire_done = &tunnel_timeout_expire_done;
+    tunnel->tunnel_outgoing_connected_done = &tunnel_outgoing_connected_done;
     tunnel->tunnel_read_done = &tunnel_read_done;
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
@@ -642,7 +644,12 @@ static void tunnel_dying(struct tunnel_ctx *tunnel) {
     free(ctx);
 }
 
-static void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    (void)tunnel;
+    (void)socket;
+}
+
+static void tunnel_outgoing_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     do_next(tunnel, socket);
 }
 
