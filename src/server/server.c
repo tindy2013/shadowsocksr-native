@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "dump_info.h"
+#include "ssrbuffer.h"
 #include "ssr_executive.h"
 #include "config_json.h"
 #include "sockaddr_universal.h"
@@ -52,7 +53,8 @@ void signal_quit_cb(uv_signal_t *handle, int signum);
 void tunnel_establish_init_cb(uv_stream_t *server, int status);
 
 static void tunnel_dying(struct tunnel_ctx *tunnel);
-static void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void tunnel_outgoing_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -60,6 +62,10 @@ static size_t tunnel_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size
 static bool tunnel_is_on_the_fly(struct tunnel_ctx *tunnel);
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel);
+static int is_header_complete(const struct buffer_t *buf);
+static void do_init_package(struct tunnel_ctx *tunnel);
+static void do_handshake(struct tunnel_ctx *tunnel);
+
 void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
 static void usage(void);
@@ -207,10 +213,12 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
 
     struct server_ctx *ctx = (struct server_ctx *) calloc(1, sizeof(*ctx));
     ctx->env = env;
+    ctx->init_pkg = buffer_alloc(SSR_BUFF_SIZE);
     tunnel->data = ctx;
 
     tunnel->tunnel_dying = &tunnel_dying;
-    tunnel->tunnel_connected_done = &tunnel_connected_done;
+    tunnel->tunnel_timeout_expire_done = &tunnel_timeout_expire_done;
+    tunnel->tunnel_outgoing_connected_done = &tunnel_outgoing_connected_done;
     tunnel->tunnel_read_done = &tunnel_read_done;
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
@@ -279,14 +287,28 @@ static void tunnel_dying(struct tunnel_ctx *tunnel) {
     if (ctx->cipher) {
         tunnel_cipher_release(ctx->cipher);
     }
-    //buffer_free(ctx->init_pkg);
+    buffer_free(ctx->init_pkg);
     free(ctx);
 }
 
 static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    struct server_ctx *ctx = (struct server_ctx *)tunnel->data;
+    switch (ctx->state) {
+    case STAGE_INIT:
+        do_init_package(tunnel);
+        break;
+    default:
+        break;
+    }
 }
 
-static void tunnel_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    // TODO: collect MALICIOUS IPs.
+    (void)tunnel;
+    (void)socket;
+}
+
+static void tunnel_outgoing_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     do_next(tunnel, socket);
 }
 
@@ -320,6 +342,62 @@ static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel) {
     uv_tcp_t *tcp = &tunnel->incoming->handle.tcp;
     // TODO: check incoming ip.
     return true;
+}
+
+static int is_header_complete(const struct buffer_t *buf) {
+    size_t header_len = 0;
+    size_t buf_len = buf->len;
+
+    char addr_type = buf->buffer[header_len];
+
+    // 1 byte for addr_type
+    header_len++;
+
+    if ((addr_type & ADDRTYPE_MASK) == 1) {
+        // IP V4
+        header_len += sizeof(struct in_addr);
+    } else if ((addr_type & ADDRTYPE_MASK) == 3) {
+        // Domain name (domain len + len of domain)
+        if (buf_len < header_len + 1) {
+            return 0;
+        }
+        uint8_t name_len = *(uint8_t *)(buf->buffer + header_len);
+        header_len += name_len + 1;
+    } else if ((addr_type & ADDRTYPE_MASK) == 4) {
+        // IP V6
+        header_len += sizeof(struct in6_addr);
+    } else {
+        return -1;
+    }
+
+    // len of port
+    header_len += 2;
+
+    return (buf_len >= header_len) ? 1 : 0;
+}
+
+static void do_init_package(struct tunnel_ctx *tunnel) {
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+    struct socket_ctx *incoming = tunnel->incoming;
+
+    if (is_completed_package(ctx->env, incoming->buf, incoming->buf_size) == false) {
+        buffer_store(ctx->init_pkg, incoming->buf, incoming->buf_size);
+        socket_read(incoming);
+        ctx->state = STAGE_INIT;  /* Need more data. */
+        return;
+    }
+    buffer_concatenate(ctx->init_pkg, incoming->buf, incoming->buf_size);
+
+    ASSERT(ctx->cipher == NULL);
+    ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg); // FIXME: error init_pkg
+
+    struct buffer_t *feedback = NULL;
+    if (ssr_ok != tunnel_decrypt(ctx->cipher, ctx->init_pkg, &feedback)) {
+        // TODO: report_addr(server->fd, MALICIOUS);
+        tunnel_shutdown(tunnel);
+        return;
+    }
+
 }
 
 void print_server_info(const struct server_config *config) {
