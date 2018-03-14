@@ -144,6 +144,11 @@ void ssr_cipher_env_release(struct server_env_t *env) {
     object_safe_free((void **)&env);
 }
 
+bool is_completed_package(struct server_env_t *env, const uint8_t *data, size_t size) {
+    (void)data;
+    return size > (enc_get_iv_len(env->cipher) + 1);
+}
+
 struct clib_set * objects_container_create(void) {
     // https://github.com/davinash/cstl/blob/master/test/t_c_set.c#L93
     return c_set_new(c_set_compare_element, NULL);

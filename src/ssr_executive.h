@@ -87,6 +87,7 @@ void config_change_for_server(struct server_config *config);
 
 struct server_env_t * ssr_cipher_env_create(struct server_config *config, void *data);
 void ssr_cipher_env_release(struct server_env_t *env);
+bool is_completed_package(struct server_env_t *env, const uint8_t *data, size_t size);
 struct clib_set * objects_container_create(void);
 void objects_container_destroy(struct clib_set *set);
 void objects_container_add(struct clib_set *set, void *obj);
