@@ -303,9 +303,13 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 }
 
 static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    // TODO: collect MALICIOUS IPs.
-    (void)tunnel;
-    (void)socket;
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+    struct socket_ctx *incoming = tunnel->incoming;
+    if (incoming == socket) {
+        if (ctx->state < STAGE_PARSE) {
+            // report_addr(server->fd, SUSPICIOUS); // collect MALICIOUS IPs.
+        }
+    }
 }
 
 static void tunnel_outgoing_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
@@ -396,6 +400,17 @@ static void do_init_package(struct tunnel_ctx *tunnel) {
         // TODO: report_addr(server->fd, MALICIOUS);
         tunnel_shutdown(tunnel);
         return;
+    }
+
+    int ret = is_header_complete(ctx->init_pkg);
+    if (ret == 1) {
+        ctx->state = STAGE_PARSE;
+    } else if (ret == -1) {
+        // report_addr(server->fd, MALFORMED);
+        tunnel_shutdown(tunnel);
+        return;
+    } else {
+        ctx->state = STAGE_HANDSHAKE;
     }
 
 }
