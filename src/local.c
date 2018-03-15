@@ -487,7 +487,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
                 size_t size = 0;
                 struct socks5_response *response =
-                        build_socks5_response(SOCKS5_REPLY_CMDUNSUPP, SOCKS5_ADDRTYPE_IPV4,
+                        build_socks5_response(SOCKS5_REPLY_CMDUNSUPP, SOCKS5_ADDRTYPE__IPV4,
                                               &sock_addr, buffer->buffer, buffer->capacity, &size);
 
                 local_send_data(local, (char *)response, (unsigned int)size);
@@ -503,7 +503,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
                 size_t size = 0;
                 struct socks5_response *response =
-                        build_socks5_response(SOCKS5_REPLY_SUCCESS, SOCKS5_ADDRTYPE_IPV4,
+                        build_socks5_response(SOCKS5_REPLY_SUCCESS, SOCKS5_ADDRTYPE__IPV4,
                                               &sock_addr, buffer->buffer, buffer->capacity, &size);
 
                 local_send_data(local, (char *)response, (unsigned int)size);
@@ -527,7 +527,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             char *addr_n_port = request->addr_n_port;
 
             // get remote addr and port
-            if (addr_type == SOCKS5_ADDRTYPE_IPV4) {
+            if (addr_type == SOCKS5_ADDRTYPE__IPV4) {
                 // IP V4
                 size_t in_addr_len = sizeof(struct in_addr);
                 memcpy(abuf->buffer + abuf->len, addr_n_port, in_addr_len + 2);
@@ -538,7 +538,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     dns_ntop(AF_INET, (const void *)(addr_n_port), ip, INET_ADDRSTRLEN);
                     sprintf(port, "%d", p);
                 }
-            } else if (addr_type == SOCKS5_ADDRTYPE_NAME) {
+            } else if (addr_type == SOCKS5_ADDRTYPE__NAME) {
                 // Domain name
                 uint8_t name_len = *(uint8_t *)addr_n_port;
                 abuf->buffer[abuf->len++] = name_len;
@@ -551,7 +551,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     host[name_len] = '\0';
                     sprintf(port, "%d", p);
                 }
-            } else if (addr_type == SOCKS5_ADDRTYPE_IPV6) {
+            } else if (addr_type == SOCKS5_ADDRTYPE__IPV6) {
                 // IP V6
                 size_t in6_addr_len = sizeof(struct in6_addr);
                 memcpy(abuf->buffer + abuf->len, addr_n_port, in6_addr_len + 2);
@@ -572,7 +572,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             size_t abuf_len  = abuf->len;
             int sni_detected = 0;
 
-            if (addr_type == SOCKS5_ADDRTYPE_IPV4 || addr_type == SOCKS5_ADDRTYPE_IPV6) {
+            if (addr_type == SOCKS5_ADDRTYPE__IPV4 || addr_type == SOCKS5_ADDRTYPE__IPV6) {
                 char *hostname;
                 uint16_t p = ntohs(*(uint16_t *)(abuf->buffer + abuf->len - 2));
                 int ret    = 0;
@@ -645,7 +645,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     bypass = 1;                 // proxy hostnames in white list
                 } else {
 #ifndef ANDROID
-                    if (addr_type == SOCKS5_ADDRTYPE_NAME) {            // resolve domain so we can bypass domain with geoip
+                    if (addr_type == SOCKS5_ADDRTYPE__NAME) {            // resolve domain so we can bypass domain with geoip
                         err = (int) get_sockaddr(host, port, &storage, 0, ipv6first);
                         if ( err != -1) {
                             resolved = 1;
@@ -690,11 +690,11 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
                 if (bypass) {
                     if (verbose) {
-                        if (sni_detected || addr_type == SOCKS5_ADDRTYPE_NAME) {
+                        if (sni_detected || addr_type == SOCKS5_ADDRTYPE__NAME) {
                             LOGI("bypass %s:%s", host, port);
-                        } else if (addr_type == SOCKS5_ADDRTYPE_IPV4) {
+                        } else if (addr_type == SOCKS5_ADDRTYPE__IPV4) {
                             LOGI("bypass %s:%s", ip, port);
-                        } else if (addr_type == SOCKS5_ADDRTYPE_IPV6) {
+                        } else if (addr_type == SOCKS5_ADDRTYPE__IPV6) {
                             LOGI("bypass [%s]:%s", ip, port);
                         }
                     }
@@ -702,7 +702,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     memset(&storage, 0, sizeof(struct sockaddr_storage));
                     ssize_t err;
 #ifndef ANDROID
-                    if (addr_type == SOCKS5_ADDRTYPE_NAME && resolved != 1) {
+                    if (addr_type == SOCKS5_ADDRTYPE__NAME && resolved != 1) {
                         err = get_sockaddr(host, port, &storage, 0, ipv6first);
                     } else
 #endif
@@ -723,13 +723,13 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 struct server_env_t *server_env = &listener->servers[index];
 
                 if (verbose) {
-                    if (sni_detected || addr_type == SOCKS5_ADDRTYPE_NAME) {
+                    if (sni_detected || addr_type == SOCKS5_ADDRTYPE__NAME) {
                         LOGI("connect to %s:%s via %s:%d",
                              host, port, server_env->host, server_env->port);
-                    } else if (addr_type == SOCKS5_ADDRTYPE_IPV4) {
+                    } else if (addr_type == SOCKS5_ADDRTYPE__IPV4) {
                         LOGI("connect to %s:%s via %s:%d",
                              ip, port, server_env->host, server_env->port);
-                    } else if (addr_type == SOCKS5_ADDRTYPE_IPV6) {
+                    } else if (addr_type == SOCKS5_ADDRTYPE__IPV6) {
                         LOGI("connect to [%s]:%s via %s:%d",
                              ip, port, server_env->host, server_env->port);
                     }

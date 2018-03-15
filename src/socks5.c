@@ -27,7 +27,7 @@ build_socks5_request(const char *host, uint16_t port, char *buffer, size_t buffe
     request->ver = SOCKS5_VERSION;
     request->cmd = SOCKS5_COMMAND_CONNECT;
     request->rsv = 0;
-    request->addr_type = SOCKS5_ADDRTYPE_NAME;
+    request->addr_type = SOCKS5_ADDRTYPE__NAME;
 
     char *addr_n_port = request->addr_n_port;
     *(addr_n_port + 0) = (char) addr_len;
@@ -58,7 +58,7 @@ build_socks5_method_select_response(int method, char *buffer, size_t buffer_size
 struct socks5_response *
 build_socks5_response(int rep, int addr_type, struct sockaddr_in *addr, char *buffer, size_t buffer_size, size_t *data_size)
 {
-    assert(addr_type == SOCKS5_ADDRTYPE_IPV4); // TODO: other types.
+    assert(addr_type == SOCKS5_ADDRTYPE__IPV4); // TODO: other types.
 
     size_t min_size = sizeof(struct socks5_response) + sizeof(addr->sin_addr) + sizeof(addr->sin_port);
     if (buffer==NULL || buffer_size<min_size) {
