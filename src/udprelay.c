@@ -62,7 +62,7 @@
 #include "cache.h"
 #include "udprelay.h"
 #include "encrypt.h"
-#include "socks5.h"
+#include "sockaddr_universal.h"
 #include "ssrbuffer.h"
 #include "jconf.h"
 
@@ -294,7 +294,7 @@ udprelay_parse_header(const char *buf, size_t buf_len,
             }
             offset += (int) in_addr_len;
         }
-    } else if ((addr_type & ADDRTYPE_MASK) == SOCKS5_ADDRTYPE_NAME) {
+    } else if ((addr_type & ADDRTYPE_MASK) == SOCKS5_ADDRTYPE_DOMAINNAME) {
         // Domain name
         uint8_t name_len = *(uint8_t *)(buf + offset);
         if (name_len + 4 <= buf_len) {
