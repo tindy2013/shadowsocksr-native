@@ -3,8 +3,12 @@
 #include <stdlib.h>
 #include <getopt.h>
 
+#include <libcork/core.h>
+#include "udns.h"
+
 #include "common.h"
 #include "dump_info.h"
+#include "netutils.h"
 #include "ssrbuffer.h"
 #include "ssr_executive.h"
 #include "config_json.h"
@@ -391,13 +395,13 @@ static bool do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
     struct socket_ctx *incoming = tunnel->incoming;
     do {
         ASSERT(socket == incoming);
-        if (is_completed_package(ctx->env, incoming->buf, incoming->buf_size) == false) {
-            buffer_store(ctx->init_pkg, incoming->buf, incoming->buf_size);
+        if (is_completed_package(ctx->env, incoming->buf, (size_t)incoming->result) == false) {
+            buffer_store(ctx->init_pkg, incoming->buf, (size_t)incoming->result);
             socket_read(incoming);
             ctx->state = STAGE_INIT;  /* Need more data. */
             break;
         }
-        buffer_concatenate(ctx->init_pkg, incoming->buf, incoming->buf_size);
+        buffer_concatenate(ctx->init_pkg, incoming->buf, (size_t)incoming->result);
 
         ASSERT(ctx->cipher == NULL);
         ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg); // FIXME: error init_pkg
@@ -426,6 +430,152 @@ static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 }
 
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    /*
+     * Shadowsocks TCP Relay Header:
+     *
+     *    +------+----------+----------+
+     *    | ATYP | DST.ADDR | DST.PORT |
+     *    +------+----------+----------+
+     *    |  1   | Variable |    2     |
+     *    +------+----------+----------+
+     */
+
+    /*
+     * TCP Relay's payload
+     *
+     *    +-------------+------+
+     *    |    DATA     |      ...
+     *    +-------------+------+
+     *    |  Variable   |      ...
+     *    +-------------+------+
+     */
+
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+    struct socket_ctx *incoming = tunnel->incoming;
+
+    size_t offset     = 0;
+    int need_query = 0;
+    char host[257] = { 0 };
+    uint16_t port  = 0;
+    struct addrinfo info = { 0 };
+    struct sockaddr_storage storage = { 0 };
+
+    ASSERT(incoming == socket);
+
+    struct socks5_address s5addr = { 0 };
+    if (socks5_address_parse(ctx->init_pkg->buffer, ctx->init_pkg->len, &s5addr) == false) {
+        // report_addr(server->fd, MALFORMED);
+        tunnel_shutdown(tunnel);
+        return;
+    }
+
+    //char atyp      = server->buf->array[offset++];
+    // get remote addr and port
+    if (s5addr.addr_type == SOCKS5_ADDRTYPE_IPV4) {
+        // IP V4
+        struct sockaddr_in *addr = (struct sockaddr_in *)&storage;
+        addr->sin_family = AF_INET;
+        addr->sin_addr = s5addr.addr.ipv4;
+        dns_ntop(AF_INET, (const void *)&s5addr.addr.ipv4, host, INET_ADDRSTRLEN);
+        addr->sin_port   = htons(s5addr.port);
+        info.ai_family   = AF_INET;
+        info.ai_socktype = SOCK_STREAM;
+        info.ai_protocol = IPPROTO_TCP;
+        info.ai_addrlen  = sizeof(struct sockaddr_in);
+        info.ai_addr     = (struct sockaddr *)addr;
+    } else if (s5addr.addr_type == SOCKS5_ADDRTYPE_DOMAINNAME) {
+        // Domain name
+        uint8_t name_len = (uint8_t) strlen(s5addr.addr.domainname);
+        strcpy(host, s5addr.addr.domainname);
+        struct cork_ip ip;
+        if (cork_ip_init(&ip, host) != -1) {
+            info.ai_socktype = SOCK_STREAM;
+            info.ai_protocol = IPPROTO_TCP;
+            if (ip.version == 4) {
+                struct sockaddr_in *addr = (struct sockaddr_in *)&storage;
+                dns_pton(AF_INET, host, &(addr->sin_addr));
+                addr->sin_port   = htons(s5addr.port);
+                addr->sin_family = AF_INET;
+                info.ai_family   = AF_INET;
+                info.ai_addrlen  = sizeof(struct sockaddr_in);
+                info.ai_addr     = (struct sockaddr *)addr;
+            } else if (ip.version == 6) {
+                struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&storage;
+                dns_pton(AF_INET6, host, &(addr->sin6_addr));
+                addr->sin6_port   = htons(s5addr.port);
+                addr->sin6_family = AF_INET6;
+                info.ai_family    = AF_INET6;
+                info.ai_addrlen   = sizeof(struct sockaddr_in6);
+                info.ai_addr      = (struct sockaddr *)addr;
+            }
+        } else {
+            if (!validate_hostname(host, name_len)) {
+                // report_addr(server->fd, MALFORMED);
+                tunnel_shutdown(tunnel);
+                return;
+            }
+            need_query = 1;
+        }
+    } else if (s5addr.addr_type == SOCKS5_ADDRTYPE_IPV6) {
+        // IP V6
+        struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&storage;
+        size_t in6_addr_len       = sizeof(struct in6_addr);
+        addr->sin6_family = AF_INET6;
+        addr->sin6_addr = s5addr.addr.ipv6;
+        dns_ntop(AF_INET6, (const void *)&s5addr.addr.ipv6, host, INET6_ADDRSTRLEN);
+        addr->sin6_port  = htons(s5addr.port);
+        info.ai_family   = AF_INET6;
+        info.ai_socktype = SOCK_STREAM;
+        info.ai_protocol = IPPROTO_TCP;
+        info.ai_addrlen  = sizeof(struct sockaddr_in6);
+        info.ai_addr     = (struct sockaddr *)addr;
+    }
+
+    port = s5addr.port;
+
+    offset = socks5_address_size(&s5addr);
+
+    ctx->init_pkg->len -= offset;
+    memmove(ctx->init_pkg->buffer, ctx->init_pkg->buffer + offset, ctx->init_pkg->len);
+
+    /*
+    if (!need_query) {
+        remote_t *remote = connect_to_remote(EV_A_ &info, server);
+
+        if (remote == NULL) {
+            LOGE("connect error");
+            close_and_free_server(EV_A_ server);
+            return;
+        } else {
+            server->remote = remote;
+            remote->server = server;
+
+            // XXX: should handle buffer carefully
+            if (server->buf->len > 0) {
+                memcpy(remote->buf->array, server->buf->array, server->buf->len);
+                remote->buf->len = server->buf->len;
+                remote->buf->idx = 0;
+                server->buf->len = 0;
+                server->buf->idx = 0;
+            }
+
+            // waiting on remote connected event
+            ev_io_stop(EV_A_ & server_recv_ctx->io);
+            ev_io_start(EV_A_ & remote->send_ctx->io);
+        }
+    } else {
+        query_t *query = ss_malloc(sizeof(query_t));
+        memset(query, 0, sizeof(query_t));
+        query->server = server;
+        snprintf(query->hostname, 256, "%s", host);
+
+        server->stage = STAGE_RESOLVE;
+        server->query = resolv_query(host, server_resolve_cb,
+                                     query_free_cb, query, port);
+
+        ev_io_stop(EV_A_ & server_recv_ctx->io);
+    }
+     */
 }
 
 void print_server_info(const struct server_config *config) {
