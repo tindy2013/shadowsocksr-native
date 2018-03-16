@@ -8,6 +8,7 @@ set(SOURCE_FILES_SNI
 
 set(SOURCE_FILES_OBFS
         ssr_cipher_names.c
+        ssr_cipher_names.h
         obfs/auth.c
         obfs/auth_chain.c
         obfs/base64.c
@@ -87,13 +88,12 @@ set(SOURCE_FILES_SERVER
         dump_info.h
         ssrutils.h
         ssrutils.c
-        jconf.c
-        json.c
+        ssrbuffer.c
+        ssrbuffer.h
         encrypt.c
-        udprelay.c
+        #udprelay.c
         cache.c
-        acl.c
-        resolv.c
+        #resolv.c
         netutils.c
         ssr_executive.c
         ssr_executive.h
@@ -101,9 +101,11 @@ set(SOURCE_FILES_SERVER
         config_json.h
         sockaddr_universal.h
         sockaddr_universal.c
+        client/tunnel.c
+        client/tunnel.h
         server/server.c
         server/server.h
-        ${SOURCE_FILES_SNI})
+        ${SOURCE_FILES_OBFS})
 
 set(SOURCE_FILES_MANAGER
         utils.c
@@ -123,6 +125,7 @@ set(SOURCE_FILES_REDIR
         ${SOURCE_FILES_SNI})
 
 include_directories(obfs)
+include_directories(client)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -160,7 +163,7 @@ add_definitions(-DUDP_RELAY_ENABLE)
 add_executable(ssr-client ${SOURCE_FILES_CLIENT})
 add_executable(ssr-local ${SOURCE_FILES_LOCAL})
 #add_executable(ss_tunnel ${SOURCE_FILES_TUNNEL})
-#add_executable(ssr-server ${SOURCE_FILES_SERVER})
+add_executable(ssr-server ${SOURCE_FILES_SERVER})
 #add_executable(ss_manager ${SOURCE_FILES_MANAGER})
 #add_executable(ss_redir ${SOURCE_FILES_REDIR})
 #add_library(libssr-native ${SOURCE_FILES_LOCAL})
@@ -168,7 +171,7 @@ add_executable(ssr-local ${SOURCE_FILES_LOCAL})
 set_target_properties(ssr-client PROPERTIES COMPILE_DEFINITIONS MODULE_LOCAL)
 set_target_properties(ssr-local PROPERTIES COMPILE_DEFINITIONS MODULE_LOCAL)
 #set_target_properties(ss_tunnel PROPERTIES COMPILE_DEFINITIONS MODULE_TUNNEL)
-#set_target_properties(ssr-server PROPERTIES COMPILE_DEFINITIONS MODULE_REMOTE)
+set_target_properties(ssr-server PROPERTIES COMPILE_DEFINITIONS MODULE_REMOTE)
 #set_target_properties(ss_manager PROPERTIES COMPILE_DEFINITIONS MODULE_MANAGER)
 #set_target_properties(ss_redir PROPERTIES COMPILE_DEFINITIONS MODULE_REDIR)
 
@@ -200,6 +203,6 @@ target_link_libraries(ssr-client ${ss_lib_net})
 target_link_libraries(ssr-local ${ss_lib_net})
 
 #target_link_libraries(ss_tunnel ${ss_lib_net} )
-#target_link_libraries(ssr-server ${ss_lib_net})
+target_link_libraries(ssr-server ${ss_lib_net})
 #target_link_libraries(ss_manager ${ss_lib_common} )
 #target_link_libraries(ss_redir ${ss_lib_net})

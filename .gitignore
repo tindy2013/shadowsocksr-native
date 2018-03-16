@@ -110,6 +110,7 @@ doc/*.html
 cmake-build*
 .idea/
 
+ssr-server
 ssr-client
 ssr-local
 cmake_install.cmake
