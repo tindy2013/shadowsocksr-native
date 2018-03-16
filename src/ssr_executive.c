@@ -212,7 +212,9 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
 
     struct server_info_t server_info = { {0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-    strcpy(server_info.host, config->remote_host);
+    if (config->remote_host && strlen(config->remote_host)) {
+        strcpy(server_info.host, config->remote_host);
+    }
     server_info.port = config->remote_port;
     server_info.head_len = get_head_size(init_pkg->buffer, (int)init_pkg->len, 30);
     server_info.iv = enc_ctx_get_iv(tc->e_ctx);
