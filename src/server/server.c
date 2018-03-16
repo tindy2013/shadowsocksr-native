@@ -62,9 +62,10 @@ static size_t tunnel_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size
 static bool tunnel_is_on_the_fly(struct tunnel_ctx *tunnel);
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel);
-static int is_header_complete(const struct buffer_t *buf);
-static void do_init_package(struct tunnel_ctx *tunnel);
-static void do_handshake(struct tunnel_ctx *tunnel);
+static bool is_header_complete(const struct buffer_t *buf);
+static bool do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
 void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
@@ -292,10 +293,20 @@ static void tunnel_dying(struct tunnel_ctx *tunnel) {
 }
 
 static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    bool done = false;
     struct server_ctx *ctx = (struct server_ctx *)tunnel->data;
     switch (ctx->state) {
     case STAGE_INIT:
-        do_init_package(tunnel);
+        done = do_init_package(tunnel, socket);
+        if (done == false) {
+            do_next(tunnel, socket);
+        }
+        break;
+    case STAGE_HANDSHAKE:
+        do_handshake(tunnel, socket);
+        break;
+    case STAGE_PARSE:
+        do_parse(tunnel, socket);
         break;
     default:
         break;
@@ -348,71 +359,73 @@ static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel) {
     return true;
 }
 
-static int is_header_complete(const struct buffer_t *buf) {
-    size_t header_len = 0;
-    size_t buf_len = buf->len;
-
-    char addr_type = buf->buffer[header_len];
-
-    // 1 byte for addr_type
-    header_len++;
-
-    if ((addr_type & ADDRTYPE_MASK) == 1) {
-        // IP V4
-        header_len += sizeof(struct in_addr);
-    } else if ((addr_type & ADDRTYPE_MASK) == 3) {
-        // Domain name (domain len + len of domain)
-        if (buf_len < header_len + 1) {
-            return 0;
+static bool is_legal_header(const struct buffer_t *buf) {
+    bool result = false;
+    enum SOCKS5_ADDRTYPE addr_type;
+    do {
+        if (buf == NULL) {
+            break;
         }
-        uint8_t name_len = *(uint8_t *)(buf->buffer + header_len);
-        header_len += name_len + 1;
-    } else if ((addr_type & ADDRTYPE_MASK) == 4) {
-        // IP V6
-        header_len += sizeof(struct in6_addr);
-    } else {
-        return -1;
-    }
-
-    // len of port
-    header_len += 2;
-
-    return (buf_len >= header_len) ? 1 : 0;
+        addr_type = (enum SOCKS5_ADDRTYPE) buf->buffer[0];
+        switch (addr_type) {
+        case SOCKS5_ADDRTYPE_IPV4:
+        case SOCKS5_ADDRTYPE_DOMAINNAME:
+        case SOCKS5_ADDRTYPE_IPV6:
+            result = true;
+            break;
+        default:
+            break;
+        }
+    } while (0);
+    return result;
 }
 
-static void do_init_package(struct tunnel_ctx *tunnel) {
+static bool is_header_complete(const struct buffer_t *buf) {
+    struct socks5_address addr;
+    return socks5_address_parse(buf->buffer, buf->len, &addr);
+}
+
+static bool do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    bool done = true;
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
+    do {
+        ASSERT(socket == incoming);
+        if (is_completed_package(ctx->env, incoming->buf, incoming->buf_size) == false) {
+            buffer_store(ctx->init_pkg, incoming->buf, incoming->buf_size);
+            socket_read(incoming);
+            ctx->state = STAGE_INIT;  /* Need more data. */
+            break;
+        }
+        buffer_concatenate(ctx->init_pkg, incoming->buf, incoming->buf_size);
 
-    if (is_completed_package(ctx->env, incoming->buf, incoming->buf_size) == false) {
-        buffer_store(ctx->init_pkg, incoming->buf, incoming->buf_size);
-        socket_read(incoming);
-        ctx->state = STAGE_INIT;  /* Need more data. */
-        return;
-    }
-    buffer_concatenate(ctx->init_pkg, incoming->buf, incoming->buf_size);
+        ASSERT(ctx->cipher == NULL);
+        ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg); // FIXME: error init_pkg
 
-    ASSERT(ctx->cipher == NULL);
-    ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg); // FIXME: error init_pkg
+        struct buffer_t *feedback = NULL;
+        if (ssr_ok != tunnel_decrypt(ctx->cipher, ctx->init_pkg, &feedback)) {
+            // TODO: report_addr(server->fd, MALICIOUS);
+            tunnel_shutdown(tunnel);
+            break;
+        }
 
-    struct buffer_t *feedback = NULL;
-    if (ssr_ok != tunnel_decrypt(ctx->cipher, ctx->init_pkg, &feedback)) {
-        // TODO: report_addr(server->fd, MALICIOUS);
-        tunnel_shutdown(tunnel);
-        return;
-    }
+        if (is_legal_header(ctx->init_pkg) == false) {
+            // report_addr(server->fd, MALFORMED);
+            tunnel_shutdown(tunnel);
+            break;
+        }
 
-    int ret = is_header_complete(ctx->init_pkg);
-    if (ret == 1) {
-        ctx->state = STAGE_PARSE;
-    } else if (ret == -1) {
-        // report_addr(server->fd, MALFORMED);
-        tunnel_shutdown(tunnel);
-        return;
-    } else {
-        ctx->state = STAGE_HANDSHAKE;
-    }
+        bool ret = is_header_complete(ctx->init_pkg);
+        ctx->state = ret ? STAGE_PARSE : STAGE_HANDSHAKE;
+        done = false;
+    } while (0);
+    return done;
+}
 
+static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+}
+
+static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 }
 
 void print_server_info(const struct server_config *config) {
