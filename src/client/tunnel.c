@@ -213,7 +213,8 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
         return;
     }
 
-    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
+    bool read_stop = (tunnel->tunnel_is_on_the_fly(tunnel) == false);
+    if (read_stop) {
         uv_read_stop(&c->handle.stream);
     }
 
@@ -233,7 +234,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
         ASSERT(c->rdstate == socket_busy);
     }
-    c->rdstate = socket_done;
+    c->rdstate = read_stop ? socket_stop : socket_done;
     c->result = nread;
 
     ASSERT(tunnel->tunnel_read_done);

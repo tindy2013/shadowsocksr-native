@@ -34,7 +34,8 @@ enum session_state {
     STAGE_HANDSHAKE = 1,  /* Handshake with client            */
     STAGE_PARSE = 2,  /* Parse the header                 */
     STAGE_RESOLVE = 4,  /* Resolve the hostname             */
-    STAGE_STREAM = 5,  /* Stream between client and server */
+    session_req_connect,
+    STAGE_STREAM,  /* Stream between client and server */
     session_proxy = STAGE_STREAM, // Connected. Pipe data back and forth.
     session_kill,             // Tear down session.
     session_dead,             // Dead. Safe to free now.
@@ -44,6 +45,7 @@ struct server_ctx {
     struct server_env_t *env; // __weak_ptr
     struct tunnel_cipher_ctx *cipher;
     struct buffer_t *init_pkg;
+    struct socks5_address *s5addr;
     enum session_state state;
 };
 
@@ -72,6 +74,7 @@ static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
 void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
@@ -221,6 +224,7 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     struct server_ctx *ctx = (struct server_ctx *) calloc(1, sizeof(*ctx));
     ctx->env = env;
     ctx->init_pkg = buffer_alloc(SSR_BUFF_SIZE);
+    ctx->s5addr = (struct socks5_address *) calloc(1, sizeof(*ctx->s5addr));
     tunnel->data = ctx;
 
     tunnel->tunnel_dying = &tunnel_dying;
@@ -295,6 +299,7 @@ static void tunnel_dying(struct tunnel_ctx *tunnel) {
         tunnel_cipher_release(ctx->cipher);
     }
     buffer_free(ctx->init_pkg);
+    free(ctx->s5addr);
     free(ctx);
 }
 
@@ -316,6 +321,9 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         break;
     case STAGE_RESOLVE:
         do_query_ip_done(tunnel, socket);
+        break;
+    case session_req_connect:
+        do_connect_remote_done(tunnel, socket);
         break;
     default:
         break;
@@ -463,39 +471,40 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     ASSERT(incoming == socket);
 
     // get remote addr and port
-    struct socks5_address s5addr = { 0 };
-    if (socks5_address_parse(ctx->init_pkg->buffer, ctx->init_pkg->len, &s5addr) == false) {
+    struct socks5_address *s5addr = ctx->s5addr;
+    memset(s5addr, 0, sizeof(*s5addr));
+    if (socks5_address_parse(ctx->init_pkg->buffer, ctx->init_pkg->len, s5addr) == false) {
         // report_addr(server->fd, MALFORMED);
         tunnel_shutdown(tunnel);
         return;
     }
 
-    offset = socks5_address_size(&s5addr);
+    offset = socks5_address_size(s5addr);
     ctx->init_pkg->len -= offset;
     memmove(ctx->init_pkg->buffer, ctx->init_pkg->buffer + offset, ctx->init_pkg->len);
 
     union sockaddr_universal target;
     bool ipFound = true;
-    if (socks5_address_to_universal(&s5addr, &target) == false) {
-        const char *host = s5addr.addr.domainname;
-        ASSERT(s5addr.addr_type == SOCKS5_ADDRTYPE_DOMAINNAME);
+    if (socks5_address_to_universal(s5addr, &target) == false) {
+        const char *host = s5addr->addr.domainname;
+        ASSERT(s5addr->addr_type == SOCKS5_ADDRTYPE_DOMAINNAME);
 
-        if (uv_ip4_addr(host, s5addr.port, &target.addr4) != 0) {
-            if (uv_ip6_addr(host, s5addr.port, &target.addr6) != 0) {
+        if (uv_ip4_addr(host, s5addr->port, &target.addr4) != 0) {
+            if (uv_ip6_addr(host, s5addr->port, &target.addr6) != 0) {
                 ipFound = false;
             }
         }
     }
 
     if (ipFound == false) {
-        const char *host = s5addr.addr.domainname;
+        const char *host = s5addr->addr.domainname;
         if (!validate_hostname(host, strlen(host))) {
             // report_addr(server->fd, MALFORMED);
             tunnel_shutdown(tunnel);
             return;
         }
         ctx->state = STAGE_RESOLVE;
-        outgoing->t.addr.addr4.sin_port = htons(s5addr.port);
+        outgoing->t.addr.addr4.sin_port = htons(s5addr->port);
         socket_getaddrinfo(outgoing, host);
     } else {
         outgoing->t.addr = target;
@@ -527,7 +536,79 @@ static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 }
 
 static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+    struct socket_ctx *incoming;
+    struct socket_ctx *outgoing;
+    int err;
 
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
+    ASSERT(outgoing == socket);
+    ASSERT(incoming->rdstate == socket_stop || incoming->rdstate == socket_done);
+    ASSERT(incoming->wrstate == socket_stop || incoming->wrstate == socket_done);
+    ASSERT(outgoing->rdstate == socket_stop || outgoing->rdstate == socket_done);
+    ASSERT(outgoing->wrstate == socket_stop || outgoing->wrstate == socket_done);
+
+    err = socket_connect(outgoing);
+    if (err != 0) {
+        pr_err("connect error: %s", uv_strerror(err));
+        tunnel_shutdown(tunnel);
+        return;
+    }
+
+    ctx->state = session_req_connect;
+}
+
+static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    struct socket_ctx *incoming;
+    struct socket_ctx *outgoing;
+
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
+
+    ASSERT(outgoing == socket);
+    ASSERT(incoming->rdstate == socket_stop || incoming->rdstate == socket_done);
+    ASSERT(incoming->wrstate == socket_stop || incoming->wrstate == socket_done);
+    ASSERT(outgoing->rdstate == socket_stop || outgoing->rdstate == socket_done);
+    ASSERT(outgoing->wrstate == socket_stop || outgoing->wrstate == socket_done);
+
+    if (outgoing->result == 0) {
+        if (ctx->init_pkg->len > 0) {
+            socket_write(outgoing, ctx->init_pkg->buffer, ctx->init_pkg->len);
+            // ctx->state = session_ssr_auth_sent;
+        } else {
+            // TODO: on_the_fly
+        }
+        return;
+    } else {
+        char *addr = NULL;
+        char ip_str[INET6_ADDRSTRLEN] = { 0 };
+
+        switch (ctx->s5addr->addr_type) {
+        case SOCKS5_ADDRTYPE_IPV4:
+            uv_inet_ntop(AF_INET, &ctx->s5addr->addr.ipv4, ip_str, sizeof(ip_str));
+            addr = ip_str;
+            break;
+        case SOCKS5_ADDRTYPE_IPV6:
+            uv_inet_ntop(AF_INET6, &ctx->s5addr->addr.ipv6, ip_str, sizeof(ip_str));
+            addr = ip_str;
+            break;
+        case SOCKS5_ADDRTYPE_DOMAINNAME:
+            addr = ctx->s5addr->addr.domainname;
+            break;
+        default:
+            UNREACHABLE();
+            break;
+        }
+
+        const char *fmt = "upstream connection \"%s\" error: %s";
+        pr_err(fmt, addr, uv_strerror((int)outgoing->result));
+        tunnel_shutdown(tunnel);
+        ctx->state = session_kill;
+        return;
+    }
 }
 
 void print_server_info(const struct server_config *config) {
