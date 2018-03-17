@@ -93,6 +93,6 @@ int sockaddr_cmp(struct sockaddr_storage *addr1,
 int sockaddr_cmp_addr(struct sockaddr_storage *addr1,
                       struct sockaddr_storage *addr2, socklen_t len);
 
-int validate_hostname(const char *hostname, const int hostname_len);
+int validate_hostname(const char *hostname, size_t hostname_len);
 
 #endif

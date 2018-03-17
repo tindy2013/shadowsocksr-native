@@ -263,7 +263,7 @@ sockaddr_cmp_addr(struct sockaddr_storage *addr1,
 }
 
 int
-validate_hostname(const char *hostname, const int hostname_len)
+validate_hostname(const char *hostname, size_t hostname_len)
 {
     if (hostname == NULL)
         return 0;

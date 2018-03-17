@@ -116,6 +116,32 @@ uint8_t * socks5_address_binary(const struct socks5_address *addr, uint8_t *buff
     return buffer;
 }
 
+bool socks5_address_to_universal(const struct socks5_address *s5addr, union sockaddr_universal *addr) {
+    bool result = false;
+    do {
+        if (s5addr==NULL || addr==NULL) {
+            break;
+        }
+        switch (s5addr->addr_type) {
+        case SOCKS5_ADDRTYPE_IPV4:
+            result = true;
+            addr->addr4.sin_family = AF_INET;
+            addr->addr4.sin_port = htons(s5addr->port);
+            addr->addr4.sin_addr = s5addr->addr.ipv4;
+            break;
+        case SOCKS5_ADDRTYPE_IPV6:
+            result = true;
+            addr->addr6.sin6_family = AF_INET6;
+            addr->addr6.sin6_port = htons(s5addr->port);
+            addr->addr6.sin6_addr = s5addr->addr.ipv6;
+            break;
+        default:
+            break;
+        }
+    } while (0);
+    return result;
+}
+
 int convert_address(const char *addr_str, unsigned short port, union sockaddr_universal *addr)
 {
     struct addrinfo hints = { 0 }, *ai = NULL;
