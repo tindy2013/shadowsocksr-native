@@ -70,7 +70,8 @@ static bool is_header_complete(const struct buffer_t *buf);
 static bool do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_req_connect_start(struct tunnel_ctx *tunnel);
+static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
 void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
@@ -313,6 +314,9 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     case STAGE_PARSE:
         do_parse(tunnel, socket);
         break;
+    case STAGE_RESOLVE:
+        do_query_ip_done(tunnel, socket);
+        break;
     default:
         break;
     }
@@ -337,8 +341,7 @@ static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 }
 
 static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    UNREACHABLE();
-    tunnel_shutdown(tunnel);
+    do_next(tunnel, socket);
 }
 
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
@@ -492,14 +495,38 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             return;
         }
         ctx->state = STAGE_RESOLVE;
+        outgoing->t.addr.addr4.sin_port = htons(s5addr.port);
         socket_getaddrinfo(outgoing, host);
     } else {
         outgoing->t.addr = target;
-        do_req_connect_start(tunnel);
+        do_connect_remote_start(tunnel, socket);
     }
 }
 
-static void do_req_connect_start(struct tunnel_ctx *tunnel) {
+static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    struct socket_ctx *incoming;
+    struct socket_ctx *outgoing;
+
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
+    ASSERT(outgoing == socket);
+    ASSERT(incoming->rdstate == socket_stop || incoming->rdstate == socket_done);
+    ASSERT(incoming->wrstate == socket_stop || incoming->wrstate == socket_done);
+    ASSERT(outgoing->rdstate == socket_stop || outgoing->rdstate == socket_done);
+    ASSERT(outgoing->wrstate == socket_stop || outgoing->wrstate == socket_done);
+
+    if (outgoing->result < 0) {
+        tunnel_shutdown(tunnel);
+        ctx->state = session_kill;
+        return;
+    }
+
+    do_connect_remote_start(tunnel, socket);
+}
+
+static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 
 }
 

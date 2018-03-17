@@ -304,6 +304,7 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
 
     if (status == 0) {
         /* FIXME(bnoordhuis) Should try all addresses. */
+        uint16_t port = c->t.addr.addr4.sin_port;
         if (ai->ai_family == AF_INET) {
             c->t.addr.addr4 = *(const struct sockaddr_in *) ai->ai_addr;
         } else if (ai->ai_family == AF_INET6) {
@@ -311,6 +312,7 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
         } else {
             UNREACHABLE();
         }
+        c->t.addr.addr4.sin_port = port;
     }
 
     uv_freeaddrinfo(ai);
