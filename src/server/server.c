@@ -4,7 +4,6 @@
 #include <getopt.h>
 
 #include <libcork/core.h>
-#include "sockaddr_universal.h"
 #include "udns.h"
 
 #include "common.h"
@@ -429,6 +428,7 @@ static bool do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
 }
 
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    UNREACHABLE();
 }
 
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
@@ -491,14 +491,12 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             tunnel_shutdown(tunnel);
             return;
         }
-        socket_getaddrinfo(outgoing, s5addr.addr.domainname);
         ctx->state = STAGE_RESOLVE;
-        return;
+        socket_getaddrinfo(outgoing, host);
+    } else {
+        outgoing->t.addr = target;
+        do_req_connect_start(tunnel);
     }
-
-    outgoing->t.addr = target;
-
-    do_req_connect_start(tunnel);
 }
 
 static void do_req_connect_start(struct tunnel_ctx *tunnel) {
