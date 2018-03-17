@@ -35,6 +35,7 @@ enum session_state {
     STAGE_PARSE = 2,  /* Parse the header                 */
     STAGE_RESOLVE = 4,  /* Resolve the hostname             */
     session_req_connect,
+    session_launch_on_the_fly,
     STAGE_STREAM,  /* Stream between client and server */
     session_proxy = STAGE_STREAM, // Connected. Pipe data back and forth.
     session_kill,             // Tear down session.
@@ -75,6 +76,8 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_launch_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
 void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
@@ -324,6 +327,12 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         break;
     case session_req_connect:
         do_connect_remote_done(tunnel, socket);
+        break;
+    case session_launch_on_the_fly:
+        do_launch_on_the_fly(tunnel, socket);
+        break;
+    case session_proxy:
+        do_on_the_fly(tunnel, socket);
         break;
     default:
         break;
@@ -577,9 +586,9 @@ static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx 
     if (outgoing->result == 0) {
         if (ctx->init_pkg->len > 0) {
             socket_write(outgoing, ctx->init_pkg->buffer, ctx->init_pkg->len);
-            // ctx->state = session_ssr_auth_sent;
+            ctx->state = session_launch_on_the_fly;
         } else {
-            // TODO: on_the_fly
+            do_launch_on_the_fly(tunnel, socket);
         }
         return;
     } else {
@@ -608,6 +617,48 @@ static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx 
         tunnel_shutdown(tunnel);
         ctx->state = session_kill;
         return;
+    }
+}
+
+static void do_launch_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+    struct socket_ctx *incoming;
+    struct socket_ctx *outgoing;
+
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
+
+    ASSERT(outgoing == socket);
+    ASSERT(incoming->rdstate == socket_stop);
+    ASSERT(incoming->wrstate == socket_stop);
+    ASSERT(outgoing->rdstate == socket_stop);
+    ASSERT(outgoing->wrstate == socket_stop);
+
+    if (outgoing->result < 0) {
+        pr_err("write error: %s", uv_strerror((int)outgoing->result));
+        tunnel_shutdown(tunnel);
+        return;
+    }
+
+    socket_read(incoming);
+    socket_read(outgoing);
+    ctx->state = session_proxy;
+}
+
+static void do_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    struct socket_ctx *incoming;
+    struct socket_ctx *outgoing;
+
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
+    ASSERT(socket == incoming || socket == outgoing);
+
+    if (socket == outgoing) {
+    }
+
+    if (socket == incoming) {
     }
 }
 
