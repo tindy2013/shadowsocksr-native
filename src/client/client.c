@@ -53,7 +53,6 @@ enum session_state {
     session_proxy_start,      /* Connected. Start piping data. */
     session_proxy,            /* Connected. Pipe data back and forth. */
     session_kill,             /* Tear down session. */
-    session_dead,             /* Dead. Safe to free now. */
 };
 
 struct client_ctx {
@@ -223,7 +222,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
 
     parser = &ctx->parser;
     incoming = tunnel->incoming;
-    ASSERT(incoming->rdstate == socket_done);
+    ASSERT(incoming->rdstate == socket_done || incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     incoming->rdstate = socket_stop;
 
@@ -320,7 +319,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     incoming = tunnel->incoming;
     outgoing = tunnel->outgoing;
 
-    ASSERT(incoming->rdstate == socket_done);
+    ASSERT(incoming->rdstate == socket_done || incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     ASSERT(outgoing->rdstate == socket_stop);
     ASSERT(outgoing->wrstate == socket_stop);
@@ -624,9 +623,6 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             }
             if (buf->len > 0) {
                 socket_write(outgoing, buf->buffer, buf->len);
-            } else if (buf->len == 0) {
-                // SSR logic
-                socket_read_stop(incoming);
             }
         } while (0);
         buffer_free(buf);
