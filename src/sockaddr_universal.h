@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #endif // defined(_WIN32)
 
+#include <stdint.h>
 #include <stdbool.h>
 
 union sockaddr_universal {

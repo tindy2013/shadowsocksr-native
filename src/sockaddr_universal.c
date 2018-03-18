@@ -9,7 +9,7 @@
 #include "sockaddr_universal.h"
 
 bool socks5_address_parse(const uint8_t *data, size_t len, struct socks5_address *addr) {
-    int offset     = 0;
+    size_t offset     = 0;
     size_t addr_size = 0;
     uint8_t addr_type = 0;
 
@@ -83,7 +83,7 @@ size_t socks5_address_size(const struct socks5_address *addr) {
 }
 
 uint8_t * socks5_address_binary(const struct socks5_address *addr, uint8_t *buffer, size_t size) {
-    int offset     = 0;
+    size_t offset     = 0;
     size_t addr_size = 0;
     if (addr==NULL || buffer==NULL || size==0) {
         return NULL;
