@@ -45,12 +45,6 @@
 #define __weak_ptr
 #endif
 
-#if defined(_WIN32)
-typedef ULONG uv_buf_len_t;
-#else
-typedef size_t uv_buf_len_t;
-#endif // defined(_WIN32)
-
 #if defined(_LOCAL_H)
 struct server_env_t {
     char *hostname;

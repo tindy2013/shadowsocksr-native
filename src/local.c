@@ -146,8 +146,8 @@ static struct listener_t *current_listener;
 
 
 void do_alloc_uv_buffer(size_t suggested_size, uv_buf_t *buf) {
-    buf->base = malloc(suggested_size * sizeof(char));
-    buf->len = (uv_buf_len_t) suggested_size;
+    char *tmp = (char *) malloc(suggested_size * sizeof(char));
+    *buf = uv_buf_init(tmp, suggested_size);
 }
 
 void do_dealloc_uv_buffer(uv_buf_t *buf) {

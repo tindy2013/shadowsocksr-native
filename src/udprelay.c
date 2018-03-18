@@ -167,8 +167,8 @@ static size_t packet_size                            = DEFAULT_PACKET_SIZE;
 static size_t buf_size                               = DEFAULT_PACKET_SIZE * 2;
 
 static void udp_uv_alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
-    buf->base = (char *) ss_malloc(suggested_size * sizeof(char));
-    buf->len = (uv_buf_len_t) suggested_size;
+    char *tmp = (char *) ss_malloc(suggested_size * sizeof(char));
+    *buf = uv_buf_init(tmp, suggested_size);
 }
 
 static void udp_uv_release_buffer(uv_buf_t *buf) {

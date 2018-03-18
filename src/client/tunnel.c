@@ -263,8 +263,7 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     c->buf = realloc(c->buf, size);
     c->buf_size = size;
 
-    buf->base = (char *)c->buf;
-    buf->len = (uv_buf_len_t)size;
+    *buf = uv_buf_init((char *)c->buf, size);
 }
 
 void socket_getaddrinfo(struct socket_ctx *c, const char *hostname) {
