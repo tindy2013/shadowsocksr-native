@@ -656,9 +656,43 @@ static void do_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *socket) 
     ASSERT(socket == incoming || socket == outgoing);
 
     if (socket == outgoing) {
+        struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
+        struct buffer_t *buf = ctx->init_pkg;
+        do {
+            buffer_store(buf, outgoing->buf, (size_t)outgoing->result);
+            if (ssr_ok != tunnel_encrypt(cipher_ctx, buf)) {
+                tunnel_shutdown(tunnel);
+                break;
+            }
+            if (buf->len > 0) {
+                socket_write(incoming, buf->buffer, buf->len);
+            }
+        } while (0);
     }
 
     if (socket == incoming) {
+        struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
+        struct buffer_t *buf = ctx->init_pkg;
+        do {
+            buffer_store(buf, incoming->buf, (size_t)incoming->result);
+
+            struct buffer_t *feedback = NULL;
+            if (ssr_ok != tunnel_decrypt(cipher_ctx, buf, &feedback)) {
+                tunnel_shutdown(tunnel);
+                break;
+            }
+            if (feedback) {
+                UNREACHABLE();
+                /*
+                ASSERT(buf->len == 0);
+                socket_write(outgoing, feedback->buffer, feedback->len);
+                 */
+                buffer_free(feedback);
+            }
+            if (buf->len > 0) {
+                socket_write(outgoing, buf->buffer, buf->len);
+            }
+        } while (0);
     }
 }
 
