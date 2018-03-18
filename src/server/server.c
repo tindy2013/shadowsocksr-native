@@ -3,9 +3,6 @@
 #include <stdlib.h>
 #include <getopt.h>
 
-#include <libcork/core.h>
-#include "udns.h"
-
 #include "common.h"
 #include "dump_info.h"
 #include "netutils.h"
