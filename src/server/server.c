@@ -70,7 +70,7 @@ static bool tunnel_is_on_the_fly(struct tunnel_ctx *tunnel);
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel);
 static bool is_header_complete(const struct buffer_t *buf);
-static bool do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -311,17 +311,16 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct server_ctx *ctx = (struct server_ctx *)tunnel->data;
     switch (ctx->state) {
     case STAGE_INIT:
-        done = do_init_package(tunnel, socket);
-        if (done == false) {
-            do_next(tunnel, socket);
-        }
+        do_init_package(tunnel, socket);
         break;
+            /*
     case STAGE_HANDSHAKE:
         do_handshake(tunnel, socket);
         break;
     case STAGE_PARSE:
         do_parse(tunnel, socket);
         break;
+             */
     case STAGE_RESOLVE:
         do_query_ip_done(tunnel, socket);
         break;
@@ -335,6 +334,7 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         do_on_the_fly(tunnel, socket);
         break;
     default:
+        UNREACHABLE();
         break;
     }
 }
@@ -410,8 +410,7 @@ static bool is_header_complete(const struct buffer_t *buf) {
     return socks5_address_parse(buf->buffer, buf->len, &addr);
 }
 
-static bool do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    bool done = true;
+static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
     do {
@@ -442,9 +441,12 @@ static bool do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
 
         bool ret = is_header_complete(ctx->init_pkg);
         ctx->state = ret ? STAGE_PARSE : STAGE_HANDSHAKE;
-        done = false;
+        if (ret) {
+            do_parse(tunnel, socket);
+        } else {
+            do_handshake(tunnel, socket);
+        }
     } while (0);
-    return done;
 }
 
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
@@ -632,7 +634,7 @@ static void do_launch_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *s
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     ASSERT(outgoing->rdstate == socket_stop);
-    ASSERT(outgoing->wrstate == socket_stop);
+    ASSERT(outgoing->wrstate == socket_stop || outgoing->wrstate == socket_done);
 
     if (outgoing->result < 0) {
         pr_err("write error: %s", uv_strerror((int)outgoing->result));
