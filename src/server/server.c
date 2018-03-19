@@ -3,9 +3,6 @@
 #include <stdlib.h>
 #include <getopt.h>
 
-#include <libcork/core.h>
-#include "udns.h"
-
 #include "common.h"
 #include "dump_info.h"
 #include "netutils.h"
@@ -29,17 +26,11 @@ struct ssr_server_state {
 };
 
 enum session_state {
-    STAGE_ERROR = -1, /* Error detected                   */
-    STAGE_INIT = 0,  /* Initial stage                    */
-    STAGE_HANDSHAKE = 1,  /* Handshake with client            */
-    STAGE_PARSE = 2,  /* Parse the header                 */
-    STAGE_RESOLVE = 4,  /* Resolve the hostname             */
-    session_req_connect,
-    session_launch_on_the_fly,
-    STAGE_STREAM,  /* Stream between client and server */
-    session_proxy = STAGE_STREAM, // Connected. Pipe data back and forth.
-    session_kill,             // Tear down session.
-    session_dead,             // Dead. Safe to free now.
+    session_initial = 0,  /* Initial stage                    */
+    session_query_ip = 4,  /* Resolve the hostname             */
+    session_connect_target,
+    session_launch_stream,
+    session_stream,  /* Stream between client and server */
 };
 
 struct server_ctx {
@@ -76,8 +67,8 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_launch_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_launch_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
 void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
@@ -242,7 +233,7 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     objects_container_add(ctx->env->tunnel_set, tunnel);
 
     ctx->cipher = NULL;
-    ctx->state = STAGE_INIT;
+    ctx->state = session_initial;
 
     return is_incoming_ip_legal(tunnel);
 }
@@ -310,28 +301,20 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     bool done = false;
     struct server_ctx *ctx = (struct server_ctx *)tunnel->data;
     switch (ctx->state) {
-    case STAGE_INIT:
+    case session_initial:
         do_init_package(tunnel, socket);
         break;
-            /*
-    case STAGE_HANDSHAKE:
-        do_handshake(tunnel, socket);
-        break;
-    case STAGE_PARSE:
-        do_parse(tunnel, socket);
-        break;
-             */
-    case STAGE_RESOLVE:
+    case session_query_ip:
         do_query_ip_done(tunnel, socket);
         break;
-    case session_req_connect:
+    case session_connect_target:
         do_connect_remote_done(tunnel, socket);
         break;
-    case session_launch_on_the_fly:
-        do_launch_on_the_fly(tunnel, socket);
+    case session_launch_stream:
+        do_launch_stream(tunnel, socket);
         break;
-    case session_proxy:
-        do_on_the_fly(tunnel, socket);
+    case session_stream:
+        do_stream(tunnel, socket);
         break;
     default:
         UNREACHABLE();
@@ -343,7 +326,7 @@ static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
     if (incoming == socket) {
-        if (ctx->state < STAGE_PARSE) {
+        if (ctx->state < session_query_ip) {
             // report_addr(server->fd, SUSPICIOUS); // collect MALICIOUS IPs.
         }
     }
@@ -375,7 +358,7 @@ static size_t tunnel_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size
 
 static bool tunnel_in_streaming(struct tunnel_ctx *tunnel) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-    return (ctx->state == session_proxy);
+    return (ctx->state == session_stream);
 }
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel) {
@@ -418,7 +401,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         if (is_completed_package(ctx->env, incoming->buf, (size_t)incoming->result) == false) {
             buffer_store(ctx->init_pkg, incoming->buf, (size_t)incoming->result);
             socket_read(incoming);
-            ctx->state = STAGE_INIT;  /* Need more data. */
+            ctx->state = session_initial;  /* Need more data. */
             break;
         }
         buffer_concatenate(ctx->init_pkg, incoming->buf, (size_t)incoming->result);
@@ -439,9 +422,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
             break;
         }
 
-        bool ret = is_header_complete(ctx->init_pkg);
-        ctx->state = ret ? STAGE_PARSE : STAGE_HANDSHAKE;
-        if (ret) {
+        if (is_header_complete(ctx->init_pkg)) {
             do_parse(tunnel, socket);
         } else {
             do_handshake(tunnel, socket);
@@ -514,7 +495,7 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             tunnel_shutdown(tunnel);
             return;
         }
-        ctx->state = STAGE_RESOLVE;
+        ctx->state = session_query_ip;
         outgoing->t.addr.addr4.sin_port = htons(s5addr->port);
         socket_getaddrinfo(outgoing, host);
     } else {
@@ -539,7 +520,6 @@ static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 
     if (outgoing->result < 0) {
         tunnel_shutdown(tunnel);
-        ctx->state = session_kill;
         return;
     }
 
@@ -560,14 +540,14 @@ static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx
     ASSERT(outgoing->rdstate == socket_stop || outgoing->rdstate == socket_done);
     ASSERT(outgoing->wrstate == socket_stop || outgoing->wrstate == socket_done);
 
+    ctx->state = session_connect_target;
     err = socket_connect(outgoing);
+
     if (err != 0) {
         pr_err("connect error: %s", uv_strerror(err));
         tunnel_shutdown(tunnel);
         return;
     }
-
-    ctx->state = session_req_connect;
 }
 
 static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
@@ -588,9 +568,9 @@ static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx 
     if (outgoing->result == 0) {
         if (ctx->init_pkg->len > 0) {
             socket_write(outgoing, ctx->init_pkg->buffer, ctx->init_pkg->len);
-            ctx->state = session_launch_on_the_fly;
+            ctx->state = session_launch_stream;
         } else {
-            do_launch_on_the_fly(tunnel, socket);
+            do_launch_stream(tunnel, socket);
         }
         return;
     } else {
@@ -617,12 +597,11 @@ static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx 
         const char *fmt = "upstream connection \"%s\" error: %s";
         pr_err(fmt, addr, uv_strerror((int)outgoing->result));
         tunnel_shutdown(tunnel);
-        ctx->state = session_kill;
         return;
     }
 }
 
-static void do_launch_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_launch_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
@@ -644,10 +623,10 @@ static void do_launch_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *s
 
     socket_read(incoming);
     socket_read(outgoing);
-    ctx->state = session_proxy;
+    ctx->state = session_stream;
 }
 
-static void do_on_the_fly(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
