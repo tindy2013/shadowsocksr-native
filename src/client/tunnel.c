@@ -231,7 +231,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     }
 
     ASSERT(c->buf == (uint8_t *)buf->base);
-    if (tunnel->tunnel_in_streaming(tunnel) == false) {
+    if (read_stop) {
         ASSERT(c->rdstate == socket_busy);
     }
     c->rdstate = read_stop ? socket_stop : socket_done;
@@ -257,8 +257,8 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
         ASSERT(c->rdstate == socket_busy);
     }
 
-    if (tunnel->tunnel_alloc_size) {
-        size = tunnel->tunnel_alloc_size(tunnel, size);
+    if (tunnel->tunnel_get_alloc_size) {
+        size = tunnel->tunnel_get_alloc_size(tunnel, size);
     }
     c->buf = realloc(c->buf, size);
     c->buf_size = size;
