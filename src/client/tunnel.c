@@ -213,7 +213,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
         return;
     }
 
-    bool read_stop = (tunnel->tunnel_is_on_the_fly(tunnel) == false);
+    bool read_stop = (tunnel->tunnel_in_streaming(tunnel) == false);
     if (read_stop) {
         uv_read_stop(&c->handle.stream);
     }
@@ -231,7 +231,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     }
 
     ASSERT(c->buf == (uint8_t *)buf->base);
-    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
+    if (tunnel->tunnel_in_streaming(tunnel) == false) {
         ASSERT(c->rdstate == socket_busy);
     }
     c->rdstate = read_stop ? socket_stop : socket_done;
@@ -253,7 +253,7 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
     tunnel = c->tunnel;
 
-    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
+    if (tunnel->tunnel_in_streaming(tunnel) == false) {
         ASSERT(c->rdstate == socket_busy);
     }
 
@@ -325,7 +325,7 @@ void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     uv_buf_t buf;
     struct tunnel_ctx *tunnel = c->tunnel;
 
-    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
+    if (tunnel->tunnel_in_streaming(tunnel) == false) {
         ASSERT(c->wrstate == socket_stop || c->wrstate == socket_done);
     }
     c->wrstate = socket_busy;
@@ -359,7 +359,7 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
         return;  /* Handle has been closed. */
     }
 
-    if (tunnel->tunnel_is_on_the_fly(tunnel) == false) {
+    if (tunnel->tunnel_in_streaming(tunnel) == false) {
         ASSERT(c->wrstate == socket_busy);
     }
     c->wrstate = socket_done;
