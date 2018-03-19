@@ -57,7 +57,8 @@ void fillcrc32(unsigned char *buffer, unsigned int size) {
 }
 
 void adler32_short(unsigned char *buffer, unsigned int size, uint32_t *a, uint32_t *b) {
-    for (int i = 0; i < (int)size; i++) {
+    int i = 0;
+    for (i = 0; i < (int)size; i++) {
         *a += buffer[i];
         *b += *a;
     }

@@ -90,7 +90,8 @@ void print_remote_info(const struct server_config *config) {
     char remote_host[256] = { 0 };
     strcpy(remote_host, config->remote_host);
     if (strlen(remote_host) > 4) {
-        for (size_t i = 4; i < strlen(remote_host); i++) {
+        size_t i = 0;
+        for (i = 4; i < strlen(remote_host); i++) {
             remote_host[i] = '*';
         }
     }
@@ -98,7 +99,8 @@ void print_remote_info(const struct server_config *config) {
     char password[256] = { 0 };
     strcpy(password, config->password);
     if (strlen(password) > 2) {
-        for (size_t i = 2; i < strlen(password); i++) {
+        size_t i = 0;
+        for (i = 2; i < strlen(password); i++) {
             password[i] = '*';
         }
     }

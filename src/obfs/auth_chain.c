@@ -29,7 +29,8 @@ uint64_t shift128plus_next(struct shift128plus_ctx *ctx) {
 
 void i64_memcpy(uint8_t* target, uint8_t* source)
 {
-    for (int i = 0; i < 8; ++i) {
+    int i = 0;
+    for (i = 0; i < 8; ++i) {
         target[i] = source[7 - i];
     }
 }
@@ -56,7 +57,9 @@ void shift128plus_init_from_bin_datalen(struct shift128plus_ctx *ctx, uint8_t* b
         i64_memcpy((uint8_t*)ctx, fill_bin);
         i64_memcpy((uint8_t*)ctx + 8, fill_bin + 8);
     }
-    for (int i = 0; i < 4; ++i) {
+    
+    int i = 0;
+    for (i = 0; i < 4; ++i) {
         shift128plus_next(ctx);
     }
 }
@@ -350,7 +353,8 @@ int auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, int datalength,
                 memcpy(local->user_key, server->key, local->user_key_len);
             }
         }
-        for (int i = 0; i < 4; ++i) {
+        int i = 0;
+        for (i = 0; i < 4; ++i) {
             uid[i] = (uint8_t)local->uid[i] ^ local->last_client_hash[8 + i];
         }
 
@@ -563,7 +567,8 @@ ssize_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplainda
         cipher_env_release(cipher);
     }
     uint8_t uid[4];
-    for (int i = 0; i < 4; ++i) {
+    int i = 0;
+    for (i = 0; i < 4; ++i) {
         uid[i] = ((uint8_t)local->uid[i]) ^ hash[i];
     }
     memmove(out_buffer + datalength, rnd_data, rand_len);
@@ -670,6 +675,7 @@ void * auth_chain_b_init_data(void) {
 }
 
 void auth_chain_b_init_data_size(struct obfs_t *obfs) {
+    int i = 0;
     struct server_info_t *server = &obfs->server;
     struct auth_chain_b_data *special_data = ((struct auth_chain_local_data *)obfs->l_data)->auth_chain_special_data;
 
@@ -678,7 +684,7 @@ void auth_chain_b_init_data_size(struct obfs_t *obfs) {
     shift128plus_init_from_bin(random, server->key, 16);
     special_data->data_size_list_length = shift128plus_next(random) % 8 + 4;
     special_data->data_size_list = (int *)malloc(special_data->data_size_list_length * sizeof(special_data->data_size_list[0]));
-    for (int i = 0; i < special_data->data_size_list_length; i++) {
+    for (i = 0; i < special_data->data_size_list_length; i++) {
         special_data->data_size_list[i] = shift128plus_next(random) % 2340 % 2040 % 1440;
     }
     // stdlib qsort
@@ -690,7 +696,7 @@ void auth_chain_b_init_data_size(struct obfs_t *obfs) {
 
     special_data->data_size_list2_length = shift128plus_next(random) % 16 + 8;
     special_data->data_size_list2 = (int *)malloc(special_data->data_size_list2_length * sizeof(special_data->data_size_list2[0]));
-    for (int i = 0; i < special_data->data_size_list2_length; i++) {
+    for (i = 0; i < special_data->data_size_list2_length; i++) {
         special_data->data_size_list2[i] = shift128plus_next(random) % 2340 % 2040 % 1440;
     }
     // stdlib qsort
@@ -801,7 +807,8 @@ void auth_chain_c_init_data_size(struct obfs_t *obfs) {
     shift128plus_init_from_bin(random, server->key, 16);
     special_data->data_size_list0_length = shift128plus_next(random) % (8 + 16) + (4 + 8);
     special_data->data_size_list0 = (int *)malloc(special_data->data_size_list0_length * sizeof(int));
-    for (int i = 0; i < special_data->data_size_list0_length; i++) {
+    int i = 0;
+    for (i = 0; i < special_data->data_size_list0_length; i++) {
         special_data->data_size_list0[i] = shift128plus_next(random) % 2340 % 2040 % 1440;
     }
     // stdlib qsort
@@ -888,6 +895,7 @@ void auth_chain_d_check_and_patch_data_size(struct obfs_t *obfs, struct shift128
 }
 
 void auth_chain_d_init_data_size(struct obfs_t *obfs) {
+    int i = 0;
     struct server_info_t *server = &obfs->server;
 
     struct auth_chain_c_data *special_data = (struct auth_chain_c_data *)
@@ -898,7 +906,7 @@ void auth_chain_d_init_data_size(struct obfs_t *obfs) {
     shift128plus_init_from_bin(random, server->key, 16);
     special_data->data_size_list0_length = shift128plus_next(random) % (8 + 16) + (4 + 8);
     special_data->data_size_list0 = (int *)malloc(AUTH_CHAIN_D_MAX_DATA_SIZE_LIST_LIMIT_SIZE * sizeof(int));
-    for (int i = 0; i < special_data->data_size_list0_length; i++) {
+    for (i = 0; i < special_data->data_size_list0_length; i++) {
         special_data->data_size_list0[i] = shift128plus_next(random) % 2340 % 2040 % 1440;
     }
     // stdlib qsort
@@ -1019,6 +1027,7 @@ void * auth_chain_f_init_data(void) {
 }
 
 static void auth_chain_f_init_data_size(struct obfs_t *obfs, const uint8_t *key_change_datetime_key_bytes) {
+    int i = 0;
     struct server_info_t *server = &obfs->server;
 
     struct auth_chain_c_data *special_data = (struct auth_chain_c_data *)
@@ -1028,7 +1037,7 @@ static void auth_chain_f_init_data_size(struct obfs_t *obfs, const uint8_t *key_
 
     uint8_t *newKey = (uint8_t *)malloc(sizeof(uint8_t) * server->key_len);
     memcpy(newKey, server->key, server->key_len);
-    for (int i = 0; i != 8; ++i) {
+    for (i = 0; i != 8; ++i) {
         newKey[i] ^= key_change_datetime_key_bytes[i];
     }
     shift128plus_init_from_bin(random, newKey, server->key_len);
@@ -1038,7 +1047,7 @@ static void auth_chain_f_init_data_size(struct obfs_t *obfs, const uint8_t *key_
     special_data->data_size_list0_length = shift128plus_next(random) % (8 + 16) + (4 + 8);
     size_t len = max(AUTH_CHAIN_D_MAX_DATA_SIZE_LIST_LIMIT_SIZE, special_data->data_size_list0_length);
     special_data->data_size_list0 = (int *) calloc(len, sizeof(special_data->data_size_list0[0]));
-    for (int i = 0; i < special_data->data_size_list0_length; i++) {
+    for (i = 0; i < special_data->data_size_list0_length; i++) {
         special_data->data_size_list0[i] = shift128plus_next(random) % 2340 % 2040 % 1440;
     }
     // stdlib qsort
@@ -1087,7 +1096,8 @@ void auth_chain_f_set_server_info(struct obfs_t *obfs, struct server_info_t *ser
 
     uint8_t *key_change_datetime_key_bytes = (uint8_t *)malloc(sizeof(uint8_t) * 8);
     uint64_t key_change_datetime_key = (uint64_t)(time(NULL)) / key_change_interval;
-    for (int i = 7; i >= 0; --i) {
+    int i = 0;
+    for (i = 7; i >= 0; --i) {
         key_change_datetime_key_bytes[7 - i] = (uint8_t)((key_change_datetime_key >> (8 * i)) & 0xFF);
     }
 

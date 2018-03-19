@@ -94,8 +94,9 @@ enum ssr_protocol ssr_protocol_type_of_name(const char *name) {
     };
     
     enum ssr_protocol result = ssr_protocol_max;
-    
-    for (size_t index=0; index<SIZEOF_ARRAY(protocol_name_arr); ++index) {
+
+     size_t index = 0;    
+    for (index=0; index<SIZEOF_ARRAY(protocol_name_arr); ++index) {
         if (strcicmp(name, protocol_name_arr[index].name) == 0) {
             result = protocol_name_arr[index].index;
             break;
@@ -128,8 +129,9 @@ enum ssr_obfs ssr_obfs_type_of_name(const char *name) {
     };
     
     enum ssr_obfs result = ssr_obfs_max;
-    
-    for (size_t index=0; index<SIZEOF_ARRAY(obfs_name_arr); ++index) {
+ 
+    size_t index = 0;
+    for (index=0; index<SIZEOF_ARRAY(obfs_name_arr); ++index) {
         if (strcicmp(name, obfs_name_arr[index].name) == 0) {
             result = obfs_name_arr[index].index;
             break;

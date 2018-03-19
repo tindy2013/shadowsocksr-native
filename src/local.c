@@ -941,7 +941,8 @@ remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
     char *guard = buf0->base + nread;
 
-    for (char *iter = buf0->base; iter < guard; iter += FIXED_BUFF_SIZE) {
+    char *iter = NULL;
+    for (iter = buf0->base; iter < guard; iter += FIXED_BUFF_SIZE) {
         size_t remain = guard - iter;
         size_t len = remain > FIXED_BUFF_SIZE ? FIXED_BUFF_SIZE : remain;
 
@@ -1112,8 +1113,8 @@ static void
 listener_release(struct listener_t *listener)
 {
     ss_free(listener->iface);
-
-    for(int i = 0; i < listener->server_num; i++) {
+    int i = 0;
+    for(i = 0; i < listener->server_num; i++) {
         struct server_env_t *server_env = &listener->servers[i];
 
         ss_free(server_env->host);
