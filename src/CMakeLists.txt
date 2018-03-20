@@ -13,7 +13,7 @@ set(SOURCE_FILES_OBFS
         obfs/auth_chain.c
         obfs/base64.c
         obfs/crc32.c
-        obfs/c_lib.c
+        obfs/cstl_lib.c
         obfs/http_simple.c
         obfs/obfs.c
         obfs/obfsutil.c

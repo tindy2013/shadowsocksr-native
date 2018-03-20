@@ -30,7 +30,7 @@
 #include "obfsutil.h"
 #include "ssrbuffer.h"
 #include "obfs.h"
-#include "c_lib.h"
+#include "cstl_lib.h"
 
 const char * ssr_strerror(enum ssr_error err) {
 #define SSR_ERR_GEN(_, name, errmsg) case (name): return errmsg;
@@ -149,31 +149,31 @@ bool is_completed_package(struct server_env_t *env, const uint8_t *data, size_t 
     return size > (enc_get_iv_len(env->cipher) + 1);
 }
 
-struct clib_set * objects_container_create(void) {
+struct cstl_set * objects_container_create(void) {
     // https://github.com/davinash/cstl/blob/master/test/t_c_set.c#L93
-    return c_set_new(c_set_compare_element, NULL);
+    return cstl_set_new(c_set_compare_element, NULL);
 }
 
-void objects_container_destroy(struct clib_set *set) {
-    c_set_delete(set);
+void objects_container_destroy(struct cstl_set *set) {
+    cstl_set_delete(set);
 }
 
-void objects_container_add(struct clib_set *set, void *obj) {
+void objects_container_add(struct cstl_set *set, void *obj) {
     ASSERT(set && obj);
-    c_set_insert(set, &obj, sizeof(void *));
+    cstl_set_insert(set, &obj, sizeof(void *));
 }
 
-void objects_container_remove(struct clib_set *set, void *obj) {
-    ASSERT(clib_true == c_set_exists(set, &obj));
-    c_set_remove(set, &obj);
+void objects_container_remove(struct cstl_set *set, void *obj) {
+    ASSERT(cstl_true == cstl_set_exists(set, &obj));
+    cstl_set_remove(set, &obj);
 }
 
-void objects_container_traverse(struct clib_set *set, void(*fn)(void *obj, void *p), void *p) {
+void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p) {
     if (set==NULL || fn==NULL) {
         return;
     }
-    struct clib_iterator *iterator = c_set_new_iterator(set);
-    struct clib_object *element;
+    struct cstl_iterator *iterator = cstl_set_new_iterator(set);
+    struct cstl_object *element;
     while( (element = iterator->get_next(iterator)) ) {
         void **obj = iterator->get_value(element);
         if (obj) {
@@ -181,7 +181,7 @@ void objects_container_traverse(struct clib_set *set, void(*fn)(void *obj, void 
             free(obj);
         }
     }
-    c_set_delete_iterator(iterator);
+    cstl_set_delete_iterator(iterator);
 }
 
 void init_obfs(struct server_env_t *env, const char *protocol, const char *obfs) {

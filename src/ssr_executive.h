@@ -11,7 +11,7 @@
 struct cipher_env_t;
 struct obfs_manager;
 struct tunnel_ctx;
-struct clib_set;
+struct cstl_set;
 
 struct server_config {
     char *listen_host;
@@ -34,7 +34,7 @@ struct server_env_t {
 
     struct server_config *config; // __weak_ptr
     
-    struct clib_set *tunnel_set;
+    struct cstl_set *tunnel_set;
 
     struct cipher_env_t *cipher;
 
@@ -88,11 +88,11 @@ void config_change_for_server(struct server_config *config);
 struct server_env_t * ssr_cipher_env_create(struct server_config *config, void *data);
 void ssr_cipher_env_release(struct server_env_t *env);
 bool is_completed_package(struct server_env_t *env, const uint8_t *data, size_t size);
-struct clib_set * objects_container_create(void);
-void objects_container_destroy(struct clib_set *set);
-void objects_container_add(struct clib_set *set, void *obj);
-void objects_container_remove(struct clib_set *set, void *obj);
-void objects_container_traverse(struct clib_set *set, void(*fn)(void *obj, void *p), void *p);
+struct cstl_set * objects_container_create(void);
+void objects_container_destroy(struct cstl_set *set);
+void objects_container_add(struct cstl_set *set, void *obj);
+void objects_container_remove(struct cstl_set *set, void *obj);
+void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p);
 struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const struct buffer_t *init_pkg);
 void tunnel_cipher_release(struct tunnel_cipher_ctx *tc);
 enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf);

@@ -101,7 +101,7 @@
 struct udp_listener_ctx_t {
     uv_udp_t io;
     int timeout;
-    struct clib_set *connections;
+    struct cstl_set *connections;
 #ifdef MODULE_LOCAL
     union sockaddr_universal remote_addr;
     struct ss_host_port tunnel_addr;
