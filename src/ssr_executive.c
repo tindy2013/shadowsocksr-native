@@ -184,6 +184,44 @@ void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void 
     cstl_set_delete_iterator(iterator);
 }
 
+
+
+struct cstl_map * obj_map_create(int(*compare_key)(void*,void*), void (*destroy_key)(void*), void (*destroy_value)(void*)) {
+    return cstl_map_new(compare_key, destroy_key, destroy_value);
+}
+
+void obj_map_destroy(struct cstl_map *map) {
+    cstl_map_delete(map);
+}
+
+void obj_map_add(struct cstl_map *map, void *key, void *value) {
+    cstl_map_insert(map, key, sizeof(key), value, sizeof(value));
+}
+
+void obj_map_remove(struct cstl_map *map, void *key) {
+    cstl_map_remove(map, key);
+}
+
+const void * obj_map_find(struct cstl_map *map, void *key) {
+    return cstl_map_find(map, key);
+}
+
+void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const void *value, void *p), void *p) {
+    if (map==NULL || fn==NULL) {
+        return;
+    }
+    struct cstl_iterator *iterator = cstl_map_new_iterator(map);
+    struct cstl_object *element;
+
+    while( (element = iterator->get_next(iterator)) ) {
+        struct cstl_rb_node *current = (struct cstl_rb_node *)iterator->pCurrentElement;
+        const void *key = cstl_object_get_data(current->key);
+        const void *value = cstl_object_get_data(current->value);
+        fn(key, value, p);
+    }
+    cstl_map_delete_iterator(iterator);
+}
+
 void init_obfs(struct server_env_t *env, const char *protocol, const char *obfs) {
     env->protocol_plugin = new_obfs_manager(protocol);
     if (env->protocol_plugin) {

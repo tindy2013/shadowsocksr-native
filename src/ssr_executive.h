@@ -88,11 +88,20 @@ void config_change_for_server(struct server_config *config);
 struct server_env_t * ssr_cipher_env_create(struct server_config *config, void *data);
 void ssr_cipher_env_release(struct server_env_t *env);
 bool is_completed_package(struct server_env_t *env, const uint8_t *data, size_t size);
+
 struct cstl_set * objects_container_create(void);
 void objects_container_destroy(struct cstl_set *set);
 void objects_container_add(struct cstl_set *set, void *obj);
 void objects_container_remove(struct cstl_set *set, void *obj);
 void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p);
+
+struct cstl_map;
+struct cstl_map * obj_map_create(int(*compare_key)(void*,void*), void (*destroy_key)(void*), void (*destroy_value)(void*));
+void obj_map_destroy(struct cstl_map *map);
+void obj_map_add(struct cstl_map *map, void *key, void *value);
+void obj_map_remove(struct cstl_map *map, void *key);
+void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const void *value, void *p), void *p);
+
 struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const struct buffer_t *init_pkg);
 void tunnel_cipher_release(struct tunnel_cipher_ctx *tc);
 enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf);
