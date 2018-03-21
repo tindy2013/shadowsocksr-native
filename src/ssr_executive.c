@@ -194,8 +194,14 @@ void obj_map_destroy(struct cstl_map *map) {
     cstl_map_delete(map);
 }
 
-void obj_map_add(struct cstl_map *map, void *key, void *value) {
-    cstl_map_insert(map, key, sizeof(key), value, sizeof(value));
+bool obj_map_add(struct cstl_map *map, void *key, size_t k_size, void *value, size_t v_size) {
+    cstl_error rc;
+    if (cstl_map_exists(map, key) == cstl_false) {
+        rc = cstl_map_insert(map, key, k_size, value, v_size);
+    } else {
+        rc = cstl_map_replace(map, key, value, v_size);
+    }
+    return rc == CSTL_ERROR_SUCCESS;
 }
 
 void obj_map_remove(struct cstl_map *map, void *key) {

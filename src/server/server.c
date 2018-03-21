@@ -23,6 +23,7 @@ struct ssr_server_state {
 
     uv_tcp_t *tcp_listener;
     struct udp_listener_ctx_t *udp_listener;
+    struct cstl_map *resolved_ips;
 };
 
 enum session_state {
@@ -39,6 +40,11 @@ struct server_ctx {
     struct buffer_t *init_pkg;
     struct socks5_address *s5addr;
     enum session_state state;
+};
+
+struct address_timestamp {
+    union sockaddr_universal address;
+    time_t timestamp;
 };
 
 static int ssr_server_run_loop(struct server_config *config);
@@ -69,6 +75,10 @@ static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx
 static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_launch_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+
+static int resolved_ips_compare_key(void *left, void *right);
+static void resolved_ips_destroy_object(void *obj);
+static void resolved_ips_destroy_object2(void *obj);
 
 void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
@@ -150,6 +160,10 @@ static int ssr_server_run_loop(struct server_config *config) {
             return fprintf(stderr, "Error on listening: %s.\n", uv_strerror(error));
         }
         state->tcp_listener = listener;
+
+        state->resolved_ips = obj_map_create(resolved_ips_compare_key,
+                                             resolved_ips_destroy_object,
+                                             resolved_ips_destroy_object2);
     }
 
     {
@@ -170,6 +184,8 @@ static int ssr_server_run_loop(struct server_config *config) {
 
         free(state->sigint_watcher);
         free(state->sigterm_watcher);
+
+        obj_map_destroy(state->resolved_ips);
 
         free(state);
     }
@@ -285,8 +301,6 @@ void tunnel_establish_init_cb(uv_stream_t *server, int status) {
 
 static void tunnel_dying(struct tunnel_ctx *tunnel) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-
-    // resolv_cancel(server->query);
 
     objects_container_remove(ctx->env->tunnel_set, tunnel);
     if (ctx->cipher) {
@@ -459,6 +473,7 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
     size_t offset     = 0;
+    const char *host = NULL;
 
     ASSERT(incoming == socket);
 
@@ -475,10 +490,11 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     ctx->init_pkg->len -= offset;
     memmove(ctx->init_pkg->buffer, ctx->init_pkg->buffer + offset, ctx->init_pkg->len);
 
+    host = s5addr->addr.domainname;
+
     union sockaddr_universal target;
     bool ipFound = true;
     if (socks5_address_to_universal(s5addr, &target) == false) {
-        const char *host = s5addr->addr.domainname;
         ASSERT(s5addr->addr_type == SOCKS5_ADDRTYPE_DOMAINNAME);
 
         if (uv_ip4_addr(host, s5addr->port, &target.addr4) != 0) {
@@ -489,7 +505,18 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     }
 
     if (ipFound == false) {
-        const char *host = s5addr->addr.domainname;
+        struct ssr_server_state *state = (struct ssr_server_state *)ctx->env->data;
+        struct address_timestamp **addr = (struct address_timestamp **)
+                obj_map_find(state->resolved_ips, &host);
+        if (addr && *addr) {
+            uint16_t port = target.addr4.sin_port;
+            target = (*addr)->address;
+            target.addr4.sin_port = port;
+            ipFound = true;
+        }
+    }
+
+    if (ipFound == false) {
         if (!validate_hostname(host, strlen(host))) {
             // report_addr(server->fd, MALFORMED);
             tunnel_shutdown(tunnel);
@@ -523,6 +550,15 @@ static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
         return;
     }
 
+    {
+        struct ssr_server_state *state = (struct ssr_server_state *)ctx->env->data;
+        const char *host = strdup(ctx->s5addr->addr.domainname);
+        struct address_timestamp *addr = (struct address_timestamp *)
+                calloc(1, sizeof(struct address_timestamp));
+        addr->address = outgoing->t.addr;
+        obj_map_add(state->resolved_ips, &host, sizeof(void *), &addr, sizeof(void *));
+    }
+
     do_connect_remote_start(tunnel, socket);
 }
 
@@ -534,7 +570,6 @@ static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx
 
     incoming = tunnel->incoming;
     outgoing = tunnel->outgoing;
-    ASSERT(outgoing == socket);
     ASSERT(incoming->rdstate == socket_stop || incoming->rdstate == socket_done);
     ASSERT(incoming->wrstate == socket_stop || incoming->wrstate == socket_done);
     ASSERT(outgoing->rdstate == socket_stop || outgoing->rdstate == socket_done);
@@ -674,6 +709,30 @@ static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
                 socket_write(outgoing, buf->buffer, buf->len);
             }
         } while (0);
+    }
+}
+
+static int resolved_ips_compare_key(void *left, void *right) {
+    char *l = *(char **)left;
+    char *r = *(char **)right;
+    return strcmp(l, r);
+}
+
+static void resolved_ips_destroy_object(void *obj) {
+    if (obj) {
+        char *str = *((char **)obj);
+        if (str) {
+            free(str);
+        }
+    }
+}
+
+static void resolved_ips_destroy_object2(void *obj) {
+    if (obj) {
+        struct address_timestamp *p = *((struct address_timestamp **)obj);
+        if (p) {
+            free(p);
+        }
     }
 }
 
