@@ -561,6 +561,28 @@ cstl_map_exists(struct cstl_map* pMap, void* key) {
 }
 
 cstl_error
+cstl_map_replace(struct cstl_map* pMap, void* key, void* value,  size_t value_size) {
+    struct cstl_rb_node* node;
+    if (pMap == (struct cstl_map*)0) {
+        return CSTL_MAP_NOT_INITIALIZED;
+    }
+    node = cstl_rb_find(pMap->root, key);
+    if (node == (struct cstl_rb_node*)0) {
+        return CSTL_RBTREE_KEY_NOT_FOUND;
+    }
+
+    if (pMap->root->destruct_v_fn) {
+        void* old_element = (void *)cstl_object_get_data(node->value);
+        if (old_element) {
+            pMap->root->destruct_v_fn(old_element);
+        }
+    }
+    cstl_object_replace_raw(node->value, value, value_size);
+    return CSTL_ERROR_SUCCESS;
+}
+
+
+cstl_error
 cstl_map_remove(struct cstl_map* pMap, void* key) {
     cstl_error rc = CSTL_ERROR_SUCCESS;
     struct cstl_rb_node* node;
@@ -856,7 +878,9 @@ cstl_rb_insert(struct cstl_rb* pTree, void* k, size_t key_size, void* v, size_t 
         free(cur_key);
         free(new_key);
         if (c == 0) {
-            /* TODO : Delete node here */
+            cstl_object_delete(x->key);
+            cstl_object_delete(x->value);
+            free(x);
             return CSTL_RBTREE_KEY_DUPLICATE;
         }
         z = y;
