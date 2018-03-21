@@ -47,11 +47,12 @@ cstl_for_each(struct cstl_iterator *pIterator, void(*fn)(void*)) {
 #include <stdio.h>
 
 static struct cstl_array*
-array_check_and_grow(struct cstl_array* pArray) {
+cstl_array_check_and_grow(struct cstl_array* pArray) {
     if (pArray->no_of_elements >= pArray->no_max_elements) {
+        size_t size;
         pArray->no_max_elements = 2 * pArray->no_max_elements;
-        pArray->pElements = (struct cstl_object**) realloc(pArray->pElements,
-            pArray->no_max_elements * sizeof(struct cstl_object*));
+        size = pArray->no_max_elements * sizeof(struct cstl_object*);
+        pArray->pElements = (struct cstl_object**) realloc(pArray->pElements, size);
     }
     return pArray;
 }
@@ -76,7 +77,7 @@ cstl_array_new(int array_size, cstl_compare fn_c, cstl_destroy fn_d) {
 }
 
 static cstl_error
-insert_c_array(struct cstl_array* pArray, int index, void* elem, size_t elem_size) {
+cstl_array_insert(struct cstl_array* pArray, int index, void* elem, size_t elem_size) {
     cstl_error rc = CSTL_ERROR_SUCCESS;
     struct cstl_object* pObject = cstl_object_new(elem, elem_size);
     if (!pObject) {
@@ -94,9 +95,9 @@ cstl_array_push_back(struct cstl_array* pArray, void* elem, size_t elem_size) {
     if (!pArray) {
         return CSTL_ARRAY_NOT_INITIALIZED;
     }
-    array_check_and_grow(pArray);
+    cstl_array_check_and_grow(pArray);
 
-    rc = insert_c_array(pArray, pArray->no_of_elements, elem, elem_size);
+    rc = cstl_array_insert(pArray, pArray->no_of_elements, elem, elem_size);
 
     return rc;
 }
@@ -147,7 +148,7 @@ cstl_array_reserve(struct cstl_array* pArray, int new_size) {
     if (new_size <= pArray->no_max_elements) {
         return CSTL_ERROR_SUCCESS;
     }
-    array_check_and_grow(pArray);
+    cstl_array_check_and_grow(pArray);
     return CSTL_ERROR_SUCCESS;
 }
 
@@ -170,13 +171,13 @@ cstl_array_insert_at(struct cstl_array* pArray, int index, void* elem, size_t el
     if (index < 0 || index > pArray->no_max_elements) {
         return CSTL_ARRAY_INDEX_OUT_OF_BOUND;
     }
-    array_check_and_grow(pArray);
+    cstl_array_check_and_grow(pArray);
 
     memmove(&(pArray->pElements[index + 1]),
-        &pArray->pElements[index],
-        (pArray->no_of_elements - index) * sizeof(struct cstl_object*));
+            &pArray->pElements[index],
+            (pArray->no_of_elements - index) * sizeof(struct cstl_object*));
 
-    rc = insert_c_array(pArray, index, elem, elem_size);
+    rc = cstl_array_insert(pArray, index, elem, elem_size);
 
     return rc;
 }
@@ -201,8 +202,8 @@ cstl_array_remove_from(struct cstl_array* pArray, int index) {
     cstl_object_delete(pArray->pElements[index]);
 
     memmove(&(pArray->pElements[index]),
-        &pArray->pElements[index + 1],
-        (pArray->no_of_elements - index) * sizeof(struct cstl_object*));
+            &pArray->pElements[index + 1],
+            (pArray->no_of_elements - index) * sizeof(struct cstl_object*));
     pArray->no_of_elements--;
 
     return rc;
@@ -235,7 +236,7 @@ cstl_array_delete(struct cstl_array* pArray) {
 }
 
 static struct cstl_object*
-get_next_c_array(struct cstl_iterator* pIterator) {
+cstl_array_get_next(struct cstl_iterator* pIterator) {
     struct cstl_array *pArray = (struct cstl_array*)pIterator->pContainer;
     if (pIterator->pCurrent > cstl_array_size(pArray)) {
         return (struct cstl_object*)0;
@@ -245,16 +246,15 @@ get_next_c_array(struct cstl_iterator* pIterator) {
 }
 
 static void*
-get_value_c_array(void* pObject) {
-    void* elem;
+cstl_array_get_value(void* pObject) {
+    void* elem = (void *)0;
     cstl_object_get_raw(pObject, &elem);
     return elem;
 }
 
 static void
-replace_value_c_array(struct cstl_iterator *pIterator, void* elem, size_t elem_size) {
+cstl_array_replace_value(struct cstl_iterator *pIterator, void* elem, size_t elem_size) {
     struct cstl_array*  pArray = (struct cstl_array*)pIterator->pContainer;
-
     if (pArray->destruct_fn) {
         void* old_element;
         if (CSTL_ERROR_SUCCESS == cstl_object_get_raw(pIterator->pCurrentElement, &old_element)) {
@@ -268,9 +268,9 @@ replace_value_c_array(struct cstl_iterator *pIterator, void* elem, size_t elem_s
 struct cstl_iterator*
 cstl_array_new_iterator(struct cstl_array* pArray) {
     struct cstl_iterator *itr = (struct cstl_iterator*) calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = get_next_c_array;
-    itr->get_value = get_value_c_array;
-    itr->replace_value = replace_value_c_array;
+    itr->get_next = cstl_array_get_next;
+    itr->get_value = cstl_array_get_value;
+    itr->replace_value = cstl_array_replace_value;
     itr->pContainer = pArray;
     itr->pCurrent = 0;
     return itr;
@@ -288,7 +288,7 @@ cstl_array_delete_iterator(struct cstl_iterator* pItr) {
 #define cstl_deque_INDEX(x)  ((char *)(pDeq)->pElements + (sizeof(struct cstl_object) * (x)))
 
 static cstl_error
-insert_c_deque(struct cstl_deque* pDeq, int index, void* elem, size_t elem_size) {
+cstl_deque_insert(struct cstl_deque* pDeq, int index, void* elem, size_t elem_size) {
     cstl_error rc = CSTL_ERROR_SUCCESS;
     struct cstl_object* pObject = cstl_object_new(elem, elem_size);
     if (!pObject) {
@@ -300,10 +300,11 @@ insert_c_deque(struct cstl_deque* pDeq, int index, void* elem, size_t elem_size)
 }
 
 static struct cstl_deque*
-grow_deque(struct cstl_deque* pDeq) {
+cstl_deque_grow(struct cstl_deque* pDeq) {
+    size_t size;
     pDeq->no_max_elements = pDeq->no_max_elements * 2;
-    pDeq->pElements = (struct cstl_object**) realloc(pDeq->pElements,
-        pDeq->no_max_elements * sizeof(struct cstl_object*));
+    size = pDeq->no_max_elements * sizeof(struct cstl_object*);
+    pDeq->pElements = (struct cstl_object**) realloc(pDeq->pElements, size);
     return pDeq;
 }
 
@@ -334,9 +335,9 @@ cstl_deque_push_back(struct cstl_deque* pDeq, void* elem, size_t elem_size) {
         return CSTL_DEQUE_NOT_INITIALIZED;
     }
     if (pDeq->tail == pDeq->no_max_elements) {
-        pDeq = grow_deque(pDeq);
+        pDeq = cstl_deque_grow(pDeq);
     }
-    insert_c_deque(pDeq, pDeq->tail, elem, elem_size);
+    cstl_deque_insert(pDeq, pDeq->tail, elem, elem_size);
     pDeq->tail++;
 
     return CSTL_ERROR_SUCCESS;
@@ -350,7 +351,7 @@ cstl_deque_push_front(struct cstl_deque* pDeq, void* elem, size_t elem_size) {
     int count = 0;
 
     if (pDeq->head == 0) {
-        pDeq = grow_deque(pDeq);
+        pDeq = cstl_deque_grow(pDeq);
         to = (pDeq->no_max_elements - pDeq->no_of_elements) / 2;
         from = pDeq->head + 1;
         count = pDeq->tail - from + 1;
@@ -358,7 +359,7 @@ cstl_deque_push_front(struct cstl_deque* pDeq, void* elem, size_t elem_size) {
         pDeq->head = to - 1;
         pDeq->tail = pDeq->head + count;
     }
-    insert_c_deque(pDeq, pDeq->head, elem, elem_size);
+    cstl_deque_insert(pDeq, pDeq->head, elem, elem_size);
     pDeq->head--;
     return rc;
 }
@@ -472,7 +473,7 @@ cstl_deque_delete(struct cstl_deque* pDeq) {
 }
 
 static struct cstl_object*
-get_next_c_deque(struct cstl_iterator* pIterator) {
+cstl_deque_get_next(struct cstl_iterator* pIterator) {
     struct cstl_deque *pDeq = (struct cstl_deque*)pIterator->pContainer;
     int index = ((struct cstl_iterator*)pIterator)->pCurrent;
 
@@ -484,14 +485,14 @@ get_next_c_deque(struct cstl_iterator* pIterator) {
 }
 
 static void*
-get_value_c_deque(void* pObject) {
+cstl_deque_get_value(void* pObject) {
     void* elem = (void *)0;
     cstl_object_get_raw(pObject, &elem);
     return elem;
 }
 
 static void
-replace_value_c_deque(struct cstl_iterator *pIterator, void* elem, size_t elem_size) {
+cstl_deque_replace_value(struct cstl_iterator *pIterator, void* elem, size_t elem_size) {
     struct cstl_deque*  pDeq = (struct cstl_deque*)pIterator->pContainer;
     if (pDeq->destruct_fn) {
         void* old_element;
@@ -506,9 +507,9 @@ replace_value_c_deque(struct cstl_iterator *pIterator, void* elem, size_t elem_s
 struct cstl_iterator*
 cstl_deque_new_iterator(struct cstl_deque* pDeq) {
     struct cstl_iterator *itr = (struct cstl_iterator*) calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = get_next_c_deque;
-    itr->get_value = get_value_c_deque;
-    itr->replace_value = replace_value_c_deque;
+    itr->get_next = cstl_deque_get_next;
+    itr->get_value = cstl_deque_get_value;
+    itr->replace_value = cstl_deque_replace_value;
     itr->pCurrent = pDeq->head + 1;
     itr->pContainer = pDeq;
     return itr;
@@ -590,20 +591,18 @@ cstl_map_remove(struct cstl_map* pMap, void* key) {
     return rc;
 }
 
-cstl_bool
-cstl_map_find(struct cstl_map* pMap, void* key, void**value) {
+const void *
+cstl_map_find(struct cstl_map* pMap, void* key) {
     struct cstl_rb_node* node;
 
     if (pMap == (struct cstl_map*)0) {
-        return cstl_false;
+        return (void *)0;
     }
     node = cstl_rb_find(pMap->root, key);
     if (node == (struct cstl_rb_node*)0) {
-        return cstl_false;
+        return (void *)0;
     }
-    cstl_object_get_raw(node->value, value);
-
-    return cstl_true;
+    return cstl_object_get_data(node->value);
 }
 
 cstl_error
@@ -617,14 +616,14 @@ cstl_map_delete(struct cstl_map* x) {
 }
 
 static struct cstl_rb_node *
-minimum_c_map(struct cstl_map *x) {
+cstl_map_minimum(struct cstl_map *x) {
     return cstl_rb_minimum(x->root, x->root->root);
 }
 
 static struct cstl_object*
-get_next_c_map(struct cstl_iterator* pIterator) {
+cstl_map_get_next(struct cstl_iterator* pIterator) {
     if (!pIterator->pCurrentElement) {
-        pIterator->pCurrentElement = minimum_c_map(pIterator->pContainer);
+        pIterator->pCurrentElement = cstl_map_minimum(pIterator->pContainer);
     } else {
         struct cstl_map *x = (struct cstl_map*)pIterator->pContainer;
         pIterator->pCurrentElement = cstl_rb_tree_successor(x->root, pIterator->pCurrentElement);
@@ -636,14 +635,14 @@ get_next_c_map(struct cstl_iterator* pIterator) {
 }
 
 static void*
-get_value_c_map(void* pObject) {
+cstl_map_get_value(void* pObject) {
     void* elem = (void *)0;
     cstl_object_get_raw(pObject, &elem);
     return elem;
 }
 
 static void
-replace_value_c_map(struct cstl_iterator *pIterator, void* elem, size_t elem_size) {
+cstl_map_replace_value(struct cstl_iterator *pIterator, void* elem, size_t elem_size) {
     struct cstl_map *pMap = (struct cstl_map*)pIterator->pContainer;
 
     if (pMap->root->destruct_v_fn) {
@@ -659,9 +658,9 @@ replace_value_c_map(struct cstl_iterator *pIterator, void* elem, size_t elem_siz
 struct cstl_iterator*
 cstl_map_new_iterator(struct cstl_map* pMap) {
     struct cstl_iterator *itr = (struct cstl_iterator*)calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = get_next_c_map;
-    itr->get_value = get_value_c_map;
-    itr->replace_value = replace_value_c_map;
+    itr->get_next = cstl_map_get_next;
+    itr->get_value = cstl_map_get_value;
+    itr->replace_value = cstl_map_replace_value;
     itr->pContainer = pMap;
     itr->pCurrent = 0;
     itr->pCurrentElement = (void*)0;
@@ -994,7 +993,7 @@ __remove_c_rb(struct cstl_rb* pTree, struct cstl_rb_node* z) {
 }
 
 struct cstl_rb_node*
-    cstl_rb_remove(struct cstl_rb* pTree, void* key) {
+cstl_rb_remove(struct cstl_rb* pTree, void* key) {
     struct cstl_rb_node* z = (struct cstl_rb_node*)0;
 
     z = pTree->root;
@@ -1078,7 +1077,7 @@ cstl_rb_minimum(struct cstl_rb* pTree, struct cstl_rb_node* x) {
 }
 
 struct cstl_rb_node *
-maximum_cstl_rb(struct cstl_rb* pTree, struct cstl_rb_node* x) {
+cstl_rb_maximum(struct cstl_rb* pTree, struct cstl_rb_node* x) {
     while (x->right != rb_sentinel) {
         x = x->right;
     }
@@ -1099,7 +1098,7 @@ cstl_rb_tree_successor(struct cstl_rb* pTree, struct cstl_rb_node* x) {
     if (x->right != rb_sentinel) {
         return cstl_rb_minimum(pTree, x->right);
     }
-    if (x == maximum_cstl_rb(pTree, pTree->root)) {
+    if (x == cstl_rb_maximum(pTree, pTree->root)) {
         return (struct cstl_rb_node*)0;
     }
     y = x->parent;
@@ -1112,7 +1111,7 @@ cstl_rb_tree_successor(struct cstl_rb* pTree, struct cstl_rb_node* x) {
 
 /*
 struct cstl_rb_node *
-get_next_c_rb(struct cstl_rb* pTree, struct cstl_rb_node**current, struct cstl_rb_node**pre) {
+cstl_rb_get_next(struct cstl_rb* pTree, struct cstl_rb_node**current, struct cstl_rb_node**pre) {
     struct cstl_rb_node* prev_current;
     while ((*current) != rb_sentinel) {
         if ((*current)->left == rb_sentinel) {
@@ -1281,14 +1280,14 @@ cstl_set_delete(struct cstl_set* x) {
 }
 
 static struct cstl_rb_node *
-minimum_c_set(struct cstl_set *x) {
+cstl_set_minimum(struct cstl_set *x) {
     return cstl_rb_minimum(x->root, x->root->root);
 }
 
 static struct cstl_object*
-get_next_c_set(struct cstl_iterator* pIterator) {
+cstl_set_get_next(struct cstl_iterator* pIterator) {
     if (!pIterator->pCurrentElement) {
-        pIterator->pCurrentElement = minimum_c_set(pIterator->pContainer);
+        pIterator->pCurrentElement = cstl_set_minimum(pIterator->pContainer);
     } else {
         struct cstl_set *x = (struct cstl_set*)pIterator->pContainer;
         pIterator->pCurrentElement = cstl_rb_tree_successor(x->root, pIterator->pCurrentElement);
@@ -1300,7 +1299,7 @@ get_next_c_set(struct cstl_iterator* pIterator) {
 }
 
 static void*
-get_value_c_set(void* pObject) {
+cstl_set_get_value(void* pObject) {
     void* elem = (void *)0;
     cstl_object_get_raw(pObject, &elem);
     return elem;
@@ -1309,8 +1308,8 @@ get_value_c_set(void* pObject) {
 struct cstl_iterator*
 cstl_set_new_iterator(struct cstl_set* pSet) {
     struct cstl_iterator *itr = (struct cstl_iterator*) calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = get_next_c_set;
-    itr->get_value = get_value_c_set;
+    itr->get_next = cstl_set_get_next;
+    itr->get_value = cstl_set_get_value;
     itr->pContainer = pSet;
     itr->pCurrent = 0;
     itr->pCurrentElement = (void*)0;
@@ -1372,7 +1371,7 @@ cstl_slist_push_back(struct cstl_slist* pSlist, void* elem, size_t elem_size) {
 }
 
 static void
-__remove_c_list(struct cstl_slist* pSlist, struct cstl_slist_node* pSlistNode) {
+__cstl_slist_remove(struct cstl_slist* pSlist, struct cstl_slist_node* pSlistNode) {
     if (pSlist->destruct_fn) {
         void* elem;
         if (cstl_object_get_raw(pSlistNode->elem, &elem) == CSTL_ERROR_SUCCESS) {
@@ -1396,7 +1395,7 @@ cstl_slist_remove(struct cstl_slist* pSlist, int pos) {
 
     if (pos == 0) {
         pSlist->head = current->next;
-        __remove_c_list(pSlist, current);
+        __cstl_slist_remove(pSlist, current);
         pSlist->size--;
         return;
     }
@@ -1405,7 +1404,7 @@ cstl_slist_remove(struct cstl_slist* pSlist, int pos) {
     }
     temp = current->next;
     current->next = current->next->next;
-    __remove_c_list(pSlist, temp);
+    __cstl_slist_remove(pSlist, temp);
 
     pSlist->size--;
 }
@@ -1480,7 +1479,7 @@ cstl_slist_find(struct cstl_slist* pSlist, void* find_value, void**out_value) {
 }
 
 static struct cstl_object*
-get_next_c_slist(struct cstl_iterator* pIterator) {
+cstl_slist_get_next(struct cstl_iterator* pIterator) {
     struct cstl_slist *pSlist = (struct cstl_slist*)pIterator->pContainer;
     if (!pIterator->pCurrentElement) {
         pIterator->pCurrentElement = (struct cstl_slist_node*)pSlist->head;
@@ -1494,14 +1493,14 @@ get_next_c_slist(struct cstl_iterator* pIterator) {
 }
 
 static void*
-get_value_c_slist(void* pObject) {
+cstl_slist_get_value(void* pObject) {
     void* elem;
     cstl_object_get_raw(pObject, &elem);
     return elem;
 }
 
 static void
-replace_value_c_slist(struct cstl_iterator *pIterator, void* elem, size_t elem_size) {
+cstl_slist_replace_value(struct cstl_iterator *pIterator, void* elem, size_t elem_size) {
     struct cstl_slist*  pSlist = (struct cstl_slist*)pIterator->pContainer;
     struct cstl_object *pObj = ((struct cstl_slist_node*)pIterator->pCurrentElement)->elem;
 
@@ -1518,9 +1517,9 @@ replace_value_c_slist(struct cstl_iterator *pIterator, void* elem, size_t elem_s
 struct cstl_iterator*
 cstl_slist_new_iterator(struct cstl_slist* pSlist) {
     struct cstl_iterator *itr = (struct cstl_iterator*) calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = get_next_c_slist;
-    itr->get_value = get_value_c_slist;
-    itr->replace_value = replace_value_c_slist;
+    itr->get_next = cstl_slist_get_next;
+    itr->get_value = cstl_slist_get_value;
+    itr->replace_value = cstl_slist_replace_value;
     itr->pContainer = pSlist;
     itr->pCurrentElement = (void*)0;
     itr->pCurrent = 0;
@@ -1572,6 +1571,10 @@ cstl_object_get_raw(struct cstl_object *inObject, void**elem) {
     memcpy(*elem, inObject->raw_data, inObject->size);
 
     return CSTL_ERROR_SUCCESS;
+}
+
+const void * cstl_object_get_data(struct cstl_object *inObject) {
+    return inObject->raw_data;
 }
 
 void

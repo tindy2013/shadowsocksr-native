@@ -83,12 +83,12 @@ struct cstl_object {
 };
 
 struct cstl_iterator {
-	struct cstl_object* (*get_next)(struct cstl_iterator*);
-	void (*replace_value)(struct cstl_iterator*,void*,size_t);
-	void* (*get_value)(void*);
-	void* pContainer;
-	int   pCurrent;
-	void* pCurrentElement;
+    struct cstl_object* (*get_next)(struct cstl_iterator*);
+    void (*replace_value)(struct cstl_iterator*,void*,size_t);
+    void* (*get_value)(void*);
+    void* pContainer;
+    int   pCurrent;
+    void* pCurrentElement;
 };
 
 
@@ -151,7 +151,7 @@ struct cstl_rb_node {
     struct cstl_rb_node *left;
     struct cstl_rb_node *right;
     struct cstl_rb_node *parent;
-    int color; 
+    int color;
     struct cstl_object* key;
     struct cstl_object* value;
 };
@@ -160,7 +160,7 @@ struct cstl_rb {
     struct cstl_rb_node* root;
     struct cstl_rb_node sentinel;
     cstl_destroy destruct_k_fn;
-	cstl_destroy destruct_v_fn;
+    cstl_destroy destruct_v_fn;
     cstl_compare compare_fn;
 };
 
@@ -200,7 +200,7 @@ extern struct cstl_map* cstl_map_new( cstl_compare fn_c_k, cstl_destroy fn_k_d, 
 extern cstl_error   cstl_map_insert ( struct cstl_map* pMap, void* key, size_t key_size, void* value,  size_t value_size);
 extern cstl_bool    cstl_map_exists ( struct cstl_map* pMap, void* key);
 extern cstl_error   cstl_map_remove ( struct cstl_map* pMap, void* key);
-extern cstl_bool    cstl_map_find   ( struct cstl_map* pMap, void* key, void**value);
+extern const void * cstl_map_find   ( struct cstl_map* pMap, void* key);
 extern cstl_error   cstl_map_delete ( struct cstl_map* pMap);
 
 extern struct cstl_iterator* cstl_map_new_iterator(struct cstl_map* pMap);
@@ -246,6 +246,7 @@ extern char* cstl_strdup(char *ptr);
 
 extern struct cstl_object* cstl_object_new(void* inObject, size_t obj_size);
 extern cstl_error cstl_object_get_raw(struct cstl_object *inObject, void**elem);
+extern const void * cstl_object_get_data(struct cstl_object *inObject);
 extern void  cstl_object_delete(struct cstl_object* inObject);
 extern void cstl_object_replace_raw(struct cstl_object* current_object, void* elem, size_t elem_size);
 
