@@ -99,6 +99,8 @@ struct cstl_map;
 struct cstl_map * obj_map_create(int(*compare_key)(void*,void*), void (*destroy_key)(void*), void (*destroy_value)(void*));
 void obj_map_destroy(struct cstl_map *map);
 bool obj_map_add(struct cstl_map *map, void *key, size_t k_size, void *value, size_t v_size);
+bool obj_map_exists(struct cstl_map *map, void *key);
+bool obj_map_replace(struct cstl_map *map, void *key, void *value, size_t v_size);
 void obj_map_remove(struct cstl_map *map, void *key);
 const void * obj_map_find(struct cstl_map *map, void *key);
 void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const void *value, void *p), void *p);

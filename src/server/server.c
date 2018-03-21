@@ -506,8 +506,8 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 
     if (ipFound == false) {
         struct ssr_server_state *state = (struct ssr_server_state *)ctx->env->data;
-        struct address_timestamp **addr = (struct address_timestamp **)
-                obj_map_find(state->resolved_ips, &host);
+        struct address_timestamp **addr = NULL;
+        addr = (struct address_timestamp **)obj_map_find(state->resolved_ips, &host);
         if (addr && *addr) {
             target = (*addr)->address;
             target.addr4.sin_port = htons(s5addr->port);
@@ -550,12 +550,15 @@ static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
     }
 
     {
+        char *host = ctx->s5addr->addr.domainname;
         struct ssr_server_state *state = (struct ssr_server_state *)ctx->env->data;
-        const char *host = strdup(ctx->s5addr->addr.domainname);
-        struct address_timestamp *addr = (struct address_timestamp *)
-                calloc(1, sizeof(struct address_timestamp));
-        addr->address = outgoing->t.addr;
-        obj_map_add(state->resolved_ips, &host, sizeof(void *), &addr, sizeof(void *));
+        if (obj_map_exists(state->resolved_ips, &host) == false) {
+            struct address_timestamp *addr = NULL;
+            addr = (struct address_timestamp *)calloc(1, sizeof(struct address_timestamp));
+            addr->address = outgoing->t.addr;
+            host = strdup(host);
+            obj_map_add(state->resolved_ips, &host, sizeof(void *), &addr, sizeof(void *));
+        }
     }
 
     do_connect_remote_start(tunnel, socket);
