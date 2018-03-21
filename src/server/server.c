@@ -509,9 +509,8 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         struct address_timestamp **addr = (struct address_timestamp **)
                 obj_map_find(state->resolved_ips, &host);
         if (addr && *addr) {
-            uint16_t port = target.addr4.sin_port;
             target = (*addr)->address;
-            target.addr4.sin_port = port;
+            target.addr4.sin_port = htons(s5addr->port);
             ipFound = true;
         }
     }

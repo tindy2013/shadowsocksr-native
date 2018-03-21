@@ -154,7 +154,7 @@ endif()
 if (UNIX)
 if (APPLE)
 else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libstdc++ -static-libgcc -static")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 endif()
 
