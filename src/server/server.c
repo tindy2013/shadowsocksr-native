@@ -29,7 +29,7 @@ struct ssr_server_state {
 
 enum session_state {
     session_initial = 0,  /* Initial stage                    */
-    session_query_ip = 4,  /* Resolve the hostname             */
+    session_resolve_host = 4,  /* Resolve the hostname             */
     session_connect_target,
     session_launch_stream,
     session_stream,  /* Stream between client and server */
@@ -71,7 +71,7 @@ static bool is_header_complete(const struct buffer_t *buf);
 static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_launch_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -318,8 +318,8 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     case session_initial:
         do_init_package(tunnel, socket);
         break;
-    case session_query_ip:
-        do_query_ip_done(tunnel, socket);
+    case session_resolve_host:
+        do_resolve_host_done(tunnel, socket);
         break;
     case session_connect_target:
         do_connect_remote_done(tunnel, socket);
@@ -340,7 +340,7 @@ static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
     if (incoming == socket) {
-        if (ctx->state < session_query_ip) {
+        if (ctx->state < session_resolve_host) {
             // report_addr(server->fd, SUSPICIOUS); // collect MALICIOUS IPs.
         }
     }
@@ -521,7 +521,7 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             tunnel_shutdown(tunnel);
             return;
         }
-        ctx->state = session_query_ip;
+        ctx->state = session_resolve_host;
         outgoing->t.addr.addr4.sin_port = htons(s5addr->port);
         socket_getaddrinfo(outgoing, host);
     } else {
@@ -530,7 +530,7 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     }
 }
 
-static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
