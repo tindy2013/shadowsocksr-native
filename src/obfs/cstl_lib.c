@@ -614,13 +614,13 @@ cstl_map_remove(struct cstl_map* pMap, void* key) {
 }
 
 const void *
-cstl_map_find(struct cstl_map* pMap, void* key) {
+cstl_map_find(struct cstl_map* pMap, const void* key) {
     struct cstl_rb_node* node;
 
     if (pMap == (struct cstl_map*)0) {
         return (void *)0;
     }
-    node = cstl_rb_find(pMap->root, key);
+    node = cstl_rb_find(pMap->root, (void *) key);
     if (node == (struct cstl_rb_node*)0) {
         return (void *)0;
     }

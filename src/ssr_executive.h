@@ -102,7 +102,7 @@ bool obj_map_add(struct cstl_map *map, void *key, size_t k_size, void *value, si
 bool obj_map_exists(struct cstl_map *map, void *key);
 bool obj_map_replace(struct cstl_map *map, void *key, void *value, size_t v_size);
 void obj_map_remove(struct cstl_map *map, void *key);
-const void * obj_map_find(struct cstl_map *map, void *key);
+const void * obj_map_find(struct cstl_map *map, const void *key);
 void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const void *value, void *p), void *p);
 
 struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const struct buffer_t *init_pkg);

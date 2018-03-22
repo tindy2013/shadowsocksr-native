@@ -210,7 +210,7 @@ void obj_map_remove(struct cstl_map *map, void *key) {
     cstl_map_remove(map, key);
 }
 
-const void * obj_map_find(struct cstl_map *map, void *key) {
+const void * obj_map_find(struct cstl_map *map, const void *key) {
     return cstl_map_find(map, key);
 }
 
