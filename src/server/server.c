@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <time.h>
 
 #include "common.h"
 #include "dump_info.h"
@@ -555,6 +556,7 @@ static void do_query_ip_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
             struct address_timestamp *addr = NULL;
             addr = (struct address_timestamp *)calloc(1, sizeof(struct address_timestamp));
             addr->address = outgoing->t.addr;
+            addr->timestamp = time(NULL);
             host = strdup(host);
             obj_map_add(state->resolved_ips, &host, sizeof(void *), &addr, sizeof(void *));
         }
