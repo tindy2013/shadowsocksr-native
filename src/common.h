@@ -89,15 +89,15 @@ int send_traffic_stat(uint64_t tx, uint64_t rx);
 * enable in debug builds but still want type-checked by the compiler
 * in release builds.
 */
-#if defined(NDEBUG)
-# define ASSERT(exp)
-# define VERIFY(exp)   do { if (!(exp)) { abort(); } } while (0)
-# define DEBUG_VERIFIES (0)
-#else
+#if defined(DEBUG) || defined(_DEBUG)
 #include <assert.h>
 # define ASSERT(exp)  assert(exp)
 # define VERIFY(exp)   assert(exp)
 # define DEBUG_VERIFIES (1)
+#else
+# define ASSERT(exp)
+# define VERIFY(exp)   do { if (!(exp)) { abort(); } } while (0)
+# define DEBUG_VERIFIES (0)
 #endif
 
 #define UNREACHABLE() VERIFY(!"Unreachable code reached.")

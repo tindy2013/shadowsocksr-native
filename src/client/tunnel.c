@@ -26,6 +26,7 @@
 #include "common.h"
 #include "sockaddr_universal.h"
 #include "tunnel.h"
+#include "dump_info.h"
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel);
 static void tunnel_add_ref(struct tunnel_ctx *tunnel);
@@ -225,7 +226,9 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     }
     if (nread < 0) {
         // http://docs.libuv.org/en/v1.x/stream.html
-        ASSERT(nread == UV_EOF || nread == UV_ECONNRESET);
+        if (nread != UV_EOF) {
+            PRINT_ERR("%d : %s", nread, uv_strerror((int)nread));
+        }
         tunnel_shutdown(tunnel);
         return;
     }
