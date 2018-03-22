@@ -78,7 +78,6 @@ static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
 static int resolved_ips_compare_key(void *left, void *right);
 static void resolved_ips_destroy_object(void *obj);
-static void resolved_ips_destroy_object2(void *obj);
 
 void print_server_info(const struct server_config *config);
 static const char * parse_opts(int argc, char * const argv[]);
@@ -163,7 +162,7 @@ static int ssr_server_run_loop(struct server_config *config) {
 
         state->resolved_ips = obj_map_create(resolved_ips_compare_key,
                                              resolved_ips_destroy_object,
-                                             resolved_ips_destroy_object2);
+                                             resolved_ips_destroy_object);
     }
 
     {
@@ -722,18 +721,9 @@ static int resolved_ips_compare_key(void *left, void *right) {
 
 static void resolved_ips_destroy_object(void *obj) {
     if (obj) {
-        char *str = *((char **)obj);
+        void *str = *((void **)obj);
         if (str) {
             free(str);
-        }
-    }
-}
-
-static void resolved_ips_destroy_object2(void *obj) {
-    if (obj) {
-        struct address_timestamp *p = *((struct address_timestamp **)obj);
-        if (p) {
-            free(p);
         }
     }
 }
