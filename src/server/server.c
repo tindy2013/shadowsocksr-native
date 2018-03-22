@@ -30,7 +30,7 @@ struct ssr_server_state {
 enum session_state {
     session_initial = 0,  /* Initial stage                    */
     session_resolve_host = 4,  /* Resolve the hostname             */
-    session_connect_target,
+    session_connect_host,
     session_launch_stream,
     session_stream,  /* Stream between client and server */
 };
@@ -72,8 +72,8 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_connect_host_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_launch_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
@@ -321,8 +321,8 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     case session_resolve_host:
         do_resolve_host_done(tunnel, socket);
         break;
-    case session_connect_target:
-        do_connect_remote_done(tunnel, socket);
+    case session_connect_host:
+        do_connect_host_done(tunnel, socket);
         break;
     case session_launch_stream:
         do_launch_stream(tunnel, socket);
@@ -526,7 +526,7 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         socket_getaddrinfo(outgoing, host);
     } else {
         outgoing->t.addr = target;
-        do_connect_remote_start(tunnel, socket);
+        do_connect_host_start(tunnel, socket);
     }
 }
 
@@ -562,10 +562,10 @@ static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
         }
     }
 
-    do_connect_remote_start(tunnel, socket);
+    do_connect_host_start(tunnel, socket);
 }
 
-static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_connect_host_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
@@ -578,7 +578,7 @@ static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx
     ASSERT(outgoing->rdstate == socket_stop || outgoing->rdstate == socket_done);
     ASSERT(outgoing->wrstate == socket_stop || outgoing->wrstate == socket_done);
 
-    ctx->state = session_connect_target;
+    ctx->state = session_connect_host;
     err = socket_connect(outgoing);
 
     if (err != 0) {
@@ -588,7 +588,7 @@ static void do_connect_remote_start(struct tunnel_ctx *tunnel, struct socket_ctx
     }
 }
 
-static void do_connect_remote_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 
