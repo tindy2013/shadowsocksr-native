@@ -676,8 +676,9 @@ static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 
     if (socket == outgoing) {
         struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
-        struct buffer_t *buf = ctx->init_pkg;
+        struct buffer_t *buf;
         do {
+            buf = buffer_alloc(SSR_BUFF_SIZE);
             buffer_store(buf, outgoing->buf, (size_t)outgoing->result);
             if (ssr_ok != tunnel_encrypt(cipher_ctx, buf)) {
                 tunnel_shutdown(tunnel);
@@ -687,12 +688,14 @@ static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
                 socket_write(incoming, buf->buffer, buf->len);
             }
         } while (0);
+        buffer_free(buf);
     }
 
     if (socket == incoming) {
         struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
-        struct buffer_t *buf = ctx->init_pkg;
+        struct buffer_t *buf;
         do {
+            buf = buffer_alloc(SSR_BUFF_SIZE);
             buffer_store(buf, incoming->buf, (size_t)incoming->result);
 
             struct buffer_t *feedback = NULL;
@@ -712,6 +715,7 @@ static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
                 socket_write(outgoing, buf->buffer, buf->len);
             }
         } while (0);
+        buffer_free(buf);
     }
 }
 
