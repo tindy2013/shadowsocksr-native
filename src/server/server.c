@@ -522,10 +522,10 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             return;
         }
         ctx->state = session_resolve_host;
-        outgoing->t.addr.addr4.sin_port = htons(s5addr->port);
+        outgoing->addr.addr4.sin_port = htons(s5addr->port);
         socket_getaddrinfo(outgoing, host);
     } else {
-        outgoing->t.addr = target;
+        outgoing->addr = target;
         do_connect_host_start(tunnel, socket);
     }
 }
@@ -555,7 +555,7 @@ static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
         if (obj_map_exists(state->resolved_ips, &host) == false) {
             struct address_timestamp *addr = NULL;
             addr = (struct address_timestamp *)calloc(1, sizeof(struct address_timestamp));
-            addr->address = outgoing->t.addr;
+            addr->address = outgoing->addr;
             addr->timestamp = time(NULL);
             host = strdup(host);
             obj_map_add(state->resolved_ips, &host, sizeof(void *), &addr, sizeof(void *));

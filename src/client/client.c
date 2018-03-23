@@ -381,7 +381,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    memcpy(&outgoing->t.addr, &remote_addr, sizeof(remote_addr));
+    memcpy(&outgoing->addr, &remote_addr, sizeof(remote_addr));
 
     do_req_connect_start(tunnel);
 }
@@ -413,12 +413,12 @@ static void do_req_lookup(struct tunnel_ctx *tunnel) {
     }
 
     /* Don't make assumptions about the offset of sin_port/sin6_port. */
-    switch (outgoing->t.addr.addr.sa_family) {
+    switch (outgoing->addr.addr.sa_family) {
     case AF_INET:
-        outgoing->t.addr.addr4.sin_port = htons(parser->dport);
+        outgoing->addr.addr4.sin_port = htons(parser->dport);
         break;
     case AF_INET6:
-        outgoing->t.addr.addr6.sin6_port = htons(parser->dport);
+        outgoing->addr.addr6.sin6_port = htons(parser->dport);
         break;
     default:
         UNREACHABLE();
@@ -441,7 +441,7 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel) {
     ASSERT(outgoing->rdstate == socket_stop);
     ASSERT(outgoing->wrstate == socket_stop);
 
-    if (!can_access(tunnel->listener, tunnel, &outgoing->t.addr.addr)) {
+    if (!can_access(tunnel->listener, tunnel, &outgoing->addr.addr)) {
         pr_warn("connection not allowed by ruleset");
         /* Send a 'Connection not allowed by ruleset' reply. */
         socket_write(incoming, "\5\2\0\1\0\0\0\0\0\0", 10);

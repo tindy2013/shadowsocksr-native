@@ -164,11 +164,11 @@ static void socket_timer_expire_cb(uv_timer_t *handle) {
 
 /* Assumes that c->t.sa contains a valid AF_INET or AF_INET6 address. */
 int socket_connect(struct socket_ctx *c) {
-    ASSERT(c->t.addr.addr.sa_family == AF_INET || c->t.addr.addr.sa_family == AF_INET6);
+    ASSERT(c->addr.addr.sa_family == AF_INET || c->addr.addr.sa_family == AF_INET6);
     socket_timer_start(c);
     return uv_tcp_connect(&c->t.connect_req,
         &c->handle.tcp,
-        &c->t.addr.addr,
+        &c->addr.addr,
         socket_connect_done_cb);
 }
 
@@ -307,15 +307,15 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
 
     if (status == 0) {
         /* FIXME(bnoordhuis) Should try all addresses. */
-        uint16_t port = c->t.addr.addr4.sin_port;
+        uint16_t port = c->addr.addr4.sin_port;
         if (ai->ai_family == AF_INET) {
-            c->t.addr.addr4 = *(const struct sockaddr_in *) ai->ai_addr;
+            c->addr.addr4 = *(const struct sockaddr_in *) ai->ai_addr;
         } else if (ai->ai_family == AF_INET6) {
-            c->t.addr.addr6 = *(const struct sockaddr_in6 *) ai->ai_addr;
+            c->addr.addr6 = *(const struct sockaddr_in6 *) ai->ai_addr;
         } else {
             UNREACHABLE();
         }
-        c->t.addr.addr4.sin_port = port;
+        c->addr.addr4.sin_port = port;
     }
 
     uv_freeaddrinfo(ai);
