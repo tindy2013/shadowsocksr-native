@@ -56,10 +56,8 @@ static void tunnel_release(struct tunnel_ctx *tunnel) {
             tunnel->tunnel_dying(tunnel);
         }
 
-        free(tunnel->incoming->buf);
         free(tunnel->incoming);
 
-        free(tunnel->outgoing->buf);
         free(tunnel->outgoing);
 
         free(tunnel->desired_addr);
@@ -208,11 +206,12 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     struct socket_ctx *c;
     struct tunnel_ctx *tunnel;
 
+    do {
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
     tunnel = c->tunnel;
 
     if (tunnel_is_dead(tunnel)) {
-        return;
+        break;
     }
 
     bool read_stop = (tunnel->tunnel_in_streaming(tunnel) == false);
@@ -223,7 +222,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     socket_timer_stop(c);
 
     if (nread == 0) {
-        return;
+        break;
     }
     if (nread < 0) {
         // http://docs.libuv.org/en/v1.x/stream.html
@@ -233,10 +232,10 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
             pr_err("recieve data failed from \"%s\": %s", addr, uv_strerror((int)nread));
         }
         tunnel_shutdown(tunnel);
-        return;
+        break;
     }
 
-    ASSERT(c->buf == (uint8_t *)buf->base);
+    c->buf = buf;
     if (read_stop) {
         ASSERT(c->rdstate == socket_busy);
     }
@@ -245,6 +244,12 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
 
     ASSERT(tunnel->tunnel_read_done);
     tunnel->tunnel_read_done(tunnel, c);
+    } while (0);
+
+    if (buf->base) {
+        free(buf->base); // important!!!
+    }
+    c->buf = NULL;
 }
 
 void socket_read_stop(struct socket_ctx *c) {
@@ -266,10 +271,8 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     if (tunnel->tunnel_get_alloc_size) {
         size = tunnel->tunnel_get_alloc_size(tunnel, size);
     }
-    c->buf = realloc(c->buf, size);
-    c->buf_size = size;
 
-    *buf = uv_buf_init((char *)c->buf, (unsigned int)size);
+    *buf = uv_buf_init((char *)calloc(size, sizeof(char)), (unsigned int)size);
 }
 
 void socket_getaddrinfo(struct socket_ctx *c, const char *hostname) {

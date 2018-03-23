@@ -232,7 +232,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    data = (uint8_t *)incoming->buf;
+    data = (uint8_t *)incoming->buf->base;
     size = (size_t)incoming->result;
     err = s5_parse(parser, &data, &size);
     if (err == s5_ok) {
@@ -331,7 +331,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    data = (uint8_t *)incoming->buf;
+    data = (uint8_t *)incoming->buf->base;
     size = (size_t)incoming->result;
 
     socks5_address_parse(data+3, size-3, tunnel->desired_addr);
@@ -364,9 +364,9 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
 
     if (parser->cmd == s5_cmd_udp_assoc) {
         // UDP ASSOCIATE requests
-        size_t len = incoming->buf_size;
+        size_t len = incoming->buf->len;
         uint8_t *buf = build_udp_assoc_package(config->udp, config->listen_host, config->listen_port,
-            (uint8_t *)incoming->buf, &len);
+            (uint8_t *)incoming->buf->base, &len);
         socket_write(incoming, buf, len);
         ctx->state = session_req_udp_accoc;
         return;
@@ -524,15 +524,15 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
     }
 
     uint8_t *buf;
-    struct buffer_t *init_pkg;
-    buf = (uint8_t *)incoming->buf;
-    init_pkg = ctx->init_pkg;
+    struct buffer_t *init_pkg = ctx->init_pkg;
+    buf = (uint8_t *)calloc(3 + init_pkg->len, sizeof(uint8_t));
 
     buf[0] = 5;  // Version.
     buf[1] = 0;  // Success.
     buf[2] = 0;  // Reserved.
     memcpy(buf + 3, init_pkg->buffer, init_pkg->len);
     socket_write(incoming, buf, 3 + init_pkg->len);
+    free(buf);
     ctx->state = session_proxy_start;
 }
 
@@ -578,7 +578,7 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             tc = ctx->cipher;
 
             buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, outgoing->buf, (size_t)outgoing->result);
+            buffer_store(buf, (const uint8_t *)outgoing->buf->base, (size_t)outgoing->result);
 
             struct buffer_t *feedback = NULL;
             if (ssr_ok != tunnel_decrypt(tc, buf, &feedback)) {
@@ -609,7 +609,7 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             tc = ctx->cipher;
 
             buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, incoming->buf, (size_t)incoming->result);
+            buffer_store(buf, (const uint8_t *)incoming->buf->base, (size_t)incoming->result);
             if (ssr_ok != tunnel_encrypt(tc, buf)) {
                 tunnel_shutdown(tunnel);
                 break;

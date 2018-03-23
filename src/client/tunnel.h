@@ -34,8 +34,7 @@ struct socket_ctx {
         uv_req_t req;
     } t;
     union sockaddr_universal addr;
-    uint8_t *buf; /* Scratch space. Used to read data into. */
-    size_t buf_size;
+    const uv_buf_t *buf; /* Scratch space. Used to read data into. */
 };
 
 struct tunnel_ctx {

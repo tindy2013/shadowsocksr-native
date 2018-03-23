@@ -408,14 +408,15 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
     do {
+        const uint8_t *buf = (const uint8_t *)incoming->buf->base;
         ASSERT(socket == incoming);
-        if (is_completed_package(ctx->env, incoming->buf, (size_t)incoming->result) == false) {
-            buffer_store(ctx->init_pkg, incoming->buf, (size_t)incoming->result);
+        if (is_completed_package(ctx->env, buf, (size_t)incoming->result) == false) {
+            buffer_store(ctx->init_pkg, buf, (size_t)incoming->result);
             socket_read(incoming);
             ctx->state = session_initial;  /* Need more data. */
             break;
         }
-        buffer_concatenate(ctx->init_pkg, incoming->buf, (size_t)incoming->result);
+        buffer_concatenate(ctx->init_pkg, buf, (size_t)incoming->result);
 
         ASSERT(ctx->cipher == NULL);
         ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg); // FIXME: error init_pkg
@@ -659,7 +660,7 @@ static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         struct buffer_t *buf;
         do {
             buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, outgoing->buf, (size_t)outgoing->result);
+            buffer_store(buf, (const uint8_t *)outgoing->buf->base, (size_t)outgoing->result);
             if (ssr_ok != tunnel_encrypt(cipher_ctx, buf)) {
                 tunnel_shutdown(tunnel);
                 break;
@@ -676,7 +677,7 @@ static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         struct buffer_t *buf;
         do {
             buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, incoming->buf, (size_t)incoming->result);
+            buffer_store(buf, (const uint8_t *)incoming->buf->base, (size_t)incoming->result);
 
             struct buffer_t *feedback = NULL;
             if (ssr_ok != tunnel_decrypt(cipher_ctx, buf, &feedback)) {
