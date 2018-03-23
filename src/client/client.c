@@ -590,6 +590,7 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 
             struct buffer_t *feedback = NULL;
             if (ssr_ok != tunnel_decrypt(tc, buf, &feedback)) {
+                pr_err("decrypt failed");
                 tunnel_shutdown(tunnel);
                 break;
             }
