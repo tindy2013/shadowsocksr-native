@@ -274,7 +274,7 @@ uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, ui
     }
 
     union sockaddr_universal addr;
-    if (convert_address(addr_str, port, &addr) != 0) {
+    if (convert_universal_address(addr_str, port, &addr) != 0) {
         return NULL;
     }
     bool ipV6 = (addr.addr.sa_family == AF_INET6);

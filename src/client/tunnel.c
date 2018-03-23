@@ -24,7 +24,6 @@
 #include <string.h>
 #include <uv.h>
 #include "common.h"
-#include "sockaddr_universal.h"
 #include "tunnel.h"
 #include "dump_info.h"
 
@@ -63,6 +62,7 @@ static void tunnel_release(struct tunnel_ctx *tunnel) {
         free(tunnel->outgoing->buf);
         free(tunnel->outgoing);
 
+        free(tunnel->desired_addr);
         free(tunnel);
     }
 }
@@ -78,6 +78,7 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, bool(*init
 
     tunnel->listener = listener;
     tunnel->ref_count = 0;
+    tunnel->desired_addr = (struct socks5_address *)calloc(1, sizeof(struct socks5_address));
 
     incoming = (struct socket_ctx *) calloc(1, sizeof(*incoming));
     incoming->tunnel = tunnel;
@@ -227,7 +228,9 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     if (nread < 0) {
         // http://docs.libuv.org/en/v1.x/stream.html
         if (nread != UV_EOF) {
-            pr_err("recieve failed: %s", uv_strerror((int)nread));
+            char addr[256] = { 0 };
+            socks5_address_to_string(tunnel->desired_addr, addr, sizeof(addr));
+            pr_err("recieve data failed from \"%s\": %s", addr, uv_strerror((int)nread));
         }
         tunnel_shutdown(tunnel);
         return;

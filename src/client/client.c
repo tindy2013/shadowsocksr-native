@@ -333,6 +333,9 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
 
     data = (uint8_t *)incoming->buf;
     size = (size_t)incoming->result;
+
+    socks5_address_parse(data+3, size-3, tunnel->desired_addr);
+
     err = s5_parse(parser, &data, &size);
     if (err == s5_ok) {
         socket_read(incoming);
@@ -375,13 +378,13 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg);
 
     union sockaddr_universal remote_addr = { 0 };
-    if (convert_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
+    if (convert_universal_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
         socket_getaddrinfo(outgoing, config->remote_host);
         ctx->state = session_req_lookup;
         return;
     }
 
-    memcpy(&outgoing->addr, &remote_addr, sizeof(remote_addr));
+    outgoing->addr = remote_addr;
 
     do_req_connect_start(tunnel);
 }
@@ -486,21 +489,10 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
         ctx->state = session_ssr_auth_sent;
         return;
     } else {
-        s5_ctx *parser = &ctx->parser;
-        char *addr = NULL;
-        char ip_str[INET6_ADDRSTRLEN] = { 0 };
-
-        if (parser->atyp == s5_atyp_host) {
-            addr = (char *)parser->daddr;
-        } else if (parser->atyp == s5_atyp_ipv4) {
-            uv_inet_ntop(AF_INET, parser->daddr, ip_str, sizeof(ip_str));
-            addr = ip_str;
-        } else {
-            uv_inet_ntop(AF_INET6, parser->daddr, ip_str, sizeof(ip_str));
-            addr = ip_str;
-        }
+        char ip_str[256] = { 0 };
         const char *fmt = "upstream connection \"%s\" error: %s";
-        pr_err(fmt, addr, uv_strerror((int)outgoing->result));
+        socks5_address_to_string(tunnel->desired_addr, ip_str, sizeof(ip_str));
+        pr_err(fmt, ip_str, uv_strerror((int)outgoing->result));
         /* Send a 'Connection refused' reply. */
         socket_write(incoming, "\5\5\0\1\0\0\0\0\0\0", 10);
         ctx->state = session_kill;

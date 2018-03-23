@@ -3,6 +3,7 @@
 
 #include <uv.h>
 #include <stdbool.h>
+#include "sockaddr_universal.h"
 
 struct tunnel_ctx;
 
@@ -44,6 +45,7 @@ struct tunnel_ctx {
     uv_tcp_t *listener;  /* Backlink to owning listener context. */
     struct socket_ctx *incoming;  /* Connection with the SOCKS client. */
     struct socket_ctx *outgoing;  /* Connection with upstream. */
+    struct socks5_address *desired_addr;
     int ref_count;
 
     void(*tunnel_dying)(struct tunnel_ctx *tunnel);

@@ -39,7 +39,6 @@ struct server_ctx {
     struct server_env_t *env; // __weak_ptr
     struct tunnel_cipher_ctx *cipher;
     struct buffer_t *init_pkg;
-    struct socks5_address *s5addr;
     enum session_state state;
 };
 
@@ -234,7 +233,6 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     struct server_ctx *ctx = (struct server_ctx *) calloc(1, sizeof(*ctx));
     ctx->env = env;
     ctx->init_pkg = buffer_alloc(SSR_BUFF_SIZE);
-    ctx->s5addr = (struct socks5_address *) calloc(1, sizeof(*ctx->s5addr));
     tunnel->data = ctx;
 
     tunnel->tunnel_dying = &tunnel_dying;
@@ -307,7 +305,6 @@ static void tunnel_dying(struct tunnel_ctx *tunnel) {
         tunnel_cipher_release(ctx->cipher);
     }
     buffer_free(ctx->init_pkg);
-    free(ctx->s5addr);
     free(ctx);
 }
 
@@ -478,7 +475,7 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     ASSERT(incoming == socket);
 
     // get remote addr and port
-    struct socks5_address *s5addr = ctx->s5addr;
+    struct socks5_address *s5addr = tunnel->desired_addr;
     memset(s5addr, 0, sizeof(*s5addr));
     if (socks5_address_parse(ctx->init_pkg->buffer, ctx->init_pkg->len, s5addr) == false) {
         // report_addr(server->fd, MALFORMED);
@@ -550,7 +547,7 @@ static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
     }
 
     {
-        char *host = ctx->s5addr->addr.domainname;
+        char *host = tunnel->desired_addr->addr.domainname;
         struct ssr_server_state *state = (struct ssr_server_state *)ctx->env->data;
         if (obj_map_exists(state->resolved_ips, &host) == false) {
             struct address_timestamp *addr = NULL;
@@ -612,28 +609,11 @@ static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
         }
         return;
     } else {
-        char *addr = NULL;
-        char ip_str[INET6_ADDRSTRLEN] = { 0 };
-
-        switch (ctx->s5addr->addr_type) {
-        case SOCKS5_ADDRTYPE_IPV4:
-            uv_inet_ntop(AF_INET, &ctx->s5addr->addr.ipv4, ip_str, sizeof(ip_str));
-            addr = ip_str;
-            break;
-        case SOCKS5_ADDRTYPE_IPV6:
-            uv_inet_ntop(AF_INET6, &ctx->s5addr->addr.ipv6, ip_str, sizeof(ip_str));
-            addr = ip_str;
-            break;
-        case SOCKS5_ADDRTYPE_DOMAINNAME:
-            addr = ctx->s5addr->addr.domainname;
-            break;
-        default:
-            UNREACHABLE();
-            break;
-        }
+        char ip_str[256] = { 0 };
+        socks5_address_to_string(tunnel->desired_addr, ip_str, sizeof(ip_str));
 
         const char *fmt = "upstream connection \"%s\" error: %s";
-        pr_err(fmt, addr, uv_strerror((int)outgoing->result));
+        pr_err(fmt, ip_str, uv_strerror((int)outgoing->result));
         tunnel_shutdown(tunnel);
         return;
     }
