@@ -36,10 +36,11 @@ struct socks5_address {
 };
 
 bool socks5_address_parse(const uint8_t *data, size_t len, struct socks5_address *addr);
+char * socks5_address_to_string(const struct socks5_address *addr, char *buffer, size_t size);
 size_t socks5_address_size(const struct socks5_address *addr);
 uint8_t * socks5_address_binary(const struct socks5_address *addr, uint8_t *buffer, size_t size);
 bool socks5_address_to_universal(const struct socks5_address *s5addr, union sockaddr_universal *addr);
 
-int convert_address(const char *addr_str, unsigned short port, union sockaddr_universal *addr);
+int convert_universal_address(const char *addr_str, unsigned short port, union sockaddr_universal *addr);
 
 #endif // !defined(__sockaddr_universal_h__)

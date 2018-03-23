@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <memory.h>
+#include <uv.h>
 
 #if !defined(_WIN32)
 #include <netdb.h>
@@ -57,6 +58,40 @@ bool socks5_address_parse(const uint8_t *data, size_t len, struct socks5_address
     offset += sizeof(uint16_t);
 
     return true;
+}
+
+char * socks5_address_to_string(const struct socks5_address *addr, char *buffer, size_t size) {
+    const char *addr_ptr = NULL;
+
+    if (addr==NULL || buffer==NULL || size==0) {
+        return NULL;
+    }
+
+    switch (addr->addr_type) {
+    case SOCKS5_ADDRTYPE_IPV4:
+        if (size < INET_ADDRSTRLEN) {
+            return NULL;
+        }
+        uv_inet_ntop(AF_INET, &addr->addr.ipv4, buffer, size);
+        break;
+    case SOCKS5_ADDRTYPE_IPV6:
+        if (size < INET6_ADDRSTRLEN) {
+            return NULL;
+        }
+        uv_inet_ntop(AF_INET6, &addr->addr.ipv6, buffer, size);
+        break;
+    case SOCKS5_ADDRTYPE_DOMAINNAME:
+        addr_ptr = addr->addr.domainname;
+        if (size < strlen(addr_ptr)) {
+            return NULL;
+        }
+        strcpy(buffer, addr_ptr);
+        break;
+    default:
+        return NULL;
+        break;
+    }
+    return buffer;
 }
 
 size_t socks5_address_size(const struct socks5_address *addr) {
@@ -142,7 +177,7 @@ bool socks5_address_to_universal(const struct socks5_address *s5addr, union sock
     return result;
 }
 
-int convert_address(const char *addr_str, unsigned short port, union sockaddr_universal *addr)
+int convert_universal_address(const char *addr_str, unsigned short port, union sockaddr_universal *addr)
 {
     struct addrinfo hints = { 0 }, *ai = NULL;
     int status;
