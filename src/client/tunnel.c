@@ -40,6 +40,7 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
 static void socket_write_done_cb(uv_write_t *req, int status);
 static void socket_close(struct socket_ctx *c);
 static void socket_close_done_cb(uv_handle_t *handle);
+static void dump_error_info(const char *title, struct tunnel_ctx *tunnel, int error);
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
     return (tunnel->terminated != false);
@@ -186,7 +187,8 @@ static void socket_connect_done_cb(uv_connect_t *req, int status) {
 
     socket_timer_stop(c);
 
-    if (status == UV_ECANCELED || status == UV_ECONNREFUSED) {
+    if (status < 0 /*status == UV_ECANCELED || status == UV_ECONNREFUSED*/) {
+        dump_error_info("connect failed", tunnel, (int)status);
         tunnel_shutdown(tunnel);
         return;  /* Handle has been closed. */
     }
@@ -208,6 +210,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
 
     do {
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
+    c->result = nread;
     tunnel = c->tunnel;
 
     if (tunnel_is_dead(tunnel)) {
@@ -227,9 +230,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     if (nread < 0) {
         // http://docs.libuv.org/en/v1.x/stream.html
         if (nread != UV_EOF) {
-            char addr[256] = { 0 };
-            socks5_address_to_string(tunnel->desired_addr, addr, sizeof(addr));
-            pr_err("recieve data failed from \"%s\": %s", addr, uv_strerror((int)nread));
+            dump_error_info("recieve data failed", tunnel, (int)nread);
         }
         tunnel_shutdown(tunnel);
         break;
@@ -240,7 +241,6 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
         ASSERT(c->rdstate == socket_busy);
     }
     c->rdstate = read_stop ? socket_stop : socket_done;
-    c->result = nread;
 
     ASSERT(tunnel->tunnel_read_done);
     tunnel->tunnel_read_done(tunnel, c);
@@ -311,6 +311,12 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
 
     socket_timer_stop(c);
 
+    if (status < 0) {
+        dump_error_info("resolve address failed", tunnel, (int)status);
+        tunnel_shutdown(tunnel);
+        return;
+    }
+
     if (status == 0) {
         /* FIXME(bnoordhuis) Should try all addresses. */
         uint16_t port = c->addr.addr4.sin_port;
@@ -354,6 +360,7 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
     struct tunnel_ctx *tunnel;
 
     c = (struct socket_ctx *)req->data;
+    c->result = status;
     free(req);
     tunnel = c->tunnel;
 
@@ -363,7 +370,8 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
 
     socket_timer_stop(c);
 
-    if (status == UV_ECANCELED) {
+    if (status < 0 /*status == UV_ECANCELED*/) {
+        dump_error_info("send data failed", tunnel, (int)status);
         tunnel_shutdown(tunnel);
         return;  /* Handle has been closed. */
     }
@@ -372,7 +380,6 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
         ASSERT(c->wrstate == socket_busy);
     }
     c->wrstate = socket_done;
-    c->result = status;
 
     ASSERT(tunnel->tunnel_write_done);
     tunnel->tunnel_write_done(tunnel, c);
@@ -401,4 +408,10 @@ static void socket_close_done_cb(uv_handle_t *handle) {
     tunnel = c->tunnel;
 
     tunnel_release(tunnel);
+}
+
+static void dump_error_info(const char *title, struct tunnel_ctx *tunnel, int error) {
+    char addr[256] = {0};
+    socks5_address_to_string(tunnel->desired_addr, addr, sizeof(addr));
+    pr_err("%s \"%s\": %s", title, addr, uv_strerror(error));
 }
