@@ -57,6 +57,12 @@ struct tunnel_ctx {
     bool(*tunnel_in_streaming)(struct tunnel_ctx *tunnel);
 };
 
+int uv_stream_fd(const uv_tcp_t *handle);
+int set_socket_nonblocking(int fd);
+void set_socket_nodelay(int fd, bool enable);
+void set_socket_nosigpipe(int fd);
+void set_socket_linger(int fd);
+
 void tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout, bool(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);
 void tunnel_shutdown(struct tunnel_ctx *tunnel);
 int socket_connect(struct socket_ctx *c);
