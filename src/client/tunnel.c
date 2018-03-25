@@ -187,7 +187,7 @@ static void socket_connect_done_cb(uv_connect_t *req, int status) {
     socket_timer_stop(c);
 
     if (status < 0 /*status == UV_ECANCELED || status == UV_ECONNREFUSED*/) {
-        dump_error_info("connect failed", tunnel, (int)status);
+        socket_dump_error_info("connect failed", c);
         tunnel_shutdown(tunnel);
         return;  /* Handle has been closed. */
     }
@@ -228,8 +228,8 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     }
     if (nread < 0) {
         // http://docs.libuv.org/en/v1.x/stream.html
-        if ((nread != UV_EOF) && (c==tunnel->outgoing)) {
-            dump_error_info("recieve data failed", tunnel, (int)nread);
+        if (nread != UV_EOF) {
+            socket_dump_error_info("recieve data failed", c);
         }
         tunnel_shutdown(tunnel);
         break;
@@ -311,7 +311,7 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
     socket_timer_stop(c);
 
     if (status < 0) {
-        dump_error_info("resolve address failed", tunnel, (int)status);
+        socket_dump_error_info("resolve address failed", c);
         tunnel_shutdown(tunnel);
         return;
     }
@@ -370,7 +370,7 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
     socket_timer_stop(c);
 
     if (status < 0 /*status == UV_ECANCELED*/) {
-        dump_error_info("send data failed", tunnel, (int)status);
+        socket_dump_error_info("send data failed", c);
         tunnel_shutdown(tunnel);
         return;  /* Handle has been closed. */
     }
@@ -409,8 +409,20 @@ static void socket_close_done_cb(uv_handle_t *handle) {
     tunnel_release(tunnel);
 }
 
-void dump_error_info(const char *title, struct tunnel_ctx *tunnel, int error) {
+void socket_dump_error_info(const char *title, struct socket_ctx *socket) {
+    struct tunnel_ctx *tunnel = socket->tunnel;
+    int error = (int)socket->result;
     char addr[256] = {0};
-    socks5_address_to_string(tunnel->desired_addr, addr, sizeof(addr));
-    pr_err("%s \"%s\": %s", title, addr, uv_strerror(error));
+    const char *from = NULL;
+    if (socket == tunnel->outgoing) {
+        socks5_address_to_string(tunnel->desired_addr, addr, sizeof(addr));
+        from = "outgoing";
+    } else {
+        union sockaddr_universal tmp;
+        int len = sizeof(tmp);
+        uv_tcp_getpeername(&socket->handle.tcp, &tmp.addr, &len);
+        universal_address_to_string(&tmp, addr, sizeof(addr));
+        from = "incoming";
+    }
+    pr_err("%s from %s \"%s\": %s", title, from, addr, uv_strerror(error));
 }

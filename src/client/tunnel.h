@@ -64,6 +64,6 @@ void socket_read(struct socket_ctx *c);
 void socket_read_stop(struct socket_ctx *c);
 void socket_getaddrinfo(struct socket_ctx *c, const char *hostname);
 void socket_write(struct socket_ctx *c, const void *data, size_t len);
-void dump_error_info(const char *title, struct tunnel_ctx *tunnel, int error);
+void socket_dump_error_info(const char *title, struct socket_ctx *socket);
 
 #endif // !defined(__tunnel_h__)

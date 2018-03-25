@@ -614,7 +614,7 @@ static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
         }
         return;
     } else {
-        dump_error_info("upstream connection", tunnel, (int)outgoing->result);
+        socket_dump_error_info("upstream connection", socket);
         tunnel_shutdown(tunnel);
         return;
     }

@@ -218,3 +218,17 @@ int convert_universal_address(const char *addr_str, unsigned short port, union s
     freeaddrinfo(ai);
     return result;
 }
+
+char * universal_address_to_string(const union sockaddr_universal *addr, char *addr_str, size_t size) {
+    switch (addr->addr4.sin_family) {
+    case AF_INET:
+        uv_inet_ntop(AF_INET, &addr->addr4.sin_addr, addr_str, size);
+        break;
+    case AF_INET6:
+        uv_inet_ntop(AF_INET6, &addr->addr6.sin6_addr, addr_str, size);
+        break;
+    default:
+        break;
+    }
+    return addr_str;
+}

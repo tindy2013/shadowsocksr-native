@@ -42,5 +42,6 @@ uint8_t * socks5_address_binary(const struct socks5_address *addr, uint8_t *buff
 bool socks5_address_to_universal(const struct socks5_address *s5addr, union sockaddr_universal *addr);
 
 int convert_universal_address(const char *addr_str, unsigned short port, union sockaddr_universal *addr);
+char * universal_address_to_string(const union sockaddr_universal *addr, char *addr_str, size_t size);
 
 #endif // !defined(__sockaddr_universal_h__)

@@ -489,7 +489,7 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
         ctx->state = session_ssr_auth_sent;
         return;
     } else {
-        dump_error_info("upstream connection", tunnel, (int)outgoing->result);
+        socket_dump_error_info("upstream connection", outgoing);
         /* Send a 'Connection refused' reply. */
         socket_write(incoming, "\5\5\0\1\0\0\0\0\0\0", 10);
         ctx->state = session_kill;
