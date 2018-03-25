@@ -416,13 +416,13 @@ void socket_dump_error_info(const char *title, struct socket_ctx *socket) {
     const char *from = NULL;
     if (socket == tunnel->outgoing) {
         socks5_address_to_string(tunnel->desired_addr, addr, sizeof(addr));
-        from = "outgoing";
+        from = "_server_";
     } else {
         union sockaddr_universal tmp;
         int len = sizeof(tmp);
-        uv_tcp_getpeername(&socket->handle.tcp, &tmp.addr, &len);
+        uv_tcp_getsockname(&socket->handle.tcp, &tmp.addr, &len);
         universal_address_to_string(&tmp, addr, sizeof(addr));
-        from = "incoming";
+        from = "_client_";
     }
-    pr_err("%s from %s \"%s\": %s", title, from, addr, uv_strerror(error));
+    pr_err("%s about %s \"%s\": %s", title, from, addr, uv_strerror(error));
 }
