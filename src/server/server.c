@@ -14,6 +14,10 @@
 #include "udprelay.h"
 #include "tunnel.h"
 
+#ifndef SSR_MAX_CONN
+#define SSR_MAX_CONN 1024
+#endif
+
 struct ssr_server_state {
     struct server_env_t *env;
 
@@ -153,7 +157,7 @@ static int ssr_server_run_loop(struct server_config *config) {
         addr.addr4.sin_addr.s_addr = htonl(INADDR_ANY);
         uv_tcp_bind(listener, &addr.addr, 0);
 
-        int error = uv_listen((uv_stream_t *)listener, 128, tunnel_establish_init_cb);
+        int error = uv_listen((uv_stream_t *)listener, SSR_MAX_CONN, tunnel_establish_init_cb);
 
         if (error != 0) {
             return fprintf(stderr, "Error on listening: %s.\n", uv_strerror(error));
