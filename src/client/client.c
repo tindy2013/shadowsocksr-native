@@ -489,10 +489,7 @@ static void do_req_connect(struct tunnel_ctx *tunnel) {
         ctx->state = session_ssr_auth_sent;
         return;
     } else {
-        char ip_str[256] = { 0 };
-        const char *fmt = "upstream connection \"%s\" error: %s";
-        socks5_address_to_string(tunnel->desired_addr, ip_str, sizeof(ip_str));
-        pr_err(fmt, ip_str, uv_strerror((int)outgoing->result));
+        dump_error_info("upstream connection", tunnel, (int)outgoing->result);
         /* Send a 'Connection refused' reply. */
         socket_write(incoming, "\5\5\0\1\0\0\0\0\0\0", 10);
         ctx->state = session_kill;

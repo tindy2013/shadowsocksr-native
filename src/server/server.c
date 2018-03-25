@@ -610,11 +610,7 @@ static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
         }
         return;
     } else {
-        char ip_str[256] = { 0 };
-        socks5_address_to_string(tunnel->desired_addr, ip_str, sizeof(ip_str));
-
-        const char *fmt = "upstream connection \"%s\" error: %s";
-        pr_err(fmt, ip_str, uv_strerror((int)outgoing->result));
+        dump_error_info("upstream connection", tunnel, (int)outgoing->result);
         tunnel_shutdown(tunnel);
         return;
     }

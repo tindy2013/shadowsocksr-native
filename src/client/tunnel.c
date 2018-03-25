@@ -40,7 +40,6 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
 static void socket_write_done_cb(uv_write_t *req, int status);
 static void socket_close(struct socket_ctx *c);
 static void socket_close_done_cb(uv_handle_t *handle);
-static void dump_error_info(const char *title, struct tunnel_ctx *tunnel, int error);
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
     return (tunnel->terminated != false);
@@ -410,7 +409,7 @@ static void socket_close_done_cb(uv_handle_t *handle) {
     tunnel_release(tunnel);
 }
 
-static void dump_error_info(const char *title, struct tunnel_ctx *tunnel, int error) {
+void dump_error_info(const char *title, struct tunnel_ctx *tunnel, int error) {
     char addr[256] = {0};
     socks5_address_to_string(tunnel->desired_addr, addr, sizeof(addr));
     pr_err("%s \"%s\": %s", title, addr, uv_strerror(error));
