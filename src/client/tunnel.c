@@ -70,7 +70,7 @@ void set_socket_nodelay(int fd, bool enable) {
 }
 
 void set_socket_nosigpipe(int fd) {
-#ifdef SO_NOSIGPIPE
+#if defined(SO_NOSIGPIPE) && !defined(MSG_NOSIGNAL)
     int opt = 1;
     setsockopt(serverfd, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt));
 #endif
