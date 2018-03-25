@@ -228,7 +228,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     }
     if (nread < 0) {
         // http://docs.libuv.org/en/v1.x/stream.html
-        if (nread != UV_EOF) {
+        if ((nread != UV_EOF) && (c==tunnel->outgoing)) {
             dump_error_info("recieve data failed", tunnel, (int)nread);
         }
         tunnel_shutdown(tunnel);
