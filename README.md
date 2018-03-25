@@ -9,7 +9,7 @@ It is a port of [ShadowsocksR](https://github.com/breakwa11)
 created by [@breakwa11](https://github.com/breakwa11), 
 which is maintained by [@ssrlive](https://github.com/ssrlive).
 
-Current version: 0.1 | [Changelog](debian/changelog)
+Current version: 0.4 | [Changelog](debian/changelog)
 
 ## Features
 
@@ -217,14 +217,17 @@ e.g. Ubuntu, Debian or Linux Mint, you can build the binary like this:
 
 ```bash
 # Debian / Ubuntu
-sudo apt-get install --no-install-recommends build-essential autoconf libtool asciidoc xmlto
-sudo apt install git cmake automake
+sudo su                       # using root account
+apt-get install --no-install-recommends build-essential autoconf libtool asciidoc xmlto -y
+apt-get install git gcc g++ cmake automake -y
+apt-get -f install
+apt-get update
+apt-get upgrade
 
-# install OpenSSL
-sudo apt-get install libssl-dev
-
+cd /                          # switch to root directory
 git clone https://github.com/ShadowsocksR-Live/shadowsocksr-native.git
-cd shadowsocksr-native
+mv shadowsocksr-native ssr-n  # rename shadowsocksr-native to ssr-n
+cd ssr-n                      # enter ssr-n directory. 
 git submodule update --init
 git submodule foreach -q 'git checkout $(git config -f $toplevel/.gitmodules submodule.$name.branch || echo master)'
 
