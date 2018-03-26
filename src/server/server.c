@@ -35,8 +35,8 @@ enum session_state {
     session_initial = 0,  /* Initial stage                    */
     session_resolve_host = 4,  /* Resolve the hostname             */
     session_connect_host,
-    session_launch_stream,
-    session_stream,  /* Stream between client and server */
+    session_launch_streaming,
+    session_streaming,  /* Stream between client and server */
 };
 
 struct server_ctx {
@@ -77,8 +77,8 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_host_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_launch_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
 static int resolved_ips_compare_key(void *left, void *right);
 static void resolved_ips_destroy_object(void *obj);
@@ -325,11 +325,11 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     case session_connect_host:
         do_connect_host_done(tunnel, socket);
         break;
-    case session_launch_stream:
-        do_launch_stream(tunnel, socket);
+    case session_launch_streaming:
+        do_launch_streaming(tunnel, socket);
         break;
-    case session_stream:
-        do_stream(tunnel, socket);
+    case session_streaming:
+        do_streaming(tunnel, socket);
         break;
     default:
         UNREACHABLE();
@@ -373,7 +373,7 @@ static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_
 
 static bool tunnel_in_streaming(struct tunnel_ctx *tunnel) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-    return (ctx->state == session_stream);
+    return (ctx->state == session_streaming);
 }
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel) {
@@ -608,9 +608,9 @@ static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
     if (outgoing->result == 0) {
         if (ctx->init_pkg->len > 0) {
             socket_write(outgoing, ctx->init_pkg->buffer, ctx->init_pkg->len);
-            ctx->state = session_launch_stream;
+            ctx->state = session_launch_streaming;
         } else {
-            do_launch_stream(tunnel, socket);
+            do_launch_streaming(tunnel, socket);
         }
         return;
     } else {
@@ -620,7 +620,7 @@ static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
     }
 }
 
-static void do_launch_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
@@ -642,10 +642,10 @@ static void do_launch_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 
     socket_read(incoming);
     socket_read(outgoing);
-    ctx->state = session_stream;
+    ctx->state = session_streaming;
 }
 
-static void do_stream(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming;
     struct socket_ctx *outgoing;
 

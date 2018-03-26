@@ -66,7 +66,7 @@ int set_socket_nonblocking(int fd) {
 
 void set_socket_nodelay(int fd, bool enable) {
     int opt = enable ? 1 : 0;
-    setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+    setsockopt(fd, SOL_TCP, TCP_NODELAY, (char *)&opt, sizeof(opt));
 }
 
 void set_socket_nosigpipe(int fd) {
@@ -321,14 +321,16 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
 void socket_getaddrinfo(struct socket_ctx *c, const char *hostname) {
     struct addrinfo hints;
     struct tunnel_ctx *tunnel;
+    uv_loop_t *loop;
 
     tunnel = c->tunnel;
+    loop = tunnel->listener->loop;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
-    VERIFY(0 == uv_getaddrinfo(tunnel->listener->loop,
+    VERIFY(0 == uv_getaddrinfo(loop,
         &c->t.addrinfo_req,
         socket_getaddrinfo_done_cb,
         hostname,
