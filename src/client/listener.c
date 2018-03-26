@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "dump_info.h"
+#include "tunnel.h"
 #include "ssr_executive.h"
 #include "common.h"
 #if UDP_RELAY_ENABLE
@@ -255,6 +256,8 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             ssr_run_loop_shutdown(state);
             break;
         }
+
+        fix_linux_unexpected_reset_by_incoming_peer(tcp_server);
 
         pr_info("listening on     %s:%hu\n", addrbuf, cf->listen_port);
 

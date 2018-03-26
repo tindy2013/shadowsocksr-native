@@ -164,6 +164,8 @@ static int ssr_server_run_loop(struct server_config *config) {
         }
         state->tcp_listener = listener;
 
+        fix_linux_unexpected_reset_by_incoming_peer(listener);
+
         state->resolved_ips = obj_map_create(resolved_ips_compare_key,
                                              resolved_ips_destroy_object,
                                              resolved_ips_destroy_object);
@@ -698,6 +700,8 @@ static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         } while (0);
         buffer_free(buf);
     }
+    set_socket_nodelay(uv_stream_fd(&outgoing->handle.tcp), false);
+    set_socket_nodelay(uv_stream_fd(&incoming->handle.tcp), false);
 }
 
 static int resolved_ips_compare_key(void *left, void *right) {

@@ -85,6 +85,14 @@ void set_socket_linger(int fd) {
 #endif
 }
 
+void fix_linux_unexpected_reset_by_incoming_peer(uv_tcp_t *socket) {
+    int fd = uv_stream_fd(socket);
+    set_socket_nonblocking(fd);
+    set_socket_nodelay(fd, true);
+    set_socket_nosigpipe(fd);
+    set_socket_linger(fd);
+}
+
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
     return (tunnel->terminated != false);
 }
@@ -131,6 +139,7 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, bool(*init
     VERIFY(0 == uv_timer_init(loop, &incoming->timer_handle));
     VERIFY(0 == uv_tcp_init(loop, &incoming->handle.tcp));
     VERIFY(0 == uv_accept((uv_stream_t *)listener, &incoming->handle.stream));
+    fix_linux_unexpected_reset_by_incoming_peer(&incoming->handle.tcp);
     tunnel->incoming = incoming;
 
     outgoing = (struct socket_ctx *) calloc(1, sizeof(*outgoing));
@@ -235,6 +244,8 @@ static void socket_connect_done_cb(uv_connect_t *req, int status) {
         tunnel_shutdown(tunnel);
         return;  /* Handle has been closed. */
     }
+
+    fix_linux_unexpected_reset_by_incoming_peer(&c->handle.tcp);
 
     ASSERT(tunnel->tunnel_outgoing_connected_done);
     tunnel->tunnel_outgoing_connected_done(tunnel, c);
