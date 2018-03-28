@@ -82,7 +82,6 @@ static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size);
-static bool tunnel_in_streaming(struct tunnel_ctx *tunnel);
 static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 static bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 static bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr);
@@ -101,7 +100,6 @@ static bool init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
     tunnel->tunnel_get_alloc_size = &tunnel_get_alloc_size;
-    tunnel->tunnel_in_streaming = &tunnel_in_streaming;
 
     objects_container_add(ctx->env->tunnel_set, tunnel);
 
@@ -650,20 +648,13 @@ static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx
 }
 
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    if (tunnel->tunnel_in_streaming(tunnel) == false) {
-        do_next(tunnel, socket);
-    }
+    do_next(tunnel, socket);
 }
 
 static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size) {
     (void)tunnel;
     (void)suggested_size;
     return SSR_BUFF_SIZE;
-}
-
-static bool tunnel_in_streaming(struct tunnel_ctx *tunnel) {
-    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-    return (ctx->state == session_proxy);
 }
 
 static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {

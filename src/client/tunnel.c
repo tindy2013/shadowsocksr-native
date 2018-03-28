@@ -313,9 +313,7 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
     tunnel = c->tunnel;
 
-    if (tunnel->tunnel_in_streaming(tunnel) == false) {
-        ASSERT(c->rdstate == socket_busy);
-    }
+    ASSERT(c->rdstate == socket_busy);
 
     if (tunnel->tunnel_get_alloc_size) {
         size = tunnel->tunnel_get_alloc_size(tunnel, size);
@@ -391,9 +389,7 @@ void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     uv_buf_t buf;
     struct tunnel_ctx *tunnel = c->tunnel;
 
-    if (tunnel->tunnel_in_streaming(tunnel) == false) {
-        ASSERT(c->wrstate == socket_stop || c->wrstate == socket_done);
-    }
+    ASSERT(c->wrstate == socket_stop);
     c->wrstate = socket_busy;
 
     // It's okay to cast away constness here, uv_write() won't modify the memory.
@@ -427,9 +423,7 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
         return;  /* Handle has been closed. */
     }
 
-    if (tunnel->tunnel_in_streaming(tunnel) == false) {
-        ASSERT(c->wrstate == socket_busy);
-    }
+    ASSERT(c->wrstate == socket_busy);
     c->wrstate = socket_done;
 
     ASSERT(tunnel->tunnel_write_done);
