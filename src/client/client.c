@@ -615,8 +615,6 @@ static void do_proxy(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         } while (0);
         buffer_free(buf);
     }
-    set_socket_nodelay(uv_stream_fd(&outgoing->handle.tcp), false);
-    set_socket_nodelay(uv_stream_fd(&incoming->handle.tcp), false);
 }
 
 static void tunnel_dying(struct tunnel_ctx *tunnel) {

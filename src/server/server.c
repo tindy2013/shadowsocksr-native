@@ -165,8 +165,6 @@ static int ssr_server_run_loop(struct server_config *config) {
         }
         state->tcp_listener = listener;
 
-        fix_linux_unexpected_reset_by_incoming_peer(listener);
-
         state->resolved_ips = obj_map_create(resolved_ips_compare_key,
                                              resolved_ips_destroy_object,
                                              resolved_ips_destroy_object);
@@ -656,7 +654,7 @@ static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     incoming = tunnel->incoming;
     outgoing = tunnel->outgoing;
     ASSERT(socket == incoming || socket == outgoing);
-#if 1
+
     if (socket_cycle(incoming, outgoing) == false) {
         tunnel_shutdown(tunnel);
         return;
@@ -666,53 +664,6 @@ static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         tunnel_shutdown(tunnel);
         return;
     }
-#else
-    if (socket == outgoing) {
-        struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
-        struct buffer_t *buf;
-        do {
-            buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, (const uint8_t *)outgoing->buf->base, (size_t)outgoing->result);
-            if (ssr_ok != tunnel_encrypt(cipher_ctx, buf)) {
-                tunnel_shutdown(tunnel);
-                break;
-            }
-            if (buf->len > 0) {
-                socket_write(incoming, buf->buffer, buf->len);
-            }
-        } while (0);
-        buffer_free(buf);
-    }
-
-    if (socket == incoming) {
-        struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
-        struct buffer_t *buf;
-        do {
-            buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, (const uint8_t *)incoming->buf->base, (size_t)incoming->result);
-
-            struct buffer_t *feedback = NULL;
-            if (ssr_ok != tunnel_decrypt(cipher_ctx, buf, &feedback)) {
-                tunnel_shutdown(tunnel);
-                break;
-            }
-            if (feedback) {
-                UNREACHABLE();
-                /*
-                ASSERT(buf->len == 0);
-                socket_write(outgoing, feedback->buffer, feedback->len);
-                 */
-                buffer_free(feedback);
-            }
-            if (buf->len > 0) {
-                socket_write(outgoing, buf->buffer, buf->len);
-            }
-        } while (0);
-        buffer_free(buf);
-    }
-    set_socket_nodelay(uv_stream_fd(&outgoing->handle.tcp), false);
-    set_socket_nodelay(uv_stream_fd(&incoming->handle.tcp), false);
-#endif
 }
 
 static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b) {

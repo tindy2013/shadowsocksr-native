@@ -257,8 +257,6 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             break;
         }
 
-        fix_linux_unexpected_reset_by_incoming_peer(tcp_server);
-
         pr_info("listening on     %s:%hu\n", addrbuf, cf->listen_port);
 
 #if UDP_RELAY_ENABLE

@@ -41,58 +41,6 @@ static void socket_write_done_cb(uv_write_t *req, int status);
 static void socket_close(struct socket_ctx *c);
 static void socket_close_done_cb(uv_handle_t *handle);
 
-int uv_stream_fd(const uv_tcp_t *handle) {
-#if defined(_WIN32)
-    return (int) handle->socket;
-#elif defined(__APPLE__)
-    int uv___stream_fd(const uv_stream_t* handle);
-    return uv___stream_fd((const uv_stream_t *)handle);
-#else
-    return (handle)->io_watcher.fd;
-#endif
-}
-
-int set_socket_nonblocking(int fd) {
-#if !(defined(WIN32) || defined(_WIN32))
-    int flags;
-    if (-1 == (flags = fcntl(fd, F_GETFL, 0))) {
-        flags = 0;
-    }
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-#else
-    return 0;
-#endif
-}
-
-void set_socket_nodelay(int fd, bool enable) {
-    int opt = enable ? 1 : 0;
-    setsockopt(fd, SOL_TCP, TCP_NODELAY, (char *)&opt, sizeof(opt));
-}
-
-void set_socket_nosigpipe(int fd) {
-#if defined(SO_NOSIGPIPE) && !defined(MSG_NOSIGNAL)
-    int opt = 1;
-    setsockopt(serverfd, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt));
-#endif
-}
-
-void set_socket_linger(int fd) {
-#ifdef __linux__
-    struct linger so_linger = { 0 };
-    so_linger.l_onoff  = 1;
-    so_linger.l_linger = 0;
-    setsockopt(fd, SOL_SOCKET, SO_LINGER, &so_linger, sizeof so_linger);
-#endif
-}
-
-void fix_linux_unexpected_reset_by_incoming_peer(uv_tcp_t *socket) {
-    int fd = uv_stream_fd(socket);
-    set_socket_nonblocking(fd);
-    set_socket_nodelay(fd, true);
-    set_socket_nosigpipe(fd);
-    set_socket_linger(fd);
-}
-
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
     return (tunnel->terminated != false);
 }
@@ -139,7 +87,6 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, bool(*init
     VERIFY(0 == uv_timer_init(loop, &incoming->timer_handle));
     VERIFY(0 == uv_tcp_init(loop, &incoming->handle.tcp));
     VERIFY(0 == uv_accept((uv_stream_t *)listener, &incoming->handle.stream));
-    fix_linux_unexpected_reset_by_incoming_peer(&incoming->handle.tcp);
     tunnel->incoming = incoming;
 
     outgoing = (struct socket_ctx *) calloc(1, sizeof(*outgoing));
@@ -244,8 +191,6 @@ static void socket_connect_done_cb(uv_connect_t *req, int status) {
         tunnel_shutdown(tunnel);
         return;  /* Handle has been closed. */
     }
-
-    fix_linux_unexpected_reset_by_incoming_peer(&c->handle.tcp);
 
     ASSERT(tunnel->tunnel_outgoing_connected_done);
     tunnel->tunnel_outgoing_connected_done(tunnel, c);
