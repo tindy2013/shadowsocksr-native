@@ -79,6 +79,8 @@ static void do_connect_host_start(struct tunnel_ctx *tunnel, struct socket_ctx *
 static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b);
+static bool socket_extract_data(struct socket_ctx *socket, struct buffer_t *buf);
 
 static int resolved_ips_compare_key(void *left, void *right);
 static void resolved_ips_destroy_object(void *obj);
@@ -374,8 +376,11 @@ static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_
 }
 
 static bool tunnel_in_streaming(struct tunnel_ctx *tunnel) {
+    return false;
+    /*
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     return (ctx->state == session_streaming);
+    */
 }
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel) {
@@ -416,6 +421,11 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
     do {
         const uint8_t *buf = (const uint8_t *)incoming->buf->base;
         ASSERT(socket == incoming);
+
+        ASSERT(incoming->rdstate == socket_done);
+        ASSERT(incoming->wrstate == socket_stop);
+        incoming->rdstate = socket_stop;
+
         if (is_completed_package(ctx->env, buf, (size_t)incoming->result) == false) {
             buffer_store(ctx->init_pkg, buf, (size_t)incoming->result);
             socket_read(incoming);
@@ -577,10 +587,10 @@ static void do_connect_host_start(struct tunnel_ctx *tunnel, struct socket_ctx *
 
     incoming = tunnel->incoming;
     outgoing = tunnel->outgoing;
-    ASSERT(incoming->rdstate == socket_stop || incoming->rdstate == socket_done);
-    ASSERT(incoming->wrstate == socket_stop || incoming->wrstate == socket_done);
-    ASSERT(outgoing->rdstate == socket_stop || outgoing->rdstate == socket_done);
-    ASSERT(outgoing->wrstate == socket_stop || outgoing->wrstate == socket_done);
+    ASSERT(incoming->rdstate == socket_stop);
+    ASSERT(incoming->wrstate == socket_stop);
+    ASSERT(outgoing->rdstate == socket_stop);
+    ASSERT(outgoing->wrstate == socket_stop);
 
     ctx->state = session_connect_host;
     err = socket_connect(outgoing);
@@ -602,16 +612,17 @@ static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
     outgoing = tunnel->outgoing;
 
     ASSERT(outgoing == socket);
-    ASSERT(incoming->rdstate == socket_stop || incoming->rdstate == socket_done);
-    ASSERT(incoming->wrstate == socket_stop || incoming->wrstate == socket_done);
-    ASSERT(outgoing->rdstate == socket_stop || outgoing->rdstate == socket_done);
-    ASSERT(outgoing->wrstate == socket_stop || outgoing->wrstate == socket_done);
+    ASSERT(incoming->rdstate == socket_stop);
+    ASSERT(incoming->wrstate == socket_stop);
+    ASSERT(outgoing->rdstate == socket_stop);
+    ASSERT(outgoing->wrstate == socket_stop);
 
     if (outgoing->result == 0) {
         if (ctx->init_pkg->len > 0) {
             socket_write(outgoing, ctx->init_pkg->buffer, ctx->init_pkg->len);
             ctx->state = session_launch_streaming;
         } else {
+            outgoing->wrstate = socket_done;
             do_launch_streaming(tunnel, socket);
         }
         return;
@@ -634,7 +645,8 @@ static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *so
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     ASSERT(outgoing->rdstate == socket_stop);
-    ASSERT(outgoing->wrstate == socket_stop || outgoing->wrstate == socket_done);
+    ASSERT(outgoing->wrstate == socket_done);
+    outgoing->wrstate = socket_stop;
 
     if (outgoing->result < 0) {
         pr_err("write error: %s", uv_strerror((int)outgoing->result));
@@ -656,7 +668,17 @@ static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     incoming = tunnel->incoming;
     outgoing = tunnel->outgoing;
     ASSERT(socket == incoming || socket == outgoing);
+#if 1
+    if (socket_cycle(incoming, outgoing) == false) {
+        tunnel_shutdown(tunnel);
+        return;
+    }
 
+    if (socket_cycle(outgoing, incoming) == false) {
+        tunnel_shutdown(tunnel);
+        return;
+    }
+#else
     if (socket == outgoing) {
         struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
         struct buffer_t *buf;
@@ -702,6 +724,65 @@ static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     }
     set_socket_nodelay(uv_stream_fd(&outgoing->handle.tcp), false);
     set_socket_nodelay(uv_stream_fd(&incoming->handle.tcp), false);
+#endif
+}
+
+static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b) {
+    bool result = true;
+    struct tunnel_ctx *tunnel = a->tunnel;
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+
+    ASSERT((a->result >= 0) && (b->result >= 0));
+
+    if (a->wrstate == socket_done) {
+        a->wrstate = socket_stop;
+    }
+
+    // The logic is as follows: read when we don't write and write when we don't read.
+    // That gives us back-pressure handling for free because if the peer
+    // sends data faster than we consume it, TCP congestion control kicks in.
+    if (a->wrstate == socket_stop) {
+        if (b->rdstate == socket_stop) {
+            socket_read(b);
+        } else if (b->rdstate == socket_done) {
+            struct buffer_t *buf = buffer_alloc(SSR_BUFF_SIZE);
+            if (socket_extract_data(b, buf)) {
+                socket_write(a, buf->buffer, buf->len); // socket_write(a, b->buf->base, b->result);
+                b->rdstate = socket_stop;  // Triggers the call to socket_read() above.
+            } else {
+                result = false;
+            }
+            buffer_free(buf);
+        }
+    }
+    return result;
+}
+
+static bool socket_extract_data(struct socket_ctx *socket, struct buffer_t *buf) {
+    struct tunnel_ctx *tunnel = socket->tunnel;
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+    struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
+    enum ssr_error error = ssr_error_client_decode;
+
+    buffer_store(buf, (const uint8_t *)socket->buf->base, (size_t)socket->result);
+
+    if (socket == tunnel->outgoing) {
+        error = tunnel_encrypt(cipher_ctx, buf);
+    } else if (socket == tunnel->incoming) {
+        struct buffer_t *feedback = NULL;
+        error = tunnel_decrypt(cipher_ctx, buf, &feedback);
+        if (feedback) {
+            UNREACHABLE();
+            /*
+            ASSERT(buf->len == 0);
+            socket_write(outgoing, feedback->buffer, feedback->len);
+            */
+            buffer_free(feedback);
+        }
+    } else {
+        UNREACHABLE();
+    }
+    return (error == ssr_ok);
 }
 
 static int resolved_ips_compare_key(void *left, void *right) {
