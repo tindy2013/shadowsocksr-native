@@ -107,6 +107,7 @@ void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const voi
 
 struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const struct buffer_t *init_pkg);
 void tunnel_cipher_release(struct tunnel_cipher_ctx *tc);
+bool tunnel_cipher_send_feedback(struct tunnel_cipher_ctx *tc);
 enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf);
 enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback);
 

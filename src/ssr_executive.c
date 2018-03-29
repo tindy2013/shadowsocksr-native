@@ -322,6 +322,21 @@ void tunnel_cipher_release(struct tunnel_cipher_ctx *tc) {
     free(tc);
 }
 
+bool tunnel_cipher_send_feedback(struct tunnel_cipher_ctx *tc) {
+    bool protocol = false;
+    bool obfs = false;
+    struct server_env_t *env = tc->env;
+    ASSERT(env);
+
+    if (env->protocol_plugin) {
+        protocol = env->protocol_plugin->is_always_send_feedback(tc->protocol);
+    }
+    if (env->obfs_plugin) {
+        obfs = env->obfs_plugin->is_always_send_feedback(tc->obfs);
+    }
+    return (protocol || obfs);
+}
+
 // insert shadowsocks header
 enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) {
     ASSERT(buf->capacity >= SSR_BUFF_SIZE);

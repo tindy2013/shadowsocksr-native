@@ -43,6 +43,7 @@ struct obfs_manager {
     void * (*init_data)(void);
     struct obfs_t * (*new_obfs)(void);
     int  (*get_overhead)(struct obfs_t *obfs);
+    bool (*is_always_send_feedback)(struct obfs_t *obfs);
     void (*get_server_info)(struct obfs_t *obfs, struct server_info_t *server);
     void (*set_server_info)(struct obfs_t *obfs, struct server_info_t *server);
     void (*dispose)(struct obfs_t *obfs);
