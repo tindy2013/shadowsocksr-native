@@ -6,6 +6,7 @@
 #include "sockaddr_universal.h"
 
 struct tunnel_ctx;
+struct buffer_t;
 
 enum socket_state {
     socket_stop,  /* Stopped. */
@@ -54,10 +55,12 @@ struct tunnel_ctx {
     void(*tunnel_getaddrinfo_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
     void(*tunnel_write_done)(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
     size_t(*tunnel_get_alloc_size)(struct tunnel_ctx *tunnel, size_t suggested_size);
+    bool(*tunnel_extract_data)(struct socket_ctx *socket, struct buffer_t *buf);
 };
 
 void tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout, bool(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);
 void tunnel_shutdown(struct tunnel_ctx *tunnel);
+void tunnel_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 int socket_connect(struct socket_ctx *c);
 void socket_read(struct socket_ctx *c);
 void socket_read_stop(struct socket_ctx *c);

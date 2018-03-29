@@ -26,10 +26,12 @@
 #include "common.h"
 #include "tunnel.h"
 #include "dump_info.h"
+#include "ssrbuffer.h"
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel);
 static void tunnel_add_ref(struct tunnel_ctx *tunnel);
 static void tunnel_release(struct tunnel_ctx *tunnel);
+static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b);
 static void socket_timer_expire_cb(uv_timer_t *handle);
 static void socket_timer_start(struct socket_ctx *c);
 static void socket_timer_stop(struct socket_ctx *c);
@@ -128,6 +130,55 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
     socket_close(tunnel->outgoing);
 
     tunnel->terminated = true;
+}
+
+void tunnel_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    struct socket_ctx *incoming;
+    struct socket_ctx *outgoing;
+
+    incoming = tunnel->incoming;
+    outgoing = tunnel->outgoing;
+    ASSERT(socket == incoming || socket == outgoing);
+
+    if (socket_cycle(incoming, outgoing) == false) {
+        tunnel_shutdown(tunnel);
+        return;
+    }
+
+    if (socket_cycle(outgoing, incoming) == false) {
+        tunnel_shutdown(tunnel);
+        return;
+    }
+}
+
+static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b) {
+    bool result = true;
+    struct tunnel_ctx *tunnel = a->tunnel;
+
+    ASSERT((a->result >= 0) && (b->result >= 0));
+
+    if (a->wrstate == socket_done) {
+        a->wrstate = socket_stop;
+    }
+    // The logic is as follows: read when we don't write and write when we don't read.
+    // That gives us back-pressure handling for free because if the peer
+    // sends data faster than we consume it, TCP congestion control kicks in.
+    if (a->wrstate == socket_stop) {
+        if (b->rdstate == socket_stop) {
+            socket_read(b);
+        } else if (b->rdstate == socket_done) {
+            struct buffer_t *buf = buffer_alloc(SSR_BUFF_SIZE);
+            ASSERT(tunnel->tunnel_extract_data);
+            if (tunnel->tunnel_extract_data(b, buf)) {
+                socket_write(a, buf->buffer, buf->len); // socket_write(a, b->buf->base, b->result);
+                b->rdstate = socket_stop;  // Triggers the call to socket_read() above.
+            } else {
+                result = false;
+            }
+            buffer_free(buf);
+        }
+    }
+    return result;
 }
 
 static void socket_timer_start(struct socket_ctx *c) {

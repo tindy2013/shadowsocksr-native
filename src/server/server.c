@@ -67,6 +67,7 @@ static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size);
+static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf);
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel);
 static bool is_header_complete(const struct buffer_t *buf);
@@ -77,9 +78,7 @@ static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
 static void do_connect_host_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b);
-static bool socket_extract_data(struct socket_ctx *socket, struct buffer_t *buf);
 
 static int resolved_ips_compare_key(void *left, void *right);
 static void resolved_ips_destroy_object(void *obj);
@@ -247,6 +246,7 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
     tunnel->tunnel_get_alloc_size = &tunnel_get_alloc_size;
+    tunnel->tunnel_extract_data = &tunnel_extract_data;
 
     objects_container_add(ctx->env->tunnel_set, tunnel);
 
@@ -329,7 +329,7 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         do_launch_streaming(tunnel, socket);
         break;
     case session_streaming:
-        do_streaming(tunnel, socket);
+        tunnel_streaming(tunnel, socket);
         break;
     default:
         UNREACHABLE();
@@ -645,59 +645,7 @@ static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *so
     ctx->state = session_streaming;
 }
 
-static void do_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    struct socket_ctx *incoming;
-    struct socket_ctx *outgoing;
-
-    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-
-    incoming = tunnel->incoming;
-    outgoing = tunnel->outgoing;
-    ASSERT(socket == incoming || socket == outgoing);
-
-    if (socket_cycle(incoming, outgoing) == false) {
-        tunnel_shutdown(tunnel);
-        return;
-    }
-
-    if (socket_cycle(outgoing, incoming) == false) {
-        tunnel_shutdown(tunnel);
-        return;
-    }
-}
-
-static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b) {
-    bool result = true;
-    struct tunnel_ctx *tunnel = a->tunnel;
-    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-
-    ASSERT((a->result >= 0) && (b->result >= 0));
-
-    if (a->wrstate == socket_done) {
-        a->wrstate = socket_stop;
-    }
-
-    // The logic is as follows: read when we don't write and write when we don't read.
-    // That gives us back-pressure handling for free because if the peer
-    // sends data faster than we consume it, TCP congestion control kicks in.
-    if (a->wrstate == socket_stop) {
-        if (b->rdstate == socket_stop) {
-            socket_read(b);
-        } else if (b->rdstate == socket_done) {
-            struct buffer_t *buf = buffer_alloc(SSR_BUFF_SIZE);
-            if (socket_extract_data(b, buf)) {
-                socket_write(a, buf->buffer, buf->len); // socket_write(a, b->buf->base, b->result);
-                b->rdstate = socket_stop;  // Triggers the call to socket_read() above.
-            } else {
-                result = false;
-            }
-            buffer_free(buf);
-        }
-    }
-    return result;
-}
-
-static bool socket_extract_data(struct socket_ctx *socket, struct buffer_t *buf) {
+static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf) {
     struct tunnel_ctx *tunnel = socket->tunnel;
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
