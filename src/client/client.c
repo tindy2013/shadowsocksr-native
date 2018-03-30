@@ -544,7 +544,7 @@ static void do_ssr_audit_feedback(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
     struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
     enum ssr_error error = ssr_error_client_decode;
-    struct buffer_t *buf = ctx->init_pkg;
+    struct buffer_t *buf = NULL;
     struct buffer_t *feedback = NULL;
 
     ASSERT(incoming->rdstate == socket_stop);
@@ -558,6 +558,7 @@ static void do_ssr_audit_feedback(struct tunnel_ctx *tunnel) {
         return;
     }
 
+    buf = buffer_alloc(SSR_BUFF_SIZE);
     buffer_store(buf, (const uint8_t *)outgoing->buf->base, (size_t)outgoing->result);
     error = tunnel_decrypt(cipher_ctx, buf, &feedback);
     ASSERT(error == ssr_ok);
@@ -568,6 +569,7 @@ static void do_ssr_audit_feedback(struct tunnel_ctx *tunnel) {
     ctx->state = session_ssr_feedback_sent;
 
     buffer_free(feedback);
+    buffer_free(buf);
 }
 
 static void do_socks5_reply_success(struct tunnel_ctx *tunnel) {
