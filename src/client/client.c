@@ -61,7 +61,7 @@ struct client_ctx {
     struct server_env_t *env; // __weak_ptr
     struct tunnel_cipher_ctx *cipher;
     struct buffer_t *init_pkg;
-    s5_ctx parser;  /* The SOCKS protocol parser. */
+    s5_ctx *parser;  /* The SOCKS protocol parser. */
     enum session_state state;
 };
 
@@ -108,7 +108,8 @@ static bool init_done_cb(struct tunnel_ctx *tunnel, void *p) {
 
     objects_container_add(ctx->env->tunnel_set, tunnel);
 
-    s5_init(&ctx->parser);
+    ctx->parser = (s5_ctx *)calloc(1, sizeof(s5_ctx));
+    s5_init(ctx->parser);
     ctx->cipher = NULL;
     ctx->state = session_handshake;
 
@@ -179,15 +180,21 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 
     switch (ctx->state) {
     case session_handshake:
+        ASSERT(incoming->rdstate == socket_done);
+        incoming->rdstate = socket_stop;
         do_handshake(tunnel);
         break;
     case session_handshake_auth:
         do_handshake_auth(tunnel);
         break;
     case session_req_start:
+        ASSERT(incoming->wrstate == socket_done);
+        incoming->wrstate = socket_stop;
         do_req_start(tunnel);
         break;
     case session_req_parse:
+        ASSERT(incoming->rdstate == socket_done);
+        incoming->rdstate = socket_stop;
         do_req_parse(tunnel);
         break;
     case session_req_udp_accoc:
@@ -232,7 +239,7 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 
 static void do_handshake(struct tunnel_ctx *tunnel) {
     enum s5_auth_method methods;
-    struct socket_ctx *incoming;
+    struct socket_ctx *incoming = tunnel->incoming;
     s5_ctx *parser;
     uint8_t *data;
     size_t size;
@@ -240,11 +247,9 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
 
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
 
-    parser = &ctx->parser;
-    incoming = tunnel->incoming;
-    ASSERT(incoming->rdstate == socket_done);
+    parser = ctx->parser;
+    ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
-    incoming->rdstate = socket_stop;
 
     if (incoming->result < 0) {
         pr_err("read error: %s", uv_strerror((int)incoming->result));
@@ -303,12 +308,10 @@ static void do_handshake_auth(struct tunnel_ctx *tunnel) {
 
 static void do_req_start(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-    struct socket_ctx *incoming;
+    struct socket_ctx *incoming = tunnel->incoming;
 
-    incoming = tunnel->incoming;
     ASSERT(incoming->rdstate == socket_stop);
-    ASSERT(incoming->wrstate == socket_done);
-    incoming->wrstate = socket_stop;
+    ASSERT(incoming->wrstate == socket_stop);
 
     if (incoming->result < 0) {
         pr_err("write error: %s", uv_strerror((int)incoming->result));
@@ -321,8 +324,8 @@ static void do_req_start(struct tunnel_ctx *tunnel) {
 }
 
 static void do_req_parse(struct tunnel_ctx *tunnel) {
-    struct socket_ctx *incoming;
-    struct socket_ctx *outgoing;
+    struct socket_ctx *incoming = tunnel->incoming;
+    struct socket_ctx *outgoing = tunnel->outgoing;
     s5_ctx *parser;
     uint8_t *data;
     size_t size;
@@ -335,15 +338,12 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     env = ctx->env;
     config = env->config;
 
-    parser = &ctx->parser;
-    incoming = tunnel->incoming;
-    outgoing = tunnel->outgoing;
+    parser = ctx->parser;
 
-    ASSERT(incoming->rdstate == socket_done);
+    ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     ASSERT(outgoing->rdstate == socket_stop);
     ASSERT(outgoing->wrstate == socket_stop);
-    incoming->rdstate = socket_stop;
 
     if (incoming->result < 0) {
         pr_err("read error: %s", uv_strerror((int)incoming->result));
@@ -416,7 +416,7 @@ static void do_req_lookup(struct tunnel_ctx *tunnel) {
 
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
 
-    parser = &ctx->parser;
+    parser = ctx->parser;
     incoming = tunnel->incoming;
     outgoing = tunnel->outgoing;
     ASSERT(incoming->rdstate == socket_stop);
@@ -453,12 +453,10 @@ static void do_req_lookup(struct tunnel_ctx *tunnel) {
 /* Assumes that cx->outgoing.t.sa contains a valid AF_INET/AF_INET6 address. */
 static void do_req_connect_start(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-    struct socket_ctx *incoming;
-    struct socket_ctx *outgoing;
+    struct socket_ctx *incoming = tunnel->incoming;
+    struct socket_ctx *outgoing = tunnel->outgoing;
     int err;
 
-    incoming = tunnel->incoming;
-    outgoing = tunnel->outgoing;
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     ASSERT(outgoing->rdstate == socket_stop);
@@ -483,13 +481,9 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel) {
 }
 
 static void do_req_connect(struct tunnel_ctx *tunnel) {
-    struct socket_ctx *incoming;
-    struct socket_ctx *outgoing;
-
+    struct socket_ctx *incoming = tunnel->incoming;
+    struct socket_ctx *outgoing = tunnel->outgoing;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-
-    incoming = tunnel->incoming;
-    outgoing = tunnel->outgoing;
 
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
@@ -712,6 +706,7 @@ static void tunnel_dying(struct tunnel_ctx *tunnel) {
         tunnel_cipher_release(ctx->cipher);
     }
     buffer_free(ctx->init_pkg);
+    free(ctx->parser);
     free(ctx);
 }
 
