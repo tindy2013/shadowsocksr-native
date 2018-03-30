@@ -133,11 +133,9 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
 }
 
 void tunnel_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    struct socket_ctx *incoming;
-    struct socket_ctx *outgoing;
+    struct socket_ctx *incoming = tunnel->incoming;
+    struct socket_ctx *outgoing = tunnel->outgoing;
 
-    incoming = tunnel->incoming;
-    outgoing = tunnel->outgoing;
     ASSERT(socket == incoming || socket == outgoing);
 
     if (socket_cycle(incoming, outgoing) == false) {
@@ -259,36 +257,36 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
     struct tunnel_ctx *tunnel;
 
     do {
-    c = CONTAINER_OF(handle, struct socket_ctx, handle);
-    c->result = nread;
-    tunnel = c->tunnel;
+        c = CONTAINER_OF(handle, struct socket_ctx, handle);
+        c->result = nread;
+        tunnel = c->tunnel;
 
-    if (tunnel_is_dead(tunnel)) {
-        break;
-    }
-
-    uv_read_stop(&c->handle.stream);
-
-    socket_timer_stop(c);
-
-    if (nread == 0) {
-        break;
-    }
-    if (nread < 0) {
-        // http://docs.libuv.org/en/v1.x/stream.html
-        if (nread != UV_EOF) {
-            socket_dump_error_info("recieve data failed", c);
+        if (tunnel_is_dead(tunnel)) {
+            break;
         }
-        tunnel_shutdown(tunnel);
-        break;
-    }
 
-    c->buf = buf;
-    ASSERT(c->rdstate == socket_busy);
-    c->rdstate = socket_done;
+        uv_read_stop(&c->handle.stream);
 
-    ASSERT(tunnel->tunnel_read_done);
-    tunnel->tunnel_read_done(tunnel, c);
+        socket_timer_stop(c);
+
+        if (nread == 0) {
+            break;
+        }
+        if (nread < 0) {
+            // http://docs.libuv.org/en/v1.x/stream.html
+            if (nread != UV_EOF) {
+                socket_dump_error_info("recieve data failed", c);
+            }
+            tunnel_shutdown(tunnel);
+            break;
+        }
+
+        c->buf = buf;
+        ASSERT(c->rdstate == socket_busy);
+        c->rdstate = socket_done;
+
+        ASSERT(tunnel->tunnel_read_done);
+        tunnel->tunnel_read_done(tunnel, c);
     } while (0);
 
     if (buf->base) {
@@ -454,7 +452,7 @@ static void socket_close_done_cb(uv_handle_t *handle) {
 void socket_dump_error_info(const char *title, struct socket_ctx *socket) {
     struct tunnel_ctx *tunnel = socket->tunnel;
     int error = (int)socket->result;
-    char addr[256] = {0};
+    char addr[256] = { 0 };
     const char *from = NULL;
     if (socket == tunnel->outgoing) {
         socks5_address_to_string(tunnel->desired_addr, addr, sizeof(addr));

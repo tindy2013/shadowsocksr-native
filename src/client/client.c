@@ -50,8 +50,8 @@ enum session_state {
     session_req_lookup,       /* Wait for upstream hostname DNS lookup to complete. */
     session_req_connect,      /* Wait for uv_tcp_connect() to complete. */
     session_ssr_auth_sent,
-    session_wait_feedback,
-    session_ssr_feedback_sent,
+    session_ssr_waiting_feedback,
+    session_ssr_receipt_of_feedback_sent,
     session_auth_complition_done,      /* Connected. Start piping data. */
     session_streaming,            /* Connected. Pipe data back and forth. */
     session_kill,             /* Tear down session. */
@@ -75,7 +75,7 @@ static void do_req_lookup(struct tunnel_ctx *tunnel);
 static void do_req_connect_start(struct tunnel_ctx *tunnel);
 static void do_req_connect(struct tunnel_ctx *tunnel);
 static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
-static void do_ssr_audit_feedback(struct tunnel_ctx *tunnel);
+static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel);
 static void do_socks5_reply_success(struct tunnel_ctx *tunnel);
 static void do_launch_streaming(struct tunnel_ctx *tunnel);
 static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf);
@@ -198,6 +198,8 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         do_req_parse(tunnel);
         break;
     case session_req_udp_accoc:
+        ASSERT(incoming->wrstate == socket_done);
+        incoming->wrstate = socket_stop;
         tunnel_shutdown(tunnel);
         break;
     case session_req_lookup:
@@ -211,12 +213,12 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         outgoing->wrstate = socket_stop;
         do_ssr_auth_sent(tunnel);
         break;
-    case session_wait_feedback:
+    case session_ssr_waiting_feedback:
         ASSERT(outgoing->rdstate == socket_done);
         outgoing->rdstate = socket_stop;
-        do_ssr_audit_feedback(tunnel);
+        do_ssr_receipt_for_feedback(tunnel);
         break;
-    case session_ssr_feedback_sent:
+    case session_ssr_receipt_of_feedback_sent:
         ASSERT(outgoing->wrstate == socket_done);
         outgoing->wrstate = socket_stop;
         do_socks5_reply_success(tunnel);
@@ -240,14 +242,12 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 static void do_handshake(struct tunnel_ctx *tunnel) {
     enum s5_auth_method methods;
     struct socket_ctx *incoming = tunnel->incoming;
-    s5_ctx *parser;
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+    s5_ctx *parser = ctx->parser;
     uint8_t *data;
     size_t size;
     enum s5_err err;
 
-    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-
-    parser = ctx->parser;
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
 
@@ -326,19 +326,13 @@ static void do_req_start(struct tunnel_ctx *tunnel) {
 static void do_req_parse(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
-    s5_ctx *parser;
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+    s5_ctx *parser = ctx->parser;
     uint8_t *data;
     size_t size;
     enum s5_err err;
-    struct server_env_t *env;
-    struct server_config *config;
-
-    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-
-    env = ctx->env;
-    config = env->config;
-
-    parser = ctx->parser;
+    struct server_env_t *env = ctx->env;
+    struct server_config *config = env->config;
 
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
@@ -410,15 +404,11 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
 }
 
 static void do_req_lookup(struct tunnel_ctx *tunnel) {
-    s5_ctx *parser;
-    struct socket_ctx *incoming;
-    struct socket_ctx *outgoing;
-
+    struct socket_ctx *incoming = tunnel->incoming;
+    struct socket_ctx *outgoing = tunnel->outgoing;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+    s5_ctx *parser = ctx->parser;
 
-    parser = ctx->parser;
-    incoming = tunnel->incoming;
-    outgoing = tunnel->outgoing;
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
     ASSERT(outgoing->rdstate == socket_stop);
@@ -532,13 +522,13 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
 
     if (tunnel_cipher_send_feedback(ctx->cipher)) {
         socket_read(outgoing);
-        ctx->state = session_wait_feedback;
+        ctx->state = session_ssr_waiting_feedback;
     } else {
         do_socks5_reply_success(tunnel);
     }
 }
 
-static void do_ssr_audit_feedback(struct tunnel_ctx *tunnel) {
+static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
@@ -566,7 +556,7 @@ static void do_ssr_audit_feedback(struct tunnel_ctx *tunnel) {
     ASSERT(buf->len == 0);
 
     socket_write(outgoing, feedback->buffer, feedback->len);
-    ctx->state = session_ssr_feedback_sent;
+    ctx->state = session_ssr_receipt_of_feedback_sent;
 
     buffer_free(feedback);
     buffer_free(buf);
@@ -613,68 +603,6 @@ static void do_launch_streaming(struct tunnel_ctx *tunnel) {
     socket_read(incoming);
     socket_read(outgoing);
     ctx->state = session_streaming;
-}
-
-/* Proxy incoming data back and forth. */
-static void do_proxy2(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    struct socket_ctx *incoming;
-    struct socket_ctx *outgoing;
-
-    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-
-    incoming = tunnel->incoming;
-    outgoing = tunnel->outgoing;
-    ASSERT(socket == incoming || socket == outgoing);
-
-    if (socket == outgoing) {
-        struct tunnel_cipher_ctx *tc;
-        struct buffer_t *buf = NULL;
-        do {
-            tc = ctx->cipher;
-
-            buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, (const uint8_t *)outgoing->buf->base, (size_t)outgoing->result);
-
-            struct buffer_t *feedback = NULL;
-            if (ssr_ok != tunnel_decrypt(tc, buf, &feedback)) {
-                pr_err("decrypt failed");
-                tunnel_shutdown(tunnel);
-                break;
-            }
-            if (feedback) {
-                // SSR logic
-                ASSERT(buf->len == 0);
-                socket_write(outgoing, feedback->buffer, feedback->len);
-                buffer_free(feedback);
-
-                socket_read_stop(incoming);
-                socket_read(incoming);
-            }
-            if (buf->len > 0) {
-                socket_write(incoming, buf->buffer, buf->len);
-            }
-        } while (0);
-        buffer_free(buf);
-    }
-
-    if (socket == incoming) {
-        struct tunnel_cipher_ctx *tc;
-        struct buffer_t *buf = NULL;
-        do {
-            tc = ctx->cipher;
-
-            buf = buffer_alloc(SSR_BUFF_SIZE);
-            buffer_store(buf, (const uint8_t *)incoming->buf->base, (size_t)incoming->result);
-            if (ssr_ok != tunnel_encrypt(tc, buf)) {
-                tunnel_shutdown(tunnel);
-                break;
-            }
-            if (buf->len > 0) {
-                socket_write(outgoing, buf->buffer, buf->len);
-            }
-        } while (0);
-        buffer_free(buf);
-    }
 }
 
 static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf) {
