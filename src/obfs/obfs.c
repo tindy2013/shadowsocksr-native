@@ -36,11 +36,11 @@ get_overhead(struct obfs_t *obfs)
     return 0;
 }
 
-bool is_always_send_feedback_false(struct obfs_t *obfs) {
+bool need_feedback_false(struct obfs_t *obfs) {
     return false;
 }
 
-bool is_always_send_feedback_true(struct obfs_t *obfs) {
+bool need_feedback_true(struct obfs_t *obfs) {
     return true;
 }
 
@@ -90,7 +90,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = init_data;
         plugin->new_obfs = http_simple_new_obfs;
         plugin->get_overhead = get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_false;
+        plugin->need_feedback = need_feedback_false;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = http_simple_dispose;
@@ -105,7 +105,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = init_data;
         plugin->new_obfs = http_simple_new_obfs;
         plugin->get_overhead = get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_false;
+        plugin->need_feedback = need_feedback_false;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = http_simple_dispose;
@@ -120,7 +120,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = tls12_ticket_auth_init_data;
         plugin->new_obfs = tls12_ticket_auth_new_obfs;
         plugin->get_overhead = tls12_ticket_auth_get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = tls12_ticket_auth_dispose;
@@ -135,7 +135,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = tls12_ticket_fastauth_init_data;
         plugin->new_obfs = tls12_ticket_fastauth_new_obfs;
         plugin->get_overhead = tls12_ticket_fastauth_get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = tls12_ticket_fastauth_dispose;
@@ -149,7 +149,7 @@ new_obfs_manager(const char *plugin_name)
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = init_data;
         plugin->new_obfs = verify_simple_new_obfs;
-        plugin->is_always_send_feedback = is_always_send_feedback_false;
+        plugin->need_feedback = need_feedback_false;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = verify_simple_dispose;
@@ -165,7 +165,7 @@ new_obfs_manager(const char *plugin_name)
         struct obfs_manager * plugin = (struct obfs_manager*)malloc(sizeof(struct obfs_manager));
         plugin->init_data = auth_simple_init_data;
         plugin->new_obfs = auth_simple_new_obfs;
-        plugin->is_always_send_feedback = is_always_send_feedback_false;
+        plugin->need_feedback = need_feedback_false;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = auth_simple_dispose;
@@ -182,7 +182,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = auth_simple_init_data;
         plugin->new_obfs = auth_simple_new_obfs;
         plugin->get_overhead = get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_false;
+        plugin->need_feedback = need_feedback_false;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = auth_simple_dispose;
@@ -199,7 +199,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = auth_simple_init_data;
         plugin->new_obfs = auth_simple_new_obfs;
         plugin->get_overhead = get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = auth_simple_dispose;
@@ -216,7 +216,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = auth_simple_init_data;
         plugin->new_obfs = auth_simple_new_obfs;
         plugin->get_overhead = get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = auth_simple_dispose;
@@ -238,7 +238,7 @@ new_obfs_manager(const char *plugin_name)
             plugin->new_obfs = auth_aes128_sha1_new_obfs;
         }
         plugin->get_overhead = auth_aes128_sha1_get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = set_server_info;
         plugin->dispose = auth_simple_dispose;
@@ -255,7 +255,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = auth_chain_a_init_data;
         plugin->new_obfs = auth_chain_a_new_obfs;
         plugin->get_overhead = auth_chain_a_get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = auth_chain_a_set_server_info;
         plugin->dispose = auth_chain_a_dispose;
@@ -272,7 +272,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = auth_chain_b_init_data;
         plugin->new_obfs = auth_chain_b_new_obfs;
         plugin->get_overhead = auth_chain_b_get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = auth_chain_b_set_server_info;
         plugin->dispose = auth_chain_b_dispose;
@@ -289,7 +289,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = auth_chain_c_init_data;
         plugin->new_obfs = auth_chain_c_new_obfs;
         plugin->get_overhead = auth_chain_c_get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = auth_chain_c_set_server_info;
         plugin->dispose = auth_chain_c_dispose;
@@ -306,7 +306,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = auth_chain_d_init_data;
         plugin->new_obfs = auth_chain_d_new_obfs;
         plugin->get_overhead = auth_chain_d_get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = auth_chain_d_set_server_info;
         plugin->dispose = auth_chain_d_dispose;
@@ -323,7 +323,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = auth_chain_e_init_data;
         plugin->new_obfs = auth_chain_e_new_obfs;
         plugin->get_overhead = auth_chain_e_get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = auth_chain_e_set_server_info;
         plugin->dispose = auth_chain_e_dispose;
@@ -340,7 +340,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->init_data = auth_chain_f_init_data;
         plugin->new_obfs = auth_chain_f_new_obfs;
         plugin->get_overhead = auth_chain_f_get_overhead;
-        plugin->is_always_send_feedback = is_always_send_feedback_true;
+        plugin->need_feedback = need_feedback_true;
         plugin->get_server_info = get_server_info;
         plugin->set_server_info = auth_chain_f_set_server_info;
         plugin->dispose = auth_chain_f_dispose;

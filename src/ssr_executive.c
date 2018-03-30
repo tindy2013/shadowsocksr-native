@@ -329,10 +329,10 @@ bool tunnel_cipher_send_feedback(struct tunnel_cipher_ctx *tc) {
     ASSERT(env);
 
     if (env->protocol_plugin) {
-        protocol = env->protocol_plugin->is_always_send_feedback(tc->protocol);
+        protocol = env->protocol_plugin->need_feedback(tc->protocol);
     }
     if (env->obfs_plugin) {
-        obfs = env->obfs_plugin->is_always_send_feedback(tc->obfs);
+        obfs = env->obfs_plugin->need_feedback(tc->obfs);
     }
     return (protocol || obfs);
 }
