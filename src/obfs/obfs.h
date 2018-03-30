@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #define OBFS_HMAC_SHA1_LEN 10
 
