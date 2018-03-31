@@ -46,7 +46,7 @@ enum session_state {
     session_handshake_auth,   /* Wait for client authentication data. */
     session_handshake_replied,        /* Start waiting for request data. */
     session_s5_request,        /* Wait for request data. */
-    session_req_udp_accoc,
+    session_s5_udp_accoc,
     session_resolve_ssr_server_host,       /* Wait for upstream hostname DNS lookup to complete. */
     session_connect_ssr_server,      /* Wait for uv_tcp_connect() to complete. */
     session_ssr_auth_sent,
@@ -197,7 +197,7 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         incoming->rdstate = socket_stop;
         do_parse_s5_request(tunnel);
         break;
-    case session_req_udp_accoc:
+    case session_s5_udp_accoc:
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
         tunnel_shutdown(tunnel);
@@ -382,7 +382,7 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
         uint8_t *buf = build_udp_assoc_package(config->udp, config->listen_host, config->listen_port,
             (uint8_t *)incoming->buf->base, &len);
         socket_write(incoming, buf, len);
-        ctx->state = session_req_udp_accoc;
+        ctx->state = session_s5_udp_accoc;
         return;
     }
 
