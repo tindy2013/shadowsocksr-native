@@ -44,11 +44,11 @@
 enum session_state {
     session_handshake,        /* Wait for client handshake. */
     session_handshake_auth,   /* Wait for client authentication data. */
-    session_req_start,        /* Start waiting for request data. */
-    session_req_parse,        /* Wait for request data. */
+    session_handshake_replied,        /* Start waiting for request data. */
+    session_s5_request,        /* Wait for request data. */
     session_req_udp_accoc,
-    session_req_lookup,       /* Wait for upstream hostname DNS lookup to complete. */
-    session_req_connect,      /* Wait for uv_tcp_connect() to complete. */
+    session_resolve_ssr_server_host,       /* Wait for upstream hostname DNS lookup to complete. */
+    session_connect_ssr_server,      /* Wait for uv_tcp_connect() to complete. */
     session_ssr_auth_sent,
     session_ssr_waiting_feedback,
     session_ssr_receipt_of_feedback_sent,
@@ -69,11 +69,11 @@ static struct buffer_t * initial_package_create(const s5_ctx *parser);
 static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_handshake(struct tunnel_ctx *tunnel);
 static void do_handshake_auth(struct tunnel_ctx *tunnel);
-static void do_req_start(struct tunnel_ctx *tunnel);
-static void do_req_parse(struct tunnel_ctx *tunnel);
-static void do_req_lookup(struct tunnel_ctx *tunnel);
-static void do_req_connect_start(struct tunnel_ctx *tunnel);
-static void do_req_connect(struct tunnel_ctx *tunnel);
+static void do_wait_s5_request(struct tunnel_ctx *tunnel);
+static void do_parse_s5_request(struct tunnel_ctx *tunnel);
+static void do_resolve_ssr_server_host(struct tunnel_ctx *tunnel);
+static void do_connect_ssr_server(struct tunnel_ctx *tunnel);
+static void do_connect_ssr_server_done(struct tunnel_ctx *tunnel);
 static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
 static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel);
 static void do_socks5_reply_success(struct tunnel_ctx *tunnel);
@@ -187,26 +187,26 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     case session_handshake_auth:
         do_handshake_auth(tunnel);
         break;
-    case session_req_start:
+    case session_handshake_replied:
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
-        do_req_start(tunnel);
+        do_wait_s5_request(tunnel);
         break;
-    case session_req_parse:
+    case session_s5_request:
         ASSERT(incoming->rdstate == socket_done);
         incoming->rdstate = socket_stop;
-        do_req_parse(tunnel);
+        do_parse_s5_request(tunnel);
         break;
     case session_req_udp_accoc:
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
         tunnel_shutdown(tunnel);
         break;
-    case session_req_lookup:
-        do_req_lookup(tunnel);
+    case session_resolve_ssr_server_host:
+        do_resolve_ssr_server_host(tunnel);
         break;
-    case session_req_connect:
-        do_req_connect(tunnel);
+    case session_connect_ssr_server:
+        do_connect_ssr_server_done(tunnel);
         break;
     case session_ssr_auth_sent:
         ASSERT(outgoing->wrstate == socket_done);
@@ -286,7 +286,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
     if ((methods & s5_auth_none) && can_auth_none(tunnel->listener, tunnel)) {
         s5_select_auth(parser, s5_auth_none);
         socket_write(incoming, "\5\0", 2);  /* No auth required. */
-        ctx->state = session_req_start;
+        ctx->state = session_handshake_replied;
         return;
     }
 
@@ -306,7 +306,7 @@ static void do_handshake_auth(struct tunnel_ctx *tunnel) {
     tunnel_shutdown(tunnel);
 }
 
-static void do_req_start(struct tunnel_ctx *tunnel) {
+static void do_wait_s5_request(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
 
@@ -320,10 +320,10 @@ static void do_req_start(struct tunnel_ctx *tunnel) {
     }
 
     socket_read(incoming);
-    ctx->state = session_req_parse;
+    ctx->state = session_s5_request;
 }
 
-static void do_req_parse(struct tunnel_ctx *tunnel) {
+static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
@@ -353,7 +353,7 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     err = s5_parse(parser, &data, &size);
     if (err == s5_ok) {
         socket_read(incoming);
-        ctx->state = session_req_parse;  /* Need more data. */
+        ctx->state = session_s5_request;  /* Need more data. */
         return;
     }
 
@@ -391,19 +391,21 @@ static void do_req_parse(struct tunnel_ctx *tunnel) {
     ctx->init_pkg = initial_package_create(parser);
     ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg);
 
-    union sockaddr_universal remote_addr = { 0 };
-    if (convert_universal_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
-        socket_getaddrinfo(outgoing, config->remote_host);
-        ctx->state = session_req_lookup;
-        return;
+    {
+        union sockaddr_universal remote_addr = { 0 };
+        if (convert_universal_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
+            socket_getaddrinfo(outgoing, config->remote_host);
+            ctx->state = session_resolve_ssr_server_host;
+            return;
+        }
+
+        outgoing->addr = remote_addr;
+
+        do_connect_ssr_server(tunnel);
     }
-
-    outgoing->addr = remote_addr;
-
-    do_req_connect_start(tunnel);
 }
 
-static void do_req_lookup(struct tunnel_ctx *tunnel) {
+static void do_resolve_ssr_server_host(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
@@ -437,11 +439,11 @@ static void do_req_lookup(struct tunnel_ctx *tunnel) {
         UNREACHABLE();
     }
 
-    do_req_connect_start(tunnel);
+    do_connect_ssr_server(tunnel);
 }
 
 /* Assumes that cx->outgoing.t.sa contains a valid AF_INET/AF_INET6 address. */
-static void do_req_connect_start(struct tunnel_ctx *tunnel) {
+static void do_connect_ssr_server(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
@@ -467,10 +469,10 @@ static void do_req_connect_start(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    ctx->state = session_req_connect;
+    ctx->state = session_connect_ssr_server;
 }
 
-static void do_req_connect(struct tunnel_ctx *tunnel) {
+static void do_connect_ssr_server_done(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
