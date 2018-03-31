@@ -46,7 +46,7 @@
 		3A300B64206FF69D00ABE7C2 /* ssr_qr_code.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B5C206FF69D00ABE7C2 /* ssr_qr_code.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A300B65206FF69D00ABE7C2 /* ssr_executive.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B5D206FF69D00ABE7C2 /* ssr_executive.c */; };
 		3A300B66206FF69D00ABE7C2 /* sockaddr_universal.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B5E206FF69D00ABE7C2 /* sockaddr_universal.c */; };
-		3A300B67206FF69D00ABE7C2 /* sockaddr_universal.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B5F206FF69D00ABE7C2 /* sockaddr_universal.h */; };
+		3A300B67206FF69D00ABE7C2 /* sockaddr_universal.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B5F206FF69D00ABE7C2 /* sockaddr_universal.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A300B68206FF69D00ABE7C2 /* ssr_cipher_names.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B60206FF69D00ABE7C2 /* ssr_cipher_names.c */; };
 		3A300B69206FF69D00ABE7C2 /* ssr_cipher_names.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B61206FF69D00ABE7C2 /* ssr_cipher_names.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A300B6A206FF69D00ABE7C2 /* ssr_executive.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B62206FF69D00ABE7C2 /* ssr_executive.h */; settings = {ATTRIBUTES = (Public, ); }; };
