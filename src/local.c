@@ -380,7 +380,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
             size_t header_len = 0;
             struct socks5_request *hdr =
-                    build_socks5_request(host, (uint16_t)atoi(port), buffer->buffer, buffer->capacity, &header_len);
+                    build_socks5_request(host, (uint16_t)atoi(port), (char *)buffer->buffer, buffer->capacity, &header_len);
 
             memmove(buf->buffer + header_len, buf->buffer, buf->len);
             memmove(buf->buffer, hdr, header_len);
@@ -450,7 +450,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
             struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
             struct method_select_response *response =
-                    build_socks5_method_select_response(SOCKS5_METHOD_NOAUTH, buffer->buffer, buffer->capacity);
+                    build_socks5_method_select_response(SOCKS5_METHOD_NOAUTH, (char *)buffer->buffer, buffer->capacity);
 
             local_send_data(local, (char *)response, sizeof(*response));
 
@@ -488,7 +488,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 size_t size = 0;
                 struct socks5_response *response =
                         build_socks5_response(SOCKS5_REPLY_CMDUNSUPP, SOCKS5_ADDRTYPE__IPV4,
-                                              &sock_addr, buffer->buffer, buffer->capacity, &size);
+                                              &sock_addr, (char *)buffer->buffer, buffer->capacity, &size);
 
                 local_send_data(local, (char *)response, (unsigned int)size);
 
@@ -504,7 +504,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 size_t size = 0;
                 struct socks5_response *response =
                         build_socks5_response(SOCKS5_REPLY_SUCCESS, SOCKS5_ADDRTYPE__IPV4,
-                                              &sock_addr, buffer->buffer, buffer->capacity, &size);
+                                              &sock_addr, (char *)buffer->buffer, buffer->capacity, &size);
 
                 local_send_data(local, (char *)response, (unsigned int)size);
 
@@ -577,11 +577,11 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 uint16_t p = ntohs(*(uint16_t *)(abuf->buffer + abuf->len - 2));
                 int ret    = 0;
                 if (p == http_protocol->default_port) {
-                    const char *data = buf->buffer + 3 + abuf->len;
+                    const char *data = (const char *)(buf->buffer + 3 + abuf->len);
                     size_t data_len  = buf->len    - 3 - abuf->len;
                     ret = http_protocol->parse_packet(data, data_len, &hostname);
                 } else if (p == tls_protocol->default_port) {
-                    const char *data = buf->buffer + 3 + abuf->len;
+                    const char *data = (const char *)(buf->buffer + 3 + abuf->len);
                     size_t data_len  = buf->len    - 3 - abuf->len;
                     ret = tls_protocol->parse_packet(data, data_len, &hostname);
                 }
@@ -971,7 +971,7 @@ remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             continue;
         }
 
-        local_send_data(local, local->buf->buffer, (unsigned int)local->buf->len);
+        local_send_data(local, (char *)local->buf->buffer, (unsigned int)local->buf->len);
     } // for loop
 
     do_dealloc_uv_buffer((uv_buf_t *)buf0);
@@ -1004,7 +1004,7 @@ remote_send_cb(uv_write_t* req, int status)
 static void
 remote_send_data(struct remote_t *remote)
 {
-    uv_buf_t tmp = uv_buf_init(remote->buf->buffer, (unsigned int)remote->buf->len);
+    uv_buf_t tmp = uv_buf_init((char *)remote->buf->buffer, (unsigned int)remote->buf->len);
 
     uv_write_t *write_req = (uv_write_t *)ss_malloc(sizeof(uv_write_t));
     write_req->data = remote;

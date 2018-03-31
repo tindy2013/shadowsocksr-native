@@ -779,10 +779,10 @@ ss_encrypt_all(struct cipher_env_t *env, struct buffer_t *plain, size_t capacity
         return 0;
     } else {
         if (env->enc_method == ss_cipher_table) {
-            char *begin = plain->buffer;
-            char *ptr   = plain->buffer;
+            uint8_t *begin = plain->buffer;
+            uint8_t *ptr   = plain->buffer;
             while (ptr < begin + plain->len) {
-                *ptr = (char)env->enc_table[(uint8_t)*ptr];
+                *ptr = env->enc_table[(uint8_t)*ptr];
                 ptr++;
             }
         }
@@ -855,10 +855,10 @@ ss_encrypt(struct cipher_env_t *env, struct buffer_t *plain, struct enc_ctx *ctx
         return 0;
     } else {
         if (env->enc_method == ss_cipher_table) {
-            char *begin = plain->buffer;
-            char *ptr   = plain->buffer;
+            uint8_t *begin = plain->buffer;
+            uint8_t *ptr   = plain->buffer;
             while (ptr < begin + plain->len) {
-                *ptr = (char)env->enc_table[(uint8_t)*ptr];
+                *ptr = env->enc_table[(uint8_t)*ptr];
                 ptr++;
             }
         }
@@ -920,10 +920,10 @@ ss_decrypt_all(struct cipher_env_t *env, struct buffer_t *cipher, size_t capacit
         return 0;
     } else {
         if (method == ss_cipher_table) {
-            char *begin = cipher->buffer;
-            char *ptr   = cipher->buffer;
+            uint8_t *begin = cipher->buffer;
+            uint8_t *ptr   = cipher->buffer;
             while (ptr < begin + cipher->len) {
-                *ptr = (char)env->dec_table[(uint8_t)*ptr];
+                *ptr = env->dec_table[(uint8_t)*ptr];
                 ptr++;
             }
         }
@@ -1005,10 +1005,10 @@ ss_decrypt(struct cipher_env_t *env, struct buffer_t *cipher, struct enc_ctx *ct
         return 0;
     } else {
         if(env->enc_method == ss_cipher_table) {
-            char *begin = cipher->buffer;
-            char *ptr   = cipher->buffer;
+            uint8_t *begin = cipher->buffer;
+            uint8_t *ptr   = cipher->buffer;
             while (ptr < begin + cipher->len) {
-                *ptr = (char)env->dec_table[(uint8_t)*ptr];
+                *ptr = env->dec_table[(uint8_t)*ptr];
                 ptr++;
             }
         }

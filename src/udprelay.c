@@ -723,7 +723,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
         LOGI("[udp] recv %s via %s", dst, src);
     }
 #else
-    int len = udprelay_parse_header(buf->buffer, buf->len, NULL, NULL, NULL);
+    int len = udprelay_parse_header((const char *)buf->buffer, buf->len, NULL, NULL, NULL);
 #endif
 
     if (len == 0) {
@@ -836,7 +836,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
 
     uv_udp_send_t *req = (uv_udp_send_t *)calloc(1, sizeof(uv_udp_send_t));
     req->data = server_ctx;
-    uv_buf_t tmp = uv_buf_init(buf->buffer, (unsigned int) buf->len);
+    uv_buf_t tmp = uv_buf_init((char *)buf->buffer, (unsigned int) buf->len);
     uv_udp_send(req, &server_ctx->io, &tmp, 1, (const struct sockaddr *)&remote_ctx->src_addr, udp_send_done_cb);
 
 #endif
@@ -1058,7 +1058,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         struct sockaddr_storage dst_addr;
         memset(&dst_addr, 0, sizeof(struct sockaddr_storage));
 
-        addr_header_len = udprelay_parse_header(buf->buffer + offset, buf->len - offset,
+        addr_header_len = udprelay_parse_header((const char *)(buf->buffer + offset), buf->len - offset,
                                                     host, port, &dst_addr);
         if (addr_header_len == 0) {
             // error in parse header
@@ -1149,7 +1149,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 
     uv_udp_send_t *req = (uv_udp_send_t *)calloc(1, sizeof(uv_udp_send_t));
     req->data = server_ctx;
-    uv_buf_t tmp = uv_buf_init(buf->buffer, (unsigned int) buf->len);
+    uv_buf_t tmp = uv_buf_init((char *)buf->buffer, (unsigned int) buf->len);
     uv_udp_send(req, &remote_ctx->io, &tmp, 1, remote_addr, udp_send_done_cb);
 
 #if !defined(MODULE_TUNNEL) && !defined(MODULE_REDIR)
