@@ -67,6 +67,9 @@ debian/libshadowsocks-libev*.symbols
 libsodium/src/libsodium/include/sodium/version.h
 rpm/SPECS/shadowsocks-libev.spec
 
+ios/ssrNative.xcodeproj/project.xcworkspace/
+ios/ssrNative.xcodeproj/xcuserdata/
+
 # Ignore per-project vim config
 .vimrc
 
