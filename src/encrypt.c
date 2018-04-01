@@ -1148,8 +1148,8 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
         // XXX: key_length changed to key_bitlen in mbed TLS 2.0.0
 
         cipher_info.base = NULL;
-        cipher_info.key_bitlen = (size_t)ss_cipher_key_size(method) * 8;
-        cipher_info.iv_size = (size_t)ss_cipher_iv_size(method);
+        cipher_info.key_bitlen = (unsigned int)ss_cipher_key_size(method) * 8;
+        cipher_info.iv_size = (unsigned int)ss_cipher_iv_size(method);
 
         cipher->core = &cipher_info;
 #endif
