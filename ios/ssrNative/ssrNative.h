@@ -21,5 +21,9 @@ FOUNDATION_EXPORT const unsigned char ssrNativeVersionString[];
 #import <ssrNative/ssr_cipher_names.h>
 #import <ssrNative/sockaddr_universal.h>
 
+struct ssr_client_state;
+
 int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, void *p), void *p);
 void ssr_run_loop_shutdown(struct ssr_client_state *state);
+
+void set_app_name(const char *name);
