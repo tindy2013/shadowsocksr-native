@@ -107,6 +107,10 @@
 		3A95CBE42070CA2B00E507E3 /* libsodium.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A95CB952070C6DC00E507E3 /* libsodium.framework */; };
 		3A95CBE52070CA2B00E507E3 /* libuv.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A95CB982070C6DC00E507E3 /* libuv.framework */; };
 		3A95CBE62070CA2B00E507E3 /* mbedtls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A95CB9B2070C6DC00E507E3 /* mbedtls.framework */; };
+		3A95CC092070D26100E507E3 /* udprelay.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A95CC072070D26000E507E3 /* udprelay.c */; };
+		3A95CC0A2070D26100E507E3 /* udprelay.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A95CC072070D26000E507E3 /* udprelay.c */; };
+		3A95CC0B2070D26100E507E3 /* udprelay.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A95CC082070D26000E507E3 /* udprelay.h */; };
+		3A95CC0C2070D26100E507E3 /* udprelay.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A95CC082070D26000E507E3 /* udprelay.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -250,6 +254,8 @@
 		3A57A60A206F9D44002F1F2D /* ssrNative.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ssrNative.h; sourceTree = "<group>"; };
 		3A57A60B206F9D44002F1F2D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		3A95CBA42070C7DA00E507E3 /* ssrNative.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ssrNative.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		3A95CC072070D26000E507E3 /* udprelay.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = udprelay.c; path = ../src/udprelay.c; sourceTree = "<group>"; };
+		3A95CC082070D26000E507E3 /* udprelay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = udprelay.h; path = ../src/udprelay.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -354,6 +360,8 @@
 		3A300B4C206FF5EA00ABE7C2 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				3A95CC072070D26000E507E3 /* udprelay.c */,
+				3A95CC082070D26000E507E3 /* udprelay.h */,
 				3A300B73206FFA0900ABE7C2 /* ssrutils.c */,
 				3A300B74206FFA0A00ABE7C2 /* ssrutils.h */,
 				3A300B70206FF9A400ABE7C2 /* cache.c */,
@@ -436,6 +444,7 @@
 				3A300B58206FF66500ABE7C2 /* encrypt.h in Headers */,
 				3A300B76206FFA0A00ABE7C2 /* ssrutils.h in Headers */,
 				3A300B39206FF54000ABE7C2 /* auth_chain.h in Headers */,
+				3A95CC0B2070D26100E507E3 /* udprelay.h in Headers */,
 				3A300B69206FF69D00ABE7C2 /* ssr_cipher_names.h in Headers */,
 				3A300B45206FF58300ABE7C2 /* s5.h in Headers */,
 				3A300B6D206FF77E00ABE7C2 /* ssrbuffer.h in Headers */,
@@ -467,6 +476,7 @@
 				3A95CBB12070C8D000E507E3 /* ssr_cipher_names.h in Headers */,
 				3A95CBCC2070C92200E507E3 /* cstl_lib.h in Headers */,
 				3A95CBB52070C8FD00E507E3 /* cache.h in Headers */,
+				3A95CC0C2070D26100E507E3 /* udprelay.h in Headers */,
 				3A95CBCE2070C92200E507E3 /* http_simple.h in Headers */,
 				3A95CBDD2070C92D00E507E3 /* tunnel.h in Headers */,
 				3A95CBB42070C8FD00E507E3 /* ssrutils.h in Headers */,
@@ -526,7 +536,7 @@
 		3A57A5FE206F9D44002F1F2D /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0920;
+				LastUpgradeCheck = 0930;
 				ORGANIZATIONNAME = ssrLive;
 				TargetAttributes = {
 					3A57A606206F9D44002F1F2D = {
@@ -647,6 +657,7 @@
 				3A300B2E206FF54000ABE7C2 /* obfsutil.c in Sources */,
 				3A300B72206FF9A400ABE7C2 /* cache.c in Sources */,
 				3A300B6E206FF77E00ABE7C2 /* ssrbuffer.c in Sources */,
+				3A95CC092070D26100E507E3 /* udprelay.c in Sources */,
 				3A300B68206FF69D00ABE7C2 /* ssr_cipher_names.c in Sources */,
 				3A300B32206FF54000ABE7C2 /* crc32.c in Sources */,
 				3A300B46206FF58300ABE7C2 /* tunnel.c in Sources */,
@@ -677,6 +688,7 @@
 				3A95CBCD2070C92200E507E3 /* http_simple.c in Sources */,
 				3A95CBBE2070C90C00E507E3 /* ssr_cipher_names.c in Sources */,
 				3A95CBD12070C92200E507E3 /* obfsutil.c in Sources */,
+				3A95CC0A2070D26100E507E3 /* udprelay.c in Sources */,
 				3A95CBBD2070C90C00E507E3 /* sockaddr_universal.c in Sources */,
 				3A95CBD72070C92C00E507E3 /* client.c in Sources */,
 				3A95CBBC2070C90C00E507E3 /* ssrbuffer.c in Sources */,
@@ -744,6 +756,7 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
@@ -751,6 +764,7 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
@@ -802,6 +816,7 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
@@ -809,6 +824,7 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
@@ -851,6 +867,9 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					MODULE_LOCAL,
+					UDP_RELAY_ENABLE,
+					HAVE_DECL_INET_NTOP,
 					USE_CRYPTO_MBEDTLS,
 					"$(inherited)",
 				);
@@ -880,6 +899,9 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					MODULE_LOCAL,
+					UDP_RELAY_ENABLE,
+					HAVE_DECL_INET_NTOP,
 					USE_CRYPTO_MBEDTLS,
 					"$(inherited)",
 				);
@@ -913,6 +935,9 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_VERSION = A;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					MODULE_LOCAL,
+					UDP_RELAY_ENABLE,
+					HAVE_DECL_INET_NTOP,
 					USE_CRYPTO_MBEDTLS,
 					"$(inherited)",
 				);
@@ -947,6 +972,9 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_VERSION = A;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					MODULE_LOCAL,
+					UDP_RELAY_ENABLE,
+					HAVE_DECL_INET_NTOP,
 					USE_CRYPTO_MBEDTLS,
 					"$(inherited)",
 				);
