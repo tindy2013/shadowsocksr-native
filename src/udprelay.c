@@ -54,8 +54,8 @@
 #include "win32.h"
 #endif
 
-#include <libcork/core.h>
-#include <udns.h>
+//#include <libcork/core.h>
+//#include <udns.h>
 
 #include "ssrutils.h"
 #include "netutils.h"
@@ -97,6 +97,17 @@
 #define MAX_UDP_PACKET_SIZE (65507)
 
 #define DEFAULT_PACKET_SIZE MAX_UDP_PACKET_SIZE // 1492 - 1 - 28 - 2 - 64 = 1397, the default MTU for UDP relay
+
+size_t
+get_sockaddr_len(struct sockaddr *addr)
+{
+    if (addr->sa_family == AF_INET) {
+        return sizeof(struct sockaddr_in);
+    } else if (addr->sa_family == AF_INET6) {
+        return sizeof(struct sockaddr_in6);
+    }
+    return 0;
+}
 
 struct udp_listener_ctx_t {
     uv_udp_t io;
@@ -289,7 +300,7 @@ udprelay_parse_header(const char *buf, size_t buf_len,
                 addr->sin_port   = *(uint16_t *)(buf + offset + in_addr_len);
             }
             if (host != NULL) {
-                dns_ntop(AF_INET, (const void *)(buf + offset),
+                uv_inet_ntop(AF_INET, (const void *)(buf + offset),
                          host, INET_ADDRSTRLEN);
             }
             offset += (int) in_addr_len;
@@ -300,17 +311,18 @@ udprelay_parse_header(const char *buf, size_t buf_len,
         if (name_len + 4 <= buf_len) {
             if (storage != NULL) {
                 char tmp[257] = { 0 };
-                struct cork_ip ip;
+                union sockaddr_universal addr_u;
                 memcpy(tmp, buf + offset + 1, name_len);
-                if (cork_ip_init(&ip, tmp) != -1) {
-                    if (ip.version == 4) {
+
+                if (convert_universal_address(tmp, 80, &addr_u) == 0) {
+                    if (addr_u.addr4.sin_family == AF_INET) {
                         struct sockaddr_in *addr = (struct sockaddr_in *)storage;
-                        dns_pton(AF_INET, tmp, &(addr->sin_addr));
+                        addr->sin_addr = addr_u.addr4.sin_addr;
                         addr->sin_port   = *(uint16_t *)(buf + offset + 1 + name_len);
                         addr->sin_family = AF_INET;
-                    } else if (ip.version == 6) {
+                    } else if (addr_u.addr6.sin6_family == AF_INET6) {
                         struct sockaddr_in6 *addr = (struct sockaddr_in6 *)storage;
-                        dns_pton(AF_INET, tmp, &(addr->sin6_addr));
+                        addr->sin6_addr = addr_u.addr6.sin6_addr;
                         addr->sin6_port   = *(uint16_t *)(buf + offset + 1 + name_len);
                         addr->sin6_family = AF_INET6;
                     }
@@ -332,7 +344,7 @@ udprelay_parse_header(const char *buf, size_t buf_len,
                 addr->sin6_port   = *(uint16_t *)(buf + offset + in6_addr_len);
             }
             if (host != NULL) {
-                dns_ntop(AF_INET6, (const void *)(buf + offset),
+                uv_inet_ntop(AF_INET6, (const void *)(buf + offset),
                          host, INET6_ADDRSTRLEN);
             }
             offset += (int)in6_addr_len;
@@ -363,14 +375,14 @@ get_addr_str(const struct sockaddr *sa)
 
     switch (sa->sa_family) {
     case AF_INET:
-        dns_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr),
+        uv_inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr),
                  addr, INET_ADDRSTRLEN);
         p = ntohs(((struct sockaddr_in *)sa)->sin_port);
         sprintf(port, "%d", p);
         break;
 
     case AF_INET6:
-        dns_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr),
+        uv_inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr),
                  addr, INET6_ADDRSTRLEN);
         p = ntohs(((struct sockaddr_in *)sa)->sin_port);
         sprintf(port, "%d", p);
@@ -523,7 +535,7 @@ static void udp_remote_shutdown(struct udp_remote_ctx_t *ctx) {
 
 static void udp_remote_timeout_cb(uv_timer_t* handle) {
     struct udp_remote_ctx_t *remote_ctx
-        = cork_container_of(handle, struct udp_remote_ctx_t, watcher);
+        = CONTAINER_OF(handle, struct udp_remote_ctx_t, watcher);
 
     LOGI("[udp] connection timeout");
 
@@ -653,7 +665,7 @@ static void udp_send_done_cb(uv_udp_send_t* req, int status) {
 static void
 udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags)
 {
-    struct udp_remote_ctx_t *remote_ctx = cork_container_of(handle, struct udp_remote_ctx_t, io);
+    struct udp_remote_ctx_t *remote_ctx = CONTAINER_OF(handle, struct udp_remote_ctx_t, io);
     struct udp_listener_ctx_t *server_ctx = remote_ctx->server_ctx;
     struct buffer_t *buf = NULL;
 
@@ -855,7 +867,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         return;
     }
 
-    struct udp_listener_ctx_t *server_ctx = cork_container_of(handle, struct udp_listener_ctx_t, io);
+    struct udp_listener_ctx_t *server_ctx = CONTAINER_OF(handle, struct udp_listener_ctx_t, io);
     ASSERT(server_ctx);
 
     struct sockaddr_storage src_addr = *(struct sockaddr_storage *)addr;
@@ -1003,30 +1015,22 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         strncpy(port, server_ctx->tunnel_addr.port, 64);
         uint16_t port_num     = (uint16_t)atoi(port);
         uint16_t port_net_num = htons(port_num);
-
-        struct cork_ip ip;
-        if (cork_ip_init(&ip, host) != -1) {
-            if (ip.version == 4) {
+        union sockaddr_universal addr;
+        
+        if (convert_universal_address(host, port_num, &addr) == 0) {
+            if (addr.addr4.sin_family == AF_INET) {
                 // send as IPv4
-                struct in_addr host_addr;
-                memset(&host_addr, 0, sizeof(struct in_addr));
+                struct in_addr host_addr = addr.addr4.sin_addr;
                 int host_len = sizeof(struct in_addr);
 
-                if (dns_pton(AF_INET, host, &host_addr) == -1) {
-                    FATAL("IP parser error");
-                }
                 addr_header[addr_header_len++] = 1;
                 memcpy(addr_header + addr_header_len, &host_addr, host_len);
                 addr_header_len += host_len;
-            } else if (ip.version == 6) {
+            } else if (addr.addr4.sin_family == AF_INET6) {
                 // send as IPv6
-                struct in6_addr host_addr;
-                memset(&host_addr, 0, sizeof(struct in6_addr));
+                struct in6_addr host_addr = addr.addr6.sin6_addr;
                 int host_len = sizeof(struct in6_addr);
 
-                if (dns_pton(AF_INET6, host, &host_addr) == -1) {
-                    FATAL("IP parser error");
-                }
                 addr_header[addr_header_len++] = 4;
                 memcpy(addr_header + addr_header_len, &host_addr, host_len);
                 addr_header_len += host_len;
@@ -1344,7 +1348,7 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 }
 
 static void udp_local_listener_close_done_cb(uv_handle_t* handle) {
-    struct udp_listener_ctx_t *server_ctx = cork_container_of(handle, struct udp_listener_ctx_t, io);
+    struct udp_listener_ctx_t *server_ctx = CONTAINER_OF(handle, struct udp_listener_ctx_t, io);
     objects_container_destroy(server_ctx->connections);
 
 #ifdef MODULE_LOCAL
