@@ -102,6 +102,27 @@
 			remoteGlobalIDString = 3A597D9720314D1400710634;
 			remoteInfo = mbedtls;
 		};
+		3A95CB942070C6DC00E507E3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3A300AFD206FF41B00ABE7C2 /* libsodium.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 3AE1E1562070BF2E00B52995;
+			remoteInfo = "libsodium macOS";
+		};
+		3A95CB972070C6DC00E507E3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3A300B04206FF42E00ABE7C2 /* libuv.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 3AE1E0722070ADF300B52995;
+			remoteInfo = "libuv macOS";
+		};
+		3A95CB9A2070C6DC00E507E3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3A26B213206FB2EB0084360E /* mbedtls.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 3AE1E0B82070B46200B52995;
+			remoteInfo = "mbedtls macOS";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -177,6 +198,7 @@
 			isa = PBXGroup;
 			children = (
 				3A26B218206FB2EB0084360E /* mbedtls.framework */,
+				3A95CB9B2070C6DC00E507E3 /* mbedtls.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -185,6 +207,7 @@
 			isa = PBXGroup;
 			children = (
 				3A300B02206FF41B00ABE7C2 /* libsodium.framework */,
+				3A95CB952070C6DC00E507E3 /* libsodium.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -193,6 +216,7 @@
 			isa = PBXGroup;
 			children = (
 				3A300B09206FF42E00ABE7C2 /* libuv.framework */,
+				3A95CB982070C6DC00E507E3 /* libuv.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -340,9 +364,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		3A57A606206F9D44002F1F2D /* ssrNative */ = {
+		3A57A606206F9D44002F1F2D /* ssrNative iOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3A57A60F206F9D44002F1F2D /* Build configuration list for PBXNativeTarget "ssrNative" */;
+			buildConfigurationList = 3A57A60F206F9D44002F1F2D /* Build configuration list for PBXNativeTarget "ssrNative iOS" */;
 			buildPhases = (
 				3A57A602206F9D44002F1F2D /* Sources */,
 				3A57A603206F9D44002F1F2D /* Frameworks */,
@@ -356,7 +380,7 @@
 				3A300B0D206FF44500ABE7C2 /* PBXTargetDependency */,
 				3A300B0F206FF44500ABE7C2 /* PBXTargetDependency */,
 			);
-			name = ssrNative;
+			name = "ssrNative iOS";
 			productName = ssrNative;
 			productReference = 3A57A607206F9D44002F1F2D /* ssrNative.framework */;
 			productType = "com.apple.product-type.framework";
@@ -402,7 +426,7 @@
 			);
 			projectRoot = "";
 			targets = (
-				3A57A606206F9D44002F1F2D /* ssrNative */,
+				3A57A606206F9D44002F1F2D /* ssrNative iOS */,
 			);
 		};
 /* End PBXProject section */
@@ -427,6 +451,27 @@
 			fileType = wrapper.framework;
 			path = libuv.framework;
 			remoteRef = 3A300B08206FF42E00ABE7C2 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		3A95CB952070C6DC00E507E3 /* libsodium.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = libsodium.framework;
+			remoteRef = 3A95CB942070C6DC00E507E3 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		3A95CB982070C6DC00E507E3 /* libuv.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = libuv.framework;
+			remoteRef = 3A95CB972070C6DC00E507E3 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		3A95CB9B2070C6DC00E507E3 /* mbedtls.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = mbedtls.framework;
+			remoteRef = 3A95CB9A2070C6DC00E507E3 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -626,7 +671,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.ssrlive.ssrNative;
-				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PRODUCT_NAME = ssrNative;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -655,7 +700,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.ssrlive.ssrNative;
-				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PRODUCT_NAME = ssrNative;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -673,7 +718,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3A57A60F206F9D44002F1F2D /* Build configuration list for PBXNativeTarget "ssrNative" */ = {
+		3A57A60F206F9D44002F1F2D /* Build configuration list for PBXNativeTarget "ssrNative iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3A57A610206F9D44002F1F2D /* Debug */,
