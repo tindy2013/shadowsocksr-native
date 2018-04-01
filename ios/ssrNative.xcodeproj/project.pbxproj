@@ -876,6 +876,8 @@
 				HEADER_SEARCH_PATHS = (
 					../depends/libuv/include/,
 					../depends/libsodium/src/libsodium/include,
+					../depends/libsodium/src/libsodium/include/sodium,
+					../depends/libsodium/ssrbuild/include,
 					../depends/mbedtls/include,
 				);
 				INFOPLIST_FILE = ssrNative/Info.plist;
@@ -908,6 +910,8 @@
 				HEADER_SEARCH_PATHS = (
 					../depends/libuv/include/,
 					../depends/libsodium/src/libsodium/include,
+					../depends/libsodium/src/libsodium/include/sodium,
+					../depends/libsodium/ssrbuild/include,
 					../depends/mbedtls/include,
 				);
 				INFOPLIST_FILE = ssrNative/Info.plist;
@@ -944,6 +948,8 @@
 				HEADER_SEARCH_PATHS = (
 					../depends/libuv/include/,
 					../depends/libsodium/src/libsodium/include,
+					../depends/libsodium/src/libsodium/include/sodium,
+					../depends/libsodium/ssrbuild/include,
 					../depends/mbedtls/include,
 				);
 				INFOPLIST_FILE = ssrNative/Info.plist;
@@ -981,6 +987,8 @@
 				HEADER_SEARCH_PATHS = (
 					../depends/libuv/include/,
 					../depends/libsodium/src/libsodium/include,
+					../depends/libsodium/src/libsodium/include/sodium,
+					../depends/libsodium/ssrbuild/include,
 					../depends/mbedtls/include,
 				);
 				INFOPLIST_FILE = ssrNative/Info.plist;
