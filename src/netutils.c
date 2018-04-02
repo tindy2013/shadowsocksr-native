@@ -68,6 +68,7 @@ set_reuseport(int socket)
     return setsockopt(socket, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
 }
 
+/*
 size_t
 get_sockaddr_len(struct sockaddr *addr)
 {
@@ -78,6 +79,7 @@ get_sockaddr_len(struct sockaddr *addr)
     }
     return 0;
 }
+*/
 
 #ifdef SET_INTERFACE
 int
