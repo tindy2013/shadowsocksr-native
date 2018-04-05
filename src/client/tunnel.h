@@ -58,6 +58,8 @@ struct tunnel_ctx {
     bool(*tunnel_extract_data)(struct socket_ctx *socket, struct buffer_t *buf);
 };
 
+int uv_stream_fd(const uv_tcp_t *handle);
+uint16_t get_socket_port(const uv_tcp_t *tcp);
 void tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout, bool(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);
 void tunnel_shutdown(struct tunnel_ctx *tunnel);
 void tunnel_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);

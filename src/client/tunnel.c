@@ -43,6 +43,27 @@ static void socket_write_done_cb(uv_write_t *req, int status);
 static void socket_close(struct socket_ctx *c);
 static void socket_close_done_cb(uv_handle_t *handle);
 
+int uv_stream_fd(const uv_tcp_t *handle) {
+#if defined(_WIN32)
+    return (int) handle->socket;
+#elif defined(__APPLE__)
+    int uv___stream_fd(const uv_stream_t* handle);
+    return uv___stream_fd((const uv_stream_t *)handle);
+#else
+    return (handle)->io_watcher.fd;
+#endif
+}
+
+uint16_t get_socket_port(const uv_tcp_t *tcp) {
+    union sockaddr_universal tmp = { 0 };
+    int len = sizeof(tmp);
+    if (uv_tcp_getsockname(tcp, &tmp.addr, &len) != 0) {
+        return 0;
+    } else {
+        return ntohs(tmp.addr4.sin_port);
+    }
+}
+
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
     return (tunnel->terminated != false);
 }
