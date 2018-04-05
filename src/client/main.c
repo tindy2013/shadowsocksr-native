@@ -36,7 +36,7 @@ static const char * parse_opts(int argc, char **argv);
 static void usage(void);
 
 struct ssr_client_state *g_state = NULL;
-void feedback_state(struct ssr_client_state *state, void *p);
+void feedback_state(struct ssr_client_state *state, int listen_fd, void *p);
 void print_remote_info(const struct server_config *config);
 
 int main(int argc, char **argv) {
@@ -120,7 +120,7 @@ void print_remote_info(const struct server_config *config) {
     pr_info("udp relay        %s\n", config->udp ? "yes" : "no");
 }
 
-void feedback_state(struct ssr_client_state *state, void *p) {
+void feedback_state(struct ssr_client_state *state, int listen_fd, void *p) {
     g_state = state;
     (void)p;
 }
