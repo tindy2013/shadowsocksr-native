@@ -52,13 +52,17 @@ struct ssr_client_state {
     
     int listener_count;
     struct listener_t *listeners;
+
+    void(*feedback_state)(struct ssr_client_state *state, int listen_fd, void *p);
+    void *ptr;
+    int listen_fd;
 };
 
 static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
 static void signal_quit(uv_signal_t* handle, int signum);
 
-int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, void *p), void *p) {
+int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, int listen_fd, void *p), void *p) {
     uv_loop_t * loop = NULL;
     struct addrinfo hints;
     struct ssr_client_state *state;
@@ -70,6 +74,8 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ss
     state = (struct ssr_client_state *) calloc(1, sizeof(*state));
     state->listeners = NULL;
     state->env = ssr_cipher_env_create(cf, state);
+    state->feedback_state = feedback_state;
+    state->ptr = p;
 
     loop->data = state->env;
 
@@ -86,6 +92,9 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ss
     err = uv_getaddrinfo(loop, req, getaddrinfo_done_cb, cf->listen_host, NULL, &hints);
     if (err != 0) {
         pr_err("getaddrinfo: %s", uv_strerror(err));
+        if (state->feedback_state) {
+            state->feedback_state(state, state->listen_fd, state->ptr);
+        }
         return err;
     }
 
@@ -97,10 +106,6 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ss
     state->sigterm_watcher = (uv_signal_t *) calloc(1, sizeof(uv_signal_t));
     uv_signal_init(loop, state->sigterm_watcher);
     uv_signal_start(state->sigterm_watcher, signal_quit, SIGTERM);
-
-    if (feedback_state) {
-        feedback_state(state, p);
-    }
 
     /* Start the event loop.  Control continues in getaddrinfo_done_cb(). */
     err = uv_run(loop, UV_RUN_DEFAULT);
@@ -194,6 +199,9 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
     if (status < 0) {
         pr_err("getaddrinfo(\"%s\"): %s", cf->listen_host, uv_strerror(status));
         uv_freeaddrinfo(addrs);
+        if (state->feedback_state) {
+            state->feedback_state(state, state->listen_fd, state->ptr);
+        }
         return;
     }
 
@@ -251,13 +259,21 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             err = uv_listen((uv_stream_t *)tcp_server, 128, listen_incoming_connection_cb);
         }
 
+        state->listen_fd = uv_stream_fd(tcp_server);
+        
+        if (state->feedback_state) {
+            state->feedback_state(state, state->listen_fd, state->ptr);
+        }
+
         if (err != 0) {
             pr_err("%s(\"%s:%hu\"): %s", what, addrbuf, cf->listen_port, uv_strerror(err));
             ssr_run_loop_shutdown(state);
             break;
         }
 
-        pr_info("listening on     %s:%hu\n", addrbuf, cf->listen_port);
+        uint16_t port = get_socket_port(tcp_server);
+        
+        pr_info("listening on     %s:%hu\n", addrbuf, port);
 
 #if UDP_RELAY_ENABLE
         if (cf->udp) {
@@ -265,7 +281,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             convert_universal_address(cf->remote_host, cf->remote_port, &remote_addr);
 
             listener->udp_server = udprelay_begin(loop,
-                cf->listen_host, cf->listen_port,
+                cf->listen_host, port,
                 &remote_addr,
                 NULL, 0, cf->idle_timeout,
                 state->env->cipher,
