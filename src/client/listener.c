@@ -171,12 +171,12 @@ void ssr_run_loop_shutdown(struct ssr_client_state *state) {
     pr_info("terminated.\n");
 }
 
-unsigned short ssr_get_listen_port(struct ssr_client_state *state) {
+int ssr_get_listen_socket_fd(struct ssr_client_state *state) {
     if (state==NULL || state->listener_count==0 || state->listeners==NULL) {
         return 0;
     }
     ASSERT(state->listener_count == 1);
-    return get_socket_port(state->listeners[0].tcp_server);
+    return uv_stream_fd(state->listeners[0].tcp_server);
 }
 
 /* Bind a server to each address that getaddrinfo() reported. */
