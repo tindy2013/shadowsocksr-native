@@ -256,6 +256,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
         what = "uv_tcp_bind";
         err = uv_tcp_bind(tcp_server, &s.addr, 0);
         if (err == 0) {
+            // https://unix.stackexchange.com/questions/180492/is-it-possible-to-connect-to-tcp-port-0
             what = "uv_listen";
             err = uv_listen((uv_stream_t *)tcp_server, 128, listen_incoming_connection_cb);
         }
