@@ -75,9 +75,9 @@ int bind_to_address(int socket_fd, const char *address);
 /**
  * Compare two sockaddrs. Imposes an ordering on the addresses.
  * Compares address and port.
- * @param addr1: address 1.
- * @param addr2: address 2.
- * @param len: lengths of addr.
+ * @param addr1 address 1.
+ * @param addr2 address 2.
+ * @param len lengths of addr.
  * @return: 0 if addr1 == addr2. -1 if addr1 is smaller, +1 if larger.
  */
 int sockaddr_cmp(struct sockaddr_storage *addr1,
@@ -85,9 +85,9 @@ int sockaddr_cmp(struct sockaddr_storage *addr1,
 
 /**
  * Compare two sockaddrs. Compares address, not the port.
- * @param addr1: address 1.
- * @param addr2: address 2.
- * @param len: lengths of addr.
+ * @param addr1 address 1.
+ * @param addr2 address 2.
+ * @param len lengths of addr.
  * @return: 0 if addr1 == addr2. -1 if addr1 is smaller, +1 if larger.
  */
 int sockaddr_cmp_addr(struct sockaddr_storage *addr1,
