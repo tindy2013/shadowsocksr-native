@@ -54,16 +54,15 @@ struct ssr_client_state {
     int listener_count;
     struct listener_t *listeners;
 
-    void(*feedback_state)(struct ssr_client_state *state, int listen_fd, void *p);
+    void(*feedback_state)(struct ssr_client_state *state, void *p);
     void *ptr;
-    int listen_fd;
 };
 
 static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs);
 static void listen_incoming_connection_cb(uv_stream_t *server, int status);
 static void signal_quit(uv_signal_t* handle, int signum);
 
-int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, int listen_fd, void *p), void *p) {
+int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, void *p), void *p) {
     uv_loop_t * loop = NULL;
     struct addrinfo hints;
     struct ssr_client_state *state;
@@ -94,7 +93,7 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ss
     if (err != 0) {
         pr_err("getaddrinfo: %s", uv_strerror(err));
         if (state->feedback_state) {
-            state->feedback_state(state, state->listen_fd, state->ptr);
+            state->feedback_state(state, state->ptr);
         }
         return err;
     }
@@ -172,6 +171,14 @@ void ssr_run_loop_shutdown(struct ssr_client_state *state) {
     pr_info("terminated.\n");
 }
 
+unsigned short ssr_get_listen_port(struct ssr_client_state *state) {
+    if (state==NULL || state->listener_count==0 || state->listeners==NULL) {
+        return 0;
+    }
+    ASSERT(state->listener_count == 1);
+    return get_socket_port(state->listeners[0].tcp_server);
+}
+
 /* Bind a server to each address that getaddrinfo() reported. */
 static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrinfo *addrs) {
     char addrbuf[INET6_ADDRSTRLEN + 1];
@@ -201,7 +208,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
         pr_err("getaddrinfo(\"%s\"): %s", cf->listen_host, uv_strerror(status));
         uv_freeaddrinfo(addrs);
         if (state->feedback_state) {
-            state->feedback_state(state, state->listen_fd, state->ptr);
+            state->feedback_state(state, state->ptr);
         }
         return;
     }
@@ -261,10 +268,8 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             err = uv_listen((uv_stream_t *)tcp_server, 128, listen_incoming_connection_cb);
         }
 
-        state->listen_fd = uv_stream_fd(tcp_server);
-        
         if (state->feedback_state) {
-            state->feedback_state(state, state->listen_fd, state->ptr);
+            state->feedback_state(state, state->ptr);
         }
 
         if (err != 0) {

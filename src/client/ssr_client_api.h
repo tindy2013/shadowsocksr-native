@@ -9,8 +9,9 @@ struct server_config;
 struct ssr_client_state;
 
 /* listener.c */
-int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, int listen_fd, void *p), void *p);
+int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, void *p), void *p);
 void ssr_run_loop_shutdown(struct ssr_client_state *state);
+unsigned short ssr_get_listen_port(struct ssr_client_state *state);
 
 void set_app_name(const char *name);
 
