@@ -26,6 +26,7 @@
 #include "dump_info.h"
 #include "tunnel.h"
 #include "ssr_executive.h"
+#include "ssr_client_api.h"
 #include "common.h"
 #if UDP_RELAY_ENABLE
 #include "udprelay.h"

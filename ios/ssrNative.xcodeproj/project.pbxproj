@@ -57,6 +57,8 @@
 		3A300B75206FFA0A00ABE7C2 /* ssrutils.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B73206FFA0900ABE7C2 /* ssrutils.c */; };
 		3A300B76206FFA0A00ABE7C2 /* ssrutils.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B74206FFA0A00ABE7C2 /* ssrutils.h */; };
 		3A57A60C206F9D44002F1F2D /* ssrNative.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A57A60A206F9D44002F1F2D /* ssrNative.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3A7D2CB320771D6A00D5766F /* ssr_client_api.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A7D2CB220771D6A00D5766F /* ssr_client_api.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3A7D2CB420771D6A00D5766F /* ssr_client_api.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A7D2CB220771D6A00D5766F /* ssr_client_api.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A95CBAF2070C88C00E507E3 /* ssrNative.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A57A60A206F9D44002F1F2D /* ssrNative.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A95CBB02070C8D000E507E3 /* sockaddr_universal.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B5F206FF69D00ABE7C2 /* sockaddr_universal.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A95CBB12070C8D000E507E3 /* ssr_cipher_names.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B61206FF69D00ABE7C2 /* ssr_cipher_names.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -253,6 +255,7 @@
 		3A57A607206F9D44002F1F2D /* ssrNative.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ssrNative.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A57A60A206F9D44002F1F2D /* ssrNative.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ssrNative.h; sourceTree = "<group>"; };
 		3A57A60B206F9D44002F1F2D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		3A7D2CB220771D6A00D5766F /* ssr_client_api.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ssr_client_api.h; path = ../src/client/ssr_client_api.h; sourceTree = "<group>"; };
 		3A95CBA42070C7DA00E507E3 /* ssrNative.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ssrNative.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A95CC072070D26000E507E3 /* udprelay.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = udprelay.c; path = ../src/udprelay.c; sourceTree = "<group>"; };
 		3A95CC082070D26000E507E3 /* udprelay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = udprelay.h; path = ../src/udprelay.h; sourceTree = "<group>"; };
@@ -346,6 +349,7 @@
 		3A300B3D206FF55B00ABE7C2 /* client */ = {
 			isa = PBXGroup;
 			children = (
+				3A7D2CB220771D6A00D5766F /* ssr_client_api.h */,
 				3A300B41206FF58200ABE7C2 /* client.c */,
 				3A300B40206FF58200ABE7C2 /* defs.h */,
 				3A300B44206FF58300ABE7C2 /* listener.c */,
@@ -426,6 +430,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3A300B71206FF9A400ABE7C2 /* cache.h in Headers */,
+				3A7D2CB320771D6A00D5766F /* ssr_client_api.h in Headers */,
 				3A300B47206FF58300ABE7C2 /* defs.h in Headers */,
 				3A300B37206FF54000ABE7C2 /* tls1.2_ticket.h in Headers */,
 				3A300B64206FF69D00ABE7C2 /* ssr_qr_code.h in Headers */,
@@ -458,6 +463,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3A95CBC62070C92200E507E3 /* auth.h in Headers */,
+				3A7D2CB420771D6A00D5766F /* ssr_client_api.h in Headers */,
 				3A95CBDB2070C92D00E507E3 /* s5.h in Headers */,
 				3A95CBAF2070C88C00E507E3 /* ssrNative.h in Headers */,
 				3A95CBD82070C92C00E507E3 /* defs.h in Headers */,
@@ -794,6 +800,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -848,6 +855,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
@@ -955,7 +963,6 @@
 				INFOPLIST_FILE = ssrNative/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ssrlive.ssrNative;
 				PRODUCT_NAME = ssrNative;
 				SDKROOT = macosx;
@@ -994,7 +1001,6 @@
 				INFOPLIST_FILE = ssrNative/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ssrlive.ssrNative;
 				PRODUCT_NAME = ssrNative;
 				SDKROOT = macosx;

@@ -27,6 +27,7 @@
 #include "dump_info.h"
 #include "common.h"
 #include "ssr_executive.h"
+#include "ssr_client_api.h"
 
 #if HAVE_UNISTD_H
 #include <unistd.h>  /* getopt */

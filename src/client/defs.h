@@ -41,13 +41,7 @@
 #include "sockaddr_universal.h"
 #include "obfs.h"
 
-struct server_config;
-struct ssr_client_state;
 struct server_env_t;
-
-/* listener.c */
-int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ssr_client_state *state, int listen_fd, void *p), void *p);
-void ssr_run_loop_shutdown(struct ssr_client_state *state);
 
 /* client.c */
 void client_tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout);

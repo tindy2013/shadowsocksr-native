@@ -71,7 +71,7 @@ set(SOURCE_FILES_CLIENT
         dump_info.c
         dump_info.h
         ${SOURCE_FILES_OBFS}
-        )
+        client/ssr_client_api.h)
 
 set(SOURCE_FILES_TUNNEL
         utils.c
