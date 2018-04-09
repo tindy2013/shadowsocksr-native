@@ -29,6 +29,7 @@ struct server_config {
     char *remarks;
 };
 
+#if !defined(_LOCAL_H)
 struct server_env_t {
     void *data;
 
@@ -44,6 +45,7 @@ struct server_env_t {
     void *protocol_global;
     void *obfs_global;
 };
+#endif // _LOCAL_H
 
 struct tunnel_cipher_ctx {
     struct server_env_t *env; // __weak_ptr

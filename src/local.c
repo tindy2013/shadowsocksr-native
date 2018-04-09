@@ -78,6 +78,8 @@
 #include "local.h"
 #include "udprelay.h"
 #include "ssrbuffer.h"
+#include "sockaddr_universal.h"
+#include "ssr_executive.h"
 
 #ifndef LIB_ONLY
 #ifdef __APPLE__
@@ -111,6 +113,7 @@ char *prefix;
 
 #include "includeobfs.h" // I don't want to modify makefile
 #include "jconf.h"
+#include "local_config.h"
 
 static int acl       = 0;
 static int mode = TCP_ONLY;
@@ -172,7 +175,7 @@ setnonblocking(int fd)
 }
 #endif
 
-int uv_stream_fd(const uv_tcp_t *handle) {
+static int uv_stream_fd(const uv_tcp_t *handle) {
 #if defined(_WIN32)
     return (int) handle->socket;
 #elif defined(__APPLE__)
@@ -181,6 +184,16 @@ int uv_stream_fd(const uv_tcp_t *handle) {
 #else
     return (handle)->io_watcher.fd;
 #endif
+}
+
+static uint16_t get_socket_port(const uv_tcp_t *tcp) {
+    union sockaddr_universal tmp = { 0 };
+    int len = sizeof(tmp);
+    if (uv_tcp_getsockname(tcp, &tmp.addr, &len) != 0) {
+        return 0;
+    } else {
+        return ntohs(tmp.addr4.sin_port);
+    }
 }
 
 void
@@ -231,7 +244,7 @@ create_and_bind(const char *addr, const char *port, uv_loop_t *loop, uv_tcp_t *t
     }
 
     freeaddrinfo(result);
-
+    
     return listen_sock;
 }
 
@@ -367,7 +380,9 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
     if (nread <= 0) {
         if (nread < 0) {
-            assert(nread == UV_EOF || nread == UV_ECONNRESET);
+            if (nread != UV_EOF) {
+                LOGE("local_recv_cb \"%s\"", uv_strerror(nread));
+            }
             tunnel_close_and_free(remote, local);
         }
         return;
@@ -483,7 +498,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     LOGI("udp assc request accepted");
                 }
             } else if (request->cmd != SOCKS5_COMMAND_CONNECT) {
-                LOGE("unsupported cmd: %d", request->cmd);
+                LOGE("unsupported cmd: 0x%02X", (uint8_t)request->cmd);
                 struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
                 size_t size = 0;
                 struct socks5_response *response =
@@ -564,7 +579,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 }
             } else {
                 buffer_free(abuf);
-                LOGE("unsupported addrtype: %d", addr_type);
+                LOGE("unsupported addrtype: 0x%02X", (uint8_t)addr_type);
                 tunnel_close_and_free(remote, local);
                 return;
             }
@@ -573,7 +588,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             int sni_detected = 0;
 
             if (addr_type == SOCKS5_ADDRTYPE__IPV4 || addr_type == SOCKS5_ADDRTYPE__IPV6) {
-                char *hostname;
+                char *hostname = NULL;
                 uint16_t p = ntohs(*(uint16_t *)(abuf->buffer + abuf->len - 2));
                 int ret    = 0;
                 if (p == http_protocol->default_port) {
@@ -927,9 +942,7 @@ remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             // (errno == EAGAIN || errno == EWOULDBLOCK):
             ; // LOGI("remote_recv_cb: no data. continue to wait for recv");
         } else if (nread < 0) {
-            if (verbose) {
-                ERROR("remote_recv_cb_recv");
-            }
+            LOGE("remote_recv_cb \"%s\"", uv_strerror(nread));
             tunnel_close_and_free(remote, local);
         }
         return;
@@ -1559,11 +1572,12 @@ main(int argc, char **argv)
         protocol = NULL;
     }
 
-    if (remote_num == 0 || remote_port == NULL ||
+    if (remote_num == 0 || remote_port == NULL || password == NULL
         #ifndef HAVE_LAUNCHD
-        local_port == NULL ||
+        || local_port == NULL
         #endif
-        password == NULL) {
+        )
+    {
         usage(VERSION, USING_CRYPTO);
         exit(EXIT_FAILURE);
     }
@@ -1614,19 +1628,75 @@ main(int argc, char **argv)
 
     // parse tunnel addr
     if (tunnel_addr_str) {
+        ASSERT(!"Not support now!");
         parse_addr(tunnel_addr_str, &tunnel_addr);
     }
+    
+    struct local_config_t *local_config = (struct local_config_t *)calloc(1, sizeof(*local_config));
+    {
+        string_safe_assign(&local_config->timeout, timeout);
+        string_safe_assign(&local_config->iface, iface);
+        local_config->mptcp = mptcp;
+        local_config->remote_num = remote_num;
+        if (remote_num > 0) {
+            int index = 0;
+            local_config->remote_addr = (struct ss_host_port *)calloc(remote_num, sizeof(struct ss_host_port));
+            for (index=0; index<remote_num; ++index) {
+                string_safe_assign(&local_config->remote_addr[index].host, remote_addr[index].host);
+                string_safe_assign(&local_config->remote_addr[index].port, remote_addr[index].port);
+            }
+            local_config->hostnames = (char **)calloc(remote_num, sizeof(char *));
+            for (index=0; index<remote_num; ++index) {
+                string_safe_assign(&local_config->hostnames[index], hostnames[index]);
+            }
+        }
+        string_safe_assign(&local_config->remote_port, remote_port);
+        
+        string_safe_assign(&local_config->local_addr, local_addr);
+        string_safe_assign(&local_config->local_port, local_port);
 
+        local_config->mode = mode;
+        local_config->mtu = mtu;
+        string_safe_assign(&local_config->user, user);
+        
+        string_safe_assign(&local_config->method, method);
+        string_safe_assign(&local_config->password, password);
+        string_safe_assign(&local_config->protocol, protocol);
+        string_safe_assign(&local_config->protocol_param, protocol_param);
+        string_safe_assign(&local_config->obfs, obfs);
+        string_safe_assign(&local_config->obfs_param, obfs_param);
+    }
+        
+    i = ssr_local_main_loop(local_config, NULL, NULL);
+    
+    local_config_release(local_config);
+    free_jconf(conf);
+    
+    return i;
+}
+
+struct ssr_local_state {
+    int listen_fd;
+};
+
+int ssr_Local_listen_socket_fd(struct ssr_local_state *state) {
+    return state->listen_fd;
+}
+
+int ssr_local_main_loop(const struct local_config_t *config, void(*feedback_state)(struct ssr_local_state *state, void *p), void *p) {
 #ifdef __MINGW32__
     winsock_init();
 #endif
 
+    struct ss_host_port tunnel_addr = { .host = NULL, .port = NULL };
+
     // Setup listeners
     struct listener_t *listener = (struct listener_t *)ss_malloc(sizeof(struct listener_t));
 
-    listener->timeout = atoi(timeout) * SECONDS_PER_MINUTE;
-    listener->iface = ss_strdup(iface);
-    listener->mptcp = mptcp;
+    listener->timeout = atoi(config->timeout) * SECONDS_PER_MINUTE;
+    listener->iface = ss_strdup(config->iface);
+    listener->mptcp = config->mptcp;
+    /*
     listener->tunnel_addr = tunnel_addr;
 
     if(use_new_listener) {
@@ -1681,32 +1751,35 @@ main(int argc, char **argv)
             serv->group = ss_strdup(serv_cfg->group);
             serv->udp_over_tcp = serv_cfg->udp_over_tcp;
         }
-    } else {
-        listener->server_num = remote_num;
-        for(i = 0; i < remote_num; i++) {
+    } else
+     */
+     {
+         int i = 0;
+        listener->server_num = config->remote_num;
+        for(i = 0; i < config->remote_num; i++) {
             struct server_env_t *serv = &listener->servers[i];
-            char *host = remote_addr[i].host;
-            char *port = remote_addr[i].port ? remote_addr[i].port : remote_port;
+            char *host = config->remote_addr[i].host;
+            char *port = config->remote_addr[i].port ? config->remote_addr[i].port : config->remote_port;
 
             struct sockaddr_storage *storage = ss_malloc(sizeof(struct sockaddr_storage));
             if (get_sockaddr(host, port, storage, 1, ipv6first) == -1) {
                 FATAL("failed to resolve the provided hostname");
             }
             serv->host = ss_strdup(host);
-            if (hostnames[i]) {
-                serv->hostname = hostnames[i];
+            if (config->hostnames[i]) {
+                serv->hostname = config->hostnames[i];
             }
             serv->addr = serv->addr_udp = storage;
             serv->addr_len = serv->addr_udp_len = (int) get_sockaddr_len((struct sockaddr *)storage);
             serv->port = serv->udp_port = atoi(port);
 
             // Setup keys
-            LOGI("initializing ciphers... %s", method);
-            serv->cipher = (struct cipher_env_t *) cipher_env_new_instance(password, method);
-            serv->psw = ss_strdup(password);
+            LOGI("initializing ciphers... %s", config->method);
+            serv->cipher = (struct cipher_env_t *) cipher_env_new_instance(config->password, config->method);
+            serv->psw = ss_strdup(config->password);
 
             // init obfs
-            init_obfs(serv, protocol, protocol_param, obfs, obfs_param);
+            init_obfs(serv, config->protocol, config->protocol_param, config->obfs, config->obfs_param);
 
             serv->enable = 1;
         }
@@ -1729,13 +1802,13 @@ main(int argc, char **argv)
 
     uv_tcp_t *listener_socket = &listen_ctx->socket;
 
-    if (mode != UDP_ONLY) {
+    int listenfd;
+    if (config->mode != UDP_ONLY) {
         // Setup socket
-        int listenfd;
 #ifdef HAVE_LAUNCHD
-        listenfd = launch_or_create(local_addr, local_port, loop, listener_socket);
+        listenfd = launch_or_create(config->local_addr, config->local_port, loop, listener_socket);
 #else
-        listenfd = create_and_bind(local_addr, local_port, loop, listener_socket);
+        listenfd = create_and_bind(config->local_addr, config->local_port, loop, listener_socket);
 #endif
         if (listenfd != 0) {
             FATAL("bind() error");
@@ -1746,28 +1819,32 @@ main(int argc, char **argv)
         }
     }
 
+    listenfd = uv_stream_fd(listener_socket);
+    
+    uint16_t port = get_socket_port(listener_socket);
+
     struct udp_listener_ctx_t *udp_server = NULL;
     // Setup UDP
-    if (mode != TCP_ONLY) {
+    if (config->mode != TCP_ONLY) {
         LOGI("udprelay enabled");
-        udp_server = udprelay_begin(loop, local_addr, (uint16_t)atoi(local_port), (union sockaddr_universal *)listen_ctx->servers[0].addr_udp,
-                      &tunnel_addr, mtu, listen_ctx->timeout, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
+        udp_server = udprelay_begin(loop, config->local_addr, port, (union sockaddr_universal *)listen_ctx->servers[0].addr_udp,
+                      &tunnel_addr, config->mtu, listen_ctx->timeout, listen_ctx->servers[0].cipher, listen_ctx->servers[0].protocol_name, listen_ctx->servers[0].protocol_param);
     }
 
 #ifdef HAVE_LAUNCHD
-    if (local_port == NULL) {
+    if (config->local_port == NULL) {
         LOGI("listening through launchd");
     } else
 #endif
     {
-        if (strcmp(local_addr, ":") > 0) {
-            LOGI("listening at [%s]:%s", local_addr, local_port);
+        if (strcmp(config->local_addr, ":") > 0) {
+            LOGI("listening at [%s]:%d", config->local_addr, port);
         } else {
-            LOGI("listening at %s:%s", local_addr, local_port);
+            LOGI("listening at %s:%d", config->local_addr, port);
         }
     }
     // setuid
-    if (user != NULL && ! run_as(user)) {
+    if (config->user != NULL && ! run_as(config->user)) {
         FATAL("failed to switch user");
     }
 
@@ -1777,7 +1854,12 @@ main(int argc, char **argv)
     }
 #endif
 
-    free_jconf(conf);
+    if (feedback_state) {
+        struct ssr_local_state *state = (struct ssr_local_state *)calloc(1, sizeof(*state));
+        state->listen_fd = listenfd;
+        feedback_state(state, p);
+        free(state);
+    }
 
     // Enter the loop
     uv_run(listener_socket->loop, UV_RUN_DEFAULT);
@@ -1787,11 +1869,11 @@ main(int argc, char **argv)
     }
 
     // Clean up
-    if (mode != TCP_ONLY) {
+    if (config->mode != TCP_ONLY) {
         udprelay_shutdown(udp_server); // udp relay use some data from listener, so we need to release udp first
     }
 
-    if (mode != UDP_ONLY) {
+    if (config->mode != UDP_ONLY) {
         // uv_stop(listener_socket->loop);
         free_connections(); // after this, all inactive listener should be released already, so we only need to release the current_listener
         listener_release(current_listener);

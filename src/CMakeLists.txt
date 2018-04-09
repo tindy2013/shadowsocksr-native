@@ -38,6 +38,8 @@ set(SOURCE_FILES_LOCAL
         local.c
         common.h
         includeobfs.h
+        local_config.c
+        local_config.h
         ${SOURCE_FILES_OBFS}
         ${SOURCE_FILES_SNI})
 
