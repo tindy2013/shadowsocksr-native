@@ -99,26 +99,26 @@
 		3A520C4C207B39A900109202 /* socks5.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C3B207B39A800109202 /* socks5.h */; };
 		3A520C4D207B39A900109202 /* sockaddr_universal.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C3C207B39A800109202 /* sockaddr_universal.c */; };
 		3A520C4E207B39A900109202 /* sockaddr_universal.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C3C207B39A800109202 /* sockaddr_universal.c */; };
-		3A520C4F207B39A900109202 /* ssr_cipher_names.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C3D207B39A800109202 /* ssr_cipher_names.h */; };
-		3A520C50207B39A900109202 /* ssr_cipher_names.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C3D207B39A800109202 /* ssr_cipher_names.h */; };
+		3A520C4F207B39A900109202 /* ssr_cipher_names.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C3D207B39A800109202 /* ssr_cipher_names.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3A520C50207B39A900109202 /* ssr_cipher_names.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C3D207B39A800109202 /* ssr_cipher_names.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A520C51207B39A900109202 /* ssrbuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C3E207B39A800109202 /* ssrbuffer.c */; };
 		3A520C52207B39A900109202 /* ssrbuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C3E207B39A800109202 /* ssrbuffer.c */; };
 		3A520C53207B39A900109202 /* ssrutils.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C3F207B39A800109202 /* ssrutils.h */; };
 		3A520C54207B39A900109202 /* ssrutils.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C3F207B39A800109202 /* ssrutils.h */; };
-		3A520C55207B39A900109202 /* sockaddr_universal.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C40207B39A800109202 /* sockaddr_universal.h */; };
-		3A520C56207B39A900109202 /* sockaddr_universal.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C40207B39A800109202 /* sockaddr_universal.h */; };
+		3A520C55207B39A900109202 /* sockaddr_universal.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C40207B39A800109202 /* sockaddr_universal.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3A520C56207B39A900109202 /* sockaddr_universal.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C40207B39A800109202 /* sockaddr_universal.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A520C57207B39A900109202 /* ssr_qr_code.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C41207B39A800109202 /* ssr_qr_code.c */; };
 		3A520C58207B39A900109202 /* ssr_qr_code.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C41207B39A800109202 /* ssr_qr_code.c */; };
-		3A520C59207B39A900109202 /* ssr_qr_code.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C42207B39A800109202 /* ssr_qr_code.h */; };
-		3A520C5A207B39A900109202 /* ssr_qr_code.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C42207B39A800109202 /* ssr_qr_code.h */; };
+		3A520C59207B39A900109202 /* ssr_qr_code.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C42207B39A800109202 /* ssr_qr_code.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3A520C5A207B39A900109202 /* ssr_qr_code.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C42207B39A800109202 /* ssr_qr_code.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A520C5B207B39A900109202 /* ssr_cipher_names.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C43207B39A900109202 /* ssr_cipher_names.c */; };
 		3A520C5C207B39A900109202 /* ssr_cipher_names.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C43207B39A900109202 /* ssr_cipher_names.c */; };
 		3A520C5D207B39A900109202 /* ssrutils.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C44207B39A900109202 /* ssrutils.c */; };
 		3A520C5E207B39A900109202 /* ssrutils.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C44207B39A900109202 /* ssrutils.c */; };
 		3A520C5F207B39A900109202 /* ssr_executive.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C45207B39A900109202 /* ssr_executive.c */; };
 		3A520C60207B39A900109202 /* ssr_executive.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C45207B39A900109202 /* ssr_executive.c */; };
-		3A520C61207B39A900109202 /* ssr_executive.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C46207B39A900109202 /* ssr_executive.h */; };
-		3A520C62207B39A900109202 /* ssr_executive.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C46207B39A900109202 /* ssr_executive.h */; };
+		3A520C61207B39A900109202 /* ssr_executive.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C46207B39A900109202 /* ssr_executive.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3A520C62207B39A900109202 /* ssr_executive.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C46207B39A900109202 /* ssr_executive.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A520C67207B39BE00109202 /* cache.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C63207B39BD00109202 /* cache.c */; };
 		3A520C68207B39BE00109202 /* cache.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520C63207B39BD00109202 /* cache.c */; };
 		3A520C69207B39BE00109202 /* acl.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520C64207B39BE00109202 /* acl.h */; };
@@ -245,12 +245,10 @@
 		3A520D2C207B4E8000109202 /* local.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520D29207B4E8000109202 /* local.h */; };
 		3A520D2D207B4E8000109202 /* local.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520D2A207B4E8000109202 /* local.c */; };
 		3A520D2E207B4E8000109202 /* local.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520D2A207B4E8000109202 /* local.c */; };
-		3A520D30207B511D00109202 /* local_config.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520D2F207B511D00109202 /* local_config.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		3A520D31207B511D00109202 /* local_config.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A520D2F207B511D00109202 /* local_config.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		3A520D45207BD9AA00109202 /* local_config.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520D44207BD9AA00109202 /* local_config.c */; };
-		3A520D46207BD9AA00109202 /* local_config.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A520D44207BD9AA00109202 /* local_config.c */; };
 		3A6EB14F20784E3300763A08 /* ssrLocal.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A6EB14D20784E3300763A08 /* ssrLocal.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3A6EB1622078501800763A08 /* ssrLocal.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A6EB14D20784E3300763A08 /* ssrLocal.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3A9D0F47207C6B77002E2E60 /* local_api.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A9D0F43207C6B77002E2E60 /* local_api.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3A9D0F48207C6B77002E2E60 /* local_api.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A9D0F43207C6B77002E2E60 /* local_api.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -475,12 +473,11 @@
 		3A520D26207B4D7300109202 /* commands.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = commands.c; path = ../libcork/cli/commands.c; sourceTree = "<group>"; };
 		3A520D29207B4E8000109202 /* local.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = local.h; path = ../src/local.h; sourceTree = "<group>"; };
 		3A520D2A207B4E8000109202 /* local.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = local.c; path = ../src/local.c; sourceTree = "<group>"; };
-		3A520D2F207B511D00109202 /* local_config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = local_config.h; path = ../src/local_config.h; sourceTree = "<group>"; };
-		3A520D44207BD9AA00109202 /* local_config.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = local_config.c; path = ../src/local_config.c; sourceTree = "<group>"; };
 		3A6EB14A20784E3300763A08 /* ssrLocal.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ssrLocal.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A6EB14D20784E3300763A08 /* ssrLocal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ssrLocal.h; sourceTree = "<group>"; };
 		3A6EB14E20784E3300763A08 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		3A6EB15A20784F9100763A08 /* ssrLocal.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ssrLocal.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		3A9D0F43207C6B77002E2E60 /* local_api.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = local_api.h; path = ../src/local_api.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -644,8 +641,7 @@
 		3A520C2C207B38DE00109202 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				3A520D44207BD9AA00109202 /* local_config.c */,
-				3A520D2F207B511D00109202 /* local_config.h */,
+				3A9D0F43207C6B77002E2E60 /* local_api.h */,
 				3A520D2A207B4E8000109202 /* local.c */,
 				3A520D29207B4E8000109202 /* local.h */,
 				3A520D1E207B4CD000109202 /* rule.c */,
@@ -808,7 +804,6 @@
 				3A520C61207B39A900109202 /* ssr_executive.h in Headers */,
 				3A520CC7207B3BCC00109202 /* jconf.h in Headers */,
 				3A520C35207B395800109202 /* netutils.h in Headers */,
-				3A520D30207B511D00109202 /* local_config.h in Headers */,
 				3A6EB14F20784E3300763A08 /* ssrLocal.h in Headers */,
 				3A520CCE207B3BDF00109202 /* common.h in Headers */,
 				3A520C80207B3A4D00109202 /* encrypt.h in Headers */,
@@ -829,6 +824,7 @@
 				3A520C4B207B39A900109202 /* socks5.h in Headers */,
 				3A520C73207B39D900109202 /* http.h in Headers */,
 				3A520CA7207B3A5F00109202 /* crc32.h in Headers */,
+				3A9D0F47207C6B77002E2E60 /* local_api.h in Headers */,
 				3A520CD1207B3C0400109202 /* includeobfs.h in Headers */,
 				3A520C2F207B391800109202 /* udprelay.h in Headers */,
 				3A520CC9207B3BCC00109202 /* json.h in Headers */,
@@ -850,7 +846,6 @@
 				3A520C62207B39A900109202 /* ssr_executive.h in Headers */,
 				3A520CC8207B3BCC00109202 /* jconf.h in Headers */,
 				3A520C36207B395800109202 /* netutils.h in Headers */,
-				3A520D31207B511D00109202 /* local_config.h in Headers */,
 				3A6EB1622078501800763A08 /* ssrLocal.h in Headers */,
 				3A520CCF207B3BDF00109202 /* common.h in Headers */,
 				3A520C81207B3A4D00109202 /* encrypt.h in Headers */,
@@ -871,6 +866,7 @@
 				3A520C4C207B39A900109202 /* socks5.h in Headers */,
 				3A520C74207B39D900109202 /* http.h in Headers */,
 				3A520CA8207B3A5F00109202 /* crc32.h in Headers */,
+				3A9D0F48207C6B77002E2E60 /* local_api.h in Headers */,
 				3A520CD2207B3C0400109202 /* includeobfs.h in Headers */,
 				3A520C30207B391800109202 /* udprelay.h in Headers */,
 				3A520CCA207B3BCC00109202 /* json.h in Headers */,
@@ -1063,7 +1059,6 @@
 				3A520C20207B371B00109202 /* udns_rr_mx.c in Sources */,
 				3A520C0C207B371B00109202 /* udns_bl.c in Sources */,
 				3A520C82207B3A4D00109202 /* encrypt.c in Sources */,
-				3A520D45207BD9AA00109202 /* local_config.c in Sources */,
 				3A520C5B207B39A900109202 /* ssr_cipher_names.c in Sources */,
 				3A520C16207B371B00109202 /* udns_jran.c in Sources */,
 				3A520C4D207B39A900109202 /* sockaddr_universal.c in Sources */,
@@ -1155,7 +1150,6 @@
 				3A520C21207B371B00109202 /* udns_rr_mx.c in Sources */,
 				3A520C0D207B371B00109202 /* udns_bl.c in Sources */,
 				3A520C83207B3A4D00109202 /* encrypt.c in Sources */,
-				3A520D46207BD9AA00109202 /* local_config.c in Sources */,
 				3A520C5C207B39A900109202 /* ssr_cipher_names.c in Sources */,
 				3A520C17207B371B00109202 /* udns_jran.c in Sources */,
 				3A520C4E207B39A900109202 /* sockaddr_universal.c in Sources */,

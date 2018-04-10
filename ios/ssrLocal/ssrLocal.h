@@ -15,5 +15,8 @@ FOUNDATION_EXPORT double ssrLocalVersionNumber;
 FOUNDATION_EXPORT const unsigned char ssrLocalVersionString[];
 
 // In this header, you should import all the public headers of your framework using statements like #import <ssrLocal/PublicHeader.h>
-
-#import <ssrLocal/local_config.h>
+#import <ssrLocal/ssr_qr_code.h>
+#import <ssrLocal/ssr_executive.h>
+#import <ssrLocal/ssr_cipher_names.h>
+#import <ssrLocal/sockaddr_universal.h>
+#import <ssrLocal/local_api.h>
