@@ -153,51 +153,25 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
     tunnel->terminated = true;
 }
 
-void tunnel_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+void tunnel_process_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
+    struct socket_ctx *write_target = NULL;
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+    struct buffer_t *buf;
 
     ASSERT(socket == incoming || socket == outgoing);
 
-    if (socket_cycle(incoming, outgoing) == false) {
-        tunnel_shutdown(tunnel);
-        return;
-    }
+    socket->rdstate = socket_stop;
 
-    if (socket_cycle(outgoing, incoming) == false) {
-        tunnel_shutdown(tunnel);
-        return;
-    }
-}
+    write_target = ((socket == incoming) ? outgoing : incoming);
 
-static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b) {
-    bool result = true;
-    struct tunnel_ctx *tunnel = a->tunnel;
-
-    ASSERT((a->result >= 0) && (b->result >= 0));
-
-    if (a->wrstate == socket_done) {
-        a->wrstate = socket_stop;
+    buf = buffer_alloc(SSR_BUFF_SIZE);
+    ASSERT(tunnel->tunnel_extract_data);
+    if (tunnel->tunnel_extract_data(socket, buf) && (buf->len > 0)) {
+        socket_write(write_target, buf->buffer, buf->len);
     }
-    // The logic is as follows: read when we don't write and write when we don't read.
-    // That gives us back-pressure handling for free because if the peer
-    // sends data faster than we consume it, TCP congestion control kicks in.
-    if (a->wrstate == socket_stop) {
-        if (b->rdstate == socket_stop) {
-            socket_read(b);
-        } else if (b->rdstate == socket_done) {
-            struct buffer_t *buf = buffer_alloc(SSR_BUFF_SIZE);
-            ASSERT(tunnel->tunnel_extract_data);
-            if (tunnel->tunnel_extract_data(b, buf)) {
-                socket_write(a, buf->buffer, buf->len); // socket_write(a, b->buf->base, b->result);
-                b->rdstate = socket_stop;  // Triggers the call to socket_read() above.
-            } else {
-                result = false;
-            }
-            buffer_free(buf);
-        }
-    }
-    return result;
+    buffer_free(buf);
 }
 
 static void socket_timer_start(struct socket_ctx *c) {
@@ -286,7 +260,9 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
             break;
         }
 
-        uv_read_stop(&c->handle.stream);
+        if ((tunnel->tunnel_is_in_streaming == NULL) || (tunnel->tunnel_is_in_streaming(tunnel) == false)) {
+            uv_read_stop(&c->handle.stream);
+        }
 
         socket_timer_stop(c);
 
@@ -440,6 +416,12 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
 
     ASSERT(c->wrstate == socket_busy);
     c->wrstate = socket_done;
+
+    if (tunnel->tunnel_is_in_streaming && tunnel->tunnel_is_in_streaming(tunnel)) {
+        // in streaming stage, do nothing and return.
+        c->wrstate = socket_stop;
+        return;
+    }
 
     ASSERT(tunnel->tunnel_write_done);
     tunnel->tunnel_write_done(tunnel, c);

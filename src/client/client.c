@@ -86,6 +86,7 @@ static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size);
+static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel);
 static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 static bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 static bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr);
@@ -104,6 +105,7 @@ static bool init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_getaddrinfo_done = &tunnel_getaddrinfo_done;
     tunnel->tunnel_write_done = &tunnel_write_done;
     tunnel->tunnel_get_alloc_size = &tunnel_get_alloc_size;
+    tunnel->tunnel_is_in_streaming = &tunnel_is_in_streaming;
     tunnel->tunnel_extract_data = &tunnel_extract_data;
 
     objects_container_add(ctx->env->tunnel_set, tunnel);
@@ -137,7 +139,7 @@ static struct buffer_t * initial_package_create(const s5_ctx *parser) {
 
     uint8_t *iter = buffer->buffer;
     uint8_t len;
-    iter[0] = (char)parser->atyp;
+    iter[0] = (uint8_t)parser->atyp;
     iter++;
 
     switch (parser->atyp) {
@@ -229,7 +231,7 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         do_launch_streaming(tunnel);
         break;
     case session_streaming:
-        tunnel_streaming(tunnel, socket);
+        tunnel_process_streaming(tunnel, socket);
         break;
     case session_kill:
         tunnel_shutdown(tunnel);
@@ -667,6 +669,11 @@ static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_
     (void)tunnel;
     (void)suggested_size;
     return SSR_BUFF_SIZE;
+}
+
+static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel) {
+    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+    return (ctx->state == session_streaming);
 }
 
 static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {
