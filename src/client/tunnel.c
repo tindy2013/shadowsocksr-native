@@ -26,7 +26,6 @@
 #include "common.h"
 #include "tunnel.h"
 #include "dump_info.h"
-#include "ssrbuffer.h"
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel);
 static void tunnel_add_ref(struct tunnel_ctx *tunnel);
@@ -158,7 +157,8 @@ void tunnel_process_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *sock
     struct socket_ctx *outgoing = tunnel->outgoing;
     struct socket_ctx *write_target = NULL;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-    struct buffer_t *buf;
+    uint8_t *buffer = NULL;
+    size_t len = 0;
 
     ASSERT(socket == incoming || socket == outgoing);
 
@@ -166,12 +166,12 @@ void tunnel_process_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *sock
 
     write_target = ((socket == incoming) ? outgoing : incoming);
 
-    buf = buffer_alloc(SSR_BUFF_SIZE);
     ASSERT(tunnel->tunnel_extract_data);
-    if (tunnel->tunnel_extract_data(socket, buf) && (buf->len > 0)) {
-        socket_write(write_target, buf->buffer, buf->len);
+    buffer = tunnel->tunnel_extract_data(socket, &malloc, &len);
+    if (buffer && (len > 0)) {
+        socket_write(write_target, buffer, len);
     }
-    buffer_free(buf);
+    free(buffer);
 }
 
 static void socket_timer_start(struct socket_ctx *c) {

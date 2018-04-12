@@ -78,7 +78,7 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
 static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel);
 static void do_socks5_reply_success(struct tunnel_ctx *tunnel);
 static void do_launch_streaming(struct tunnel_ctx *tunnel);
-static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf);
+static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)(size_t size), size_t *size);
 static void tunnel_dying(struct tunnel_ctx *tunnel);
 static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_outgoing_connected_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -609,11 +609,18 @@ static void do_launch_streaming(struct tunnel_ctx *tunnel) {
     ctx->state = session_streaming;
 }
 
-static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf) {
+static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)(size_t size), size_t *size) {
     struct tunnel_ctx *tunnel = socket->tunnel;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
     struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
     enum ssr_error error = ssr_error_client_decode;
+    struct buffer_t *buf = buffer_alloc(SSR_BUFF_SIZE);
+    uint8_t *result = NULL;
+
+    if (socket==NULL || allocator==NULL || size==NULL) {
+        return result;
+    }
+    *size = 0;
 
     buffer_store(buf, (const uint8_t *)socket->buf->base, (size_t)socket->result);
 
@@ -629,7 +636,16 @@ static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf)
     } else {
         ASSERT(false);
     }
-    return (error == ssr_ok);
+
+    if (error == ssr_ok) {
+        size_t len = buf->len;
+        *size = len;
+        result = (uint8_t *)allocator(len + 1);
+        memcpy(result, buf->buffer, len);
+    }
+
+    buffer_free(buf);
+    return result;
 }
 
 static void tunnel_dying(struct tunnel_ctx *tunnel) {

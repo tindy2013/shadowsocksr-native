@@ -68,7 +68,7 @@ static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size);
 static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel);
-static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf);
+static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)(size_t size), size_t *size);
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel);
 static bool is_header_complete(const struct buffer_t *buf);
@@ -652,11 +652,18 @@ static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *so
     ctx->state = session_streaming;
 }
 
-static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf) {
+static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)(size_t size), size_t *size) {
     struct tunnel_ctx *tunnel = socket->tunnel;
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
     enum ssr_error error = ssr_error_client_decode;
+    struct buffer_t *buf = buffer_alloc(SSR_BUFF_SIZE);
+    uint8_t *result = NULL;
+
+    if (socket==NULL || allocator==NULL || size==NULL) {
+        return result;
+    }
+    *size = 0;
 
     buffer_store(buf, (const uint8_t *)socket->buf->base, (size_t)socket->result);
 
@@ -666,7 +673,7 @@ static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf)
         struct buffer_t *feedback = NULL;
         error = tunnel_decrypt(cipher_ctx, buf, &feedback);
         if (feedback) {
-            UNREACHABLE();
+            ASSERT(0);
             /*
             ASSERT(buf->len == 0);
             socket_write(outgoing, feedback->buffer, feedback->len);
@@ -674,9 +681,18 @@ static bool tunnel_extract_data(struct socket_ctx *socket, struct buffer_t *buf)
             buffer_free(feedback);
         }
     } else {
-        UNREACHABLE();
+        ASSERT(0);
     }
-    return (error == ssr_ok);
+
+    if (error == ssr_ok) {
+        size_t len = buf->len;
+        *size = len;
+        result = (uint8_t *)allocator(len + 1);
+        memcpy(result, buf->buffer, len);
+    }
+
+    buffer_free(buf);
+    return result;
 }
 
 static int resolved_ips_compare_key(void *left, void *right) {
