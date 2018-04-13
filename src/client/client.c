@@ -552,8 +552,7 @@ static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    buf = buffer_alloc(SSR_BUFF_SIZE);
-    buffer_store(buf, (const uint8_t *)outgoing->buf->base, (size_t)outgoing->result);
+    buf = buffer_create_from((uint8_t *)outgoing->buf->base, (size_t)outgoing->result);
     error = tunnel_decrypt(cipher_ctx, buf, &feedback);
     ASSERT(error == ssr_ok);
     ASSERT(feedback);
@@ -614,7 +613,7 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
     struct tunnel_cipher_ctx *cipher_ctx = ctx->cipher;
     enum ssr_error error = ssr_error_client_decode;
-    struct buffer_t *buf = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *buf = NULL;
     uint8_t *result = NULL;
 
     if (socket==NULL || allocator==NULL || size==NULL) {
@@ -622,7 +621,7 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
     }
     *size = 0;
 
-    buffer_store(buf, (const uint8_t *)socket->buf->base, (size_t)socket->result);
+    buf = buffer_create_from((uint8_t *)socket->buf->base, (size_t)socket->result);
 
     if (socket == tunnel->incoming) {
         error = tunnel_encrypt(cipher_ctx, buf);

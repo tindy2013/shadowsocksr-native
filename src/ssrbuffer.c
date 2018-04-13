@@ -40,6 +40,12 @@ struct buffer_t * buffer_alloc(size_t capacity) {
     return ptr;
 }
 
+struct buffer_t * buffer_create_from(const uint8_t *data, size_t len) {
+    struct buffer_t *result = buffer_alloc(2048);
+    buffer_store(result, data, len);
+    return result;
+}
+
 void buffer_reset(struct buffer_t *ptr) {
     if (ptr && ptr->buffer) {
         ptr->len = 0;

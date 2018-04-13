@@ -490,8 +490,7 @@ udp_create_local_listener(const char *host, uint16_t port, uv_loop_t *loop, uv_u
 #ifdef MODULE_REMOTE
 struct query_ctx * new_query_ctx(char *buf, size_t len) {
     struct query_ctx *ctx = calloc(1, sizeof(struct query_ctx));
-    ctx->buf = buffer_alloc(len);
-    buffer_store(ctx->buf, buf, len);
+    ctx->buf = buffer_create_from((uint8_t *)buf, len);
     return ctx;
 }
 
