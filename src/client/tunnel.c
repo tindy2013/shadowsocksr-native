@@ -27,6 +27,7 @@
 #include "tunnel.h"
 #include "dump_info.h"
 
+static bool tunnel_is_in_streaming_wrapper(struct tunnel_ctx *tunnel);
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel);
 static void tunnel_add_ref(struct tunnel_ctx *tunnel);
 static void tunnel_release(struct tunnel_ctx *tunnel);
@@ -61,6 +62,10 @@ uint16_t get_socket_port(const uv_tcp_t *tcp) {
     } else {
         return ntohs(tmp.addr4.sin_port);
     }
+}
+
+static bool tunnel_is_in_streaming_wrapper(struct tunnel_ctx *tunnel) {
+    return (tunnel && tunnel->tunnel_is_in_streaming && tunnel->tunnel_is_in_streaming(tunnel));
 }
 
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel) {
@@ -260,7 +265,7 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
             break;
         }
 
-        if ((tunnel->tunnel_is_in_streaming == NULL) || (tunnel->tunnel_is_in_streaming(tunnel) == false)) {
+        if (tunnel_is_in_streaming_wrapper(tunnel) == false) {
             uv_read_stop(&c->handle.stream);
         }
 
@@ -279,7 +284,9 @@ static void socket_read_done_cb(uv_stream_t *handle, ssize_t nread, const uv_buf
         }
 
         c->buf = buf;
-        ASSERT(c->rdstate == socket_busy);
+        if (tunnel_is_in_streaming_wrapper(tunnel) == false) {
+            ASSERT(c->rdstate == socket_busy);
+        }
         c->rdstate = socket_done;
 
         ASSERT(tunnel->tunnel_read_done);
@@ -304,7 +311,9 @@ static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
     c = CONTAINER_OF(handle, struct socket_ctx, handle);
     tunnel = c->tunnel;
 
-    ASSERT(c->rdstate == socket_busy);
+    if (tunnel_is_in_streaming_wrapper(tunnel) == false) {
+        ASSERT(c->rdstate == socket_busy);
+    }
 
     if (tunnel->tunnel_get_alloc_size) {
         size = tunnel->tunnel_get_alloc_size(tunnel, size);
@@ -380,7 +389,9 @@ void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     uv_buf_t buf;
     struct tunnel_ctx *tunnel = c->tunnel;
 
-    ASSERT(c->wrstate == socket_stop);
+    if (tunnel_is_in_streaming_wrapper(tunnel) == false) {
+        ASSERT(c->wrstate == socket_stop);
+    }
     c->wrstate = socket_busy;
 
     // It's okay to cast away constness here, uv_write() won't modify the memory.
@@ -414,10 +425,12 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
         return;  /* Handle has been closed. */
     }
 
-    ASSERT(c->wrstate == socket_busy);
+    if (tunnel_is_in_streaming_wrapper(tunnel) == false) {
+        ASSERT(c->wrstate == socket_busy);
+    }
     c->wrstate = socket_done;
 
-    if (tunnel->tunnel_is_in_streaming && tunnel->tunnel_is_in_streaming(tunnel)) {
+    if (tunnel_is_in_streaming_wrapper(tunnel) == true) {
         // in streaming stage, do nothing and return.
         c->wrstate = socket_stop;
         return;
