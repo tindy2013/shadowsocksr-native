@@ -388,6 +388,8 @@ static void socket_getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct
 void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     uv_buf_t buf;
     struct tunnel_ctx *tunnel = c->tunnel;
+    char *write_buf = NULL;
+    uv_write_t *req;
 
     if (tunnel_is_in_streaming_wrapper(tunnel) == false) {
         ASSERT(c->wrstate == socket_stop);
@@ -395,10 +397,12 @@ void socket_write(struct socket_ctx *c, const void *data, size_t len) {
     c->wrstate = socket_busy;
 
     // It's okay to cast away constness here, uv_write() won't modify the memory.
-    buf = uv_buf_init((char *)data, (unsigned int)len);
+    write_buf = (char *)calloc(len + 1, sizeof(*write_buf));
+    memcpy(write_buf, data, len);
+    buf = uv_buf_init(write_buf, (unsigned int)len);
 
-    uv_write_t *req = (uv_write_t *)calloc(1, sizeof(uv_write_t));
-    req->data = c;
+    req = (uv_write_t *)calloc(1, sizeof(uv_write_t));
+    req->data = write_buf;
 
     VERIFY(0 == uv_write(req, &c->handle.stream, &buf, 1, socket_write_done_cb));
     socket_timer_start(c);
@@ -407,8 +411,14 @@ void socket_write(struct socket_ctx *c, const void *data, size_t len) {
 static void socket_write_done_cb(uv_write_t *req, int status) {
     struct socket_ctx *c;
     struct tunnel_ctx *tunnel;
+    char *write_buf = NULL;
 
-    c = (struct socket_ctx *)req->data;
+    c = CONTAINER_OF(req->handle, struct socket_ctx, handle.stream);
+
+    ASSERT(req->nbufs == 1);
+    VERIFY((write_buf = (char *)req->data));
+    free(write_buf);
+
     c->result = status;
     free(req);
     tunnel = c->tunnel;
