@@ -231,7 +231,7 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         do_launch_streaming(tunnel);
         break;
     case session_streaming:
-        tunnel_process_streaming(tunnel, socket);
+        tunnel_traditional_streaming(tunnel, socket);
         break;
     case session_kill:
         tunnel_shutdown(tunnel);
@@ -687,8 +687,9 @@ static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_
 }
 
 static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel) {
-    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-    return (ctx->state == session_streaming);
+    // struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+    // return (ctx->state == session_streaming);
+    return false;
 }
 
 static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {

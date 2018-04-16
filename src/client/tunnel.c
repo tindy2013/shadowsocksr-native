@@ -31,7 +31,6 @@ static bool tunnel_is_in_streaming_wrapper(struct tunnel_ctx *tunnel);
 static bool tunnel_is_dead(struct tunnel_ctx *tunnel);
 static void tunnel_add_ref(struct tunnel_ctx *tunnel);
 static void tunnel_release(struct tunnel_ctx *tunnel);
-static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b);
 static void socket_timer_expire_cb(uv_timer_t *handle);
 static void socket_timer_start(struct socket_ctx *c);
 static void socket_timer_stop(struct socket_ctx *c);
@@ -177,6 +176,48 @@ void tunnel_process_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *sock
         socket_write(write_target, buffer, len);
     }
     free(buffer);
+}
+
+//
+// The logic is as follows: read when we don't write and write when we don't read.
+// That gives us back-pressure handling for free because if the peer
+// sends data faster than we consume it, TCP congestion control kicks in.
+//
+void tunnel_traditional_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    struct socket_ctx *current_socket = socket;
+    struct socket_ctx *target_socket = NULL;
+
+    ASSERT(current_socket == tunnel->incoming || current_socket == tunnel->outgoing);
+
+    target_socket = ((current_socket == tunnel->incoming) ? tunnel->outgoing : tunnel->incoming);
+
+    ASSERT((current_socket->wrstate == socket_done && current_socket->rdstate != socket_done) ||
+           (current_socket->wrstate != socket_done && current_socket->rdstate == socket_done));
+    ASSERT(target_socket->wrstate != socket_done && target_socket->rdstate != socket_done);
+
+    if (current_socket->wrstate == socket_done) {
+        current_socket->wrstate = socket_stop;
+        if (target_socket->rdstate == socket_stop) {
+            socket_read(target_socket);
+        }
+    }
+
+    if (current_socket->rdstate == socket_done) {
+        current_socket->rdstate = socket_stop;
+        ASSERT(target_socket->wrstate == socket_stop);
+        {
+            size_t len = 0;
+            uint8_t *buf = NULL;
+            ASSERT(tunnel->tunnel_extract_data);
+            buf = tunnel->tunnel_extract_data(current_socket, &malloc, &len);
+            if (buf /* && size > 0 */) {
+                socket_write(target_socket, buf, len);
+            } else {
+                tunnel_shutdown(tunnel);
+            }
+            free(buf);
+        }
+    }
 }
 
 static void socket_timer_start(struct socket_ctx *c) {

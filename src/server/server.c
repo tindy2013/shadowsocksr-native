@@ -331,7 +331,7 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         do_launch_streaming(tunnel, socket);
         break;
     case session_streaming:
-        tunnel_process_streaming(tunnel, socket);
+        tunnel_traditional_streaming(tunnel, socket);
         break;
     default:
         UNREACHABLE();
@@ -372,8 +372,9 @@ static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_
 }
 
 static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel) {
-    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-    return (ctx->state == session_streaming);
+    // struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+    // return (ctx->state == session_streaming);
+    return false;
 }
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel) {

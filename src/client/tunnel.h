@@ -64,6 +64,7 @@ uint16_t get_socket_port(const uv_tcp_t *tcp);
 void tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout, bool(*init_done_cb)(struct tunnel_ctx *tunnel, void *p), void *p);
 void tunnel_shutdown(struct tunnel_ctx *tunnel);
 void tunnel_process_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+void tunnel_traditional_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 int socket_connect(struct socket_ctx *c);
 void socket_read(struct socket_ctx *c);
 void socket_read_stop(struct socket_ctx *c);
