@@ -3,6 +3,7 @@
 
 void set_app_name(const char *name);
 const char *get_app_name(void);
+void set_dump_info_callback(void(*callback)(const char *info, void *p), void *p);
 
 #if defined(__GNUC__)
 # define ATTRIBUTE_FORMAT_PRINTF(a, b) __attribute__((format(printf, a, b)))

@@ -14,5 +14,6 @@ void ssr_run_loop_shutdown(struct ssr_client_state *state);
 int ssr_get_listen_socket_fd(struct ssr_client_state *state);
 
 void set_app_name(const char *name);
+void set_dump_info_callback(void(*callback)(const char *info, void *p), void *p);
 
 #endif //SHADOWSOCKSR_NATIVE_SSR_CLIENT_API_H
