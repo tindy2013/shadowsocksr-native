@@ -51,6 +51,12 @@ struct address_timestamp {
     time_t timestamp;
 };
 
+struct cmd_line_info {
+    char * cfg_file;
+    bool daemon_flag;
+    bool help_flag;
+};
+
 static int ssr_server_run_loop(struct server_config *config);
 void ssr_server_run_loop_shutdown(struct ssr_server_state *state);
 
@@ -85,28 +91,35 @@ static int resolved_ips_compare_key(void *left, void *right);
 static void resolved_ips_destroy_object(void *obj);
 
 void print_server_info(const struct server_config *config);
-static const char * parse_opts(int argc, char * const argv[]);
+static struct cmd_line_info * parse_opts(int argc, char * const argv[]);
 static void usage(void);
 
 int main(int argc, char * const argv[]) {
     struct server_config *config = NULL;
     int err = -1;
-    const char *config_path = NULL;
+    struct cmd_line_info *cmds = NULL;
 
     do {
         set_app_name(argv[0]);
 
-        config_path = DEFAULT_CONF_PATH;
         if (argc > 1) {
-            config_path = parse_opts(argc, argv);
+            cmds = parse_opts(argc, argv);
         }
 
-        if (config_path == NULL) {
+        if (cmds == NULL) {
             break;
         }
 
+        if (cmds->help_flag) {
+            break;
+        }
+
+        if (cmds->cfg_file == NULL) {
+            string_safe_assign(&cmds->cfg_file, DEFAULT_CONF_PATH);
+        }
+
         config = config_create();
-        if (parse_config_file(config_path, config) == false) {
+        if (parse_config_file(cmds->cfg_file, config) == false) {
             break;
         }
 
@@ -120,12 +133,37 @@ int main(int argc, char * const argv[]) {
             break;
         }
 
+        if (cmds->daemon_flag) {
+#if !(defined(_WIN32) || defined(WIN32))
+            #if defined(__APPLE__)
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            #endif
+
+            if(daemon(0, 0) == -1 && errno != 0) {
+                pr_err("failed to put the process in background: %s", strerror(errno));
+            } else {
+                // when in background, write log to a file
+                //log_to_file = 1;
+            }
+
+            #if defined(__APPLE__)
+            #pragma GCC diagnostic pop
+            #endif
+#endif
+        }
+
         print_server_info(config);
 
         ssr_server_run_loop(config);
 
         err = 0;
     } while (0);
+
+    if (cmds) {
+        object_safe_free((void **)&cmds->cfg_file);
+        free(cmds);
+    }
 
     config_release(config);
 
@@ -727,20 +765,26 @@ void print_server_info(const struct server_config *config) {
     pr_info("udp relay        %s\n", config->udp ? "yes" : "no");
 }
 
-static const char * parse_opts(int argc, char * const argv[]) {
+static struct cmd_line_info * parse_opts(int argc, char * const argv[]) {
     int opt;
 
-    while (-1 != (opt = getopt(argc, argv, "c:h"))) {
+    struct cmd_line_info *info = (struct cmd_line_info *)calloc(1, sizeof(*info));
+
+    while (-1 != (opt = getopt(argc, argv, "c:dh"))) {
         switch (opt) {
         case 'c':
-            return optarg;
+            string_safe_assign(&info->cfg_file, optarg);
+            break;
+        case 'd':
+            info->daemon_flag = true;
             break;
         case 'h':
         default:
+            info->help_flag = true;
             break;
         }
     }
-    return NULL;
+    return info;
 }
 
 static void usage(void) {
@@ -748,14 +792,14 @@ static void usage(void) {
         "\n"
         "Usage:\n"
         "\n"
-        "  %s [-c <config file>] [-h]\n"
+        "  %s [-d] [-c <config file>] [-h]\n"
         "\n"
         "Options:\n"
         "\n"
+        "  -d                     Run in background as a daemon.\n"
         "  -c <config file>       Configure file path.\n"
         "                         Default: " DEFAULT_CONF_PATH "\n"
         "  -h                     Show this help message.\n"
         "",
         get_app_name());
-    exit(1);
 }
