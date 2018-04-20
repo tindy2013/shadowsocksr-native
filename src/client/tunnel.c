@@ -456,7 +456,6 @@ static void socket_write_done_cb(uv_write_t *req, int status) {
 
     c = CONTAINER_OF(req->handle, struct socket_ctx, handle.stream);
 
-    ASSERT(req->nbufs == 1);
     VERIFY((write_buf = (char *)req->data));
     free(write_buf);
 

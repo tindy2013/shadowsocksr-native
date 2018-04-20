@@ -97,9 +97,9 @@ static void *ecalloc(int size, int cnt) {
   return t;
 }
 
-static void addzone(const char *zone) {
+static void addzone(char *zone) {
   if (nzones >= nzalloc) {
-    const char **zs = (const char**)ecalloc(sizeof(char*), (nzalloc += 16));
+    char **zs = (char**)ecalloc(sizeof(char*), (nzalloc += 16));
     if (zones) {
       memcpy(zs, zones, nzones * sizeof(char*));
       free(zones);
@@ -122,7 +122,7 @@ static int addzonefile(const char *fname) {
     while(*e && *e != ' ' && *e != '\t' && *e != '\n')
       ++e;
     *e++ = '\0';
-    p = memcpy(ecalloc(e - p, 1), p, e - p); // strdup
+    p = (char *) memcpy(ecalloc(e - p, 1), p, e - p); // strdup
     addzone(p);
   }
   fclose(f);

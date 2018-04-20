@@ -1,8 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
-MinimumVisualStudioVersion = 10.0.40219.1
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ssr-client", "ssr-client\ssr-client.vcxproj", "{F97AD980-48B0-4C94-9662-499EFEE4AB44}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C9840117-C1B9-43F1-9D18-A91AEB56F4C9} = {C9840117-C1B9-43F1-9D18-A91AEB56F4C9}
@@ -15,8 +13,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ssr-client", "ssr-client\ss
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libsodium", "..\depends\libsodium\ssrbuild\libsodium.vcxproj", "{A185B162-6CB6-4502-B03F-B56F7699A8D9}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{70412B63-AABC-4DE7-AF99-E5B84BC086BA}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "json-c", "..\depends\json-c\win32\json-c.vcxproj", "{F1F4BA6A-0368-4F34-95BB-C29A2244A772}"
 EndProject

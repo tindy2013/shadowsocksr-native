@@ -34,6 +34,10 @@ win32/ssr-server/x64/
 *.vcxproj.user
 *.VC.opendb
 *.sdf
+*.suo
+win32/ipch/
+sh.exe.stackdump
+*.opensdf
 
 build/
 .vscode/
