@@ -31,6 +31,7 @@
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <errno.h>
 
 #ifdef EWOULDBLOCK
 #undef EWOULDBLOCK
@@ -40,8 +41,8 @@
 #undef errno
 #endif
 
-#ifdef ERROR
-#undef ERROR
+#ifdef SS_ERROR
+#undef SS_ERROR
 #endif
 
 #ifndef AI_ALL
@@ -65,7 +66,7 @@
 #define errno WSAGetLastError()
 #endif
 #define close(fd) closesocket(fd)
-#define ERROR(s) ss_error(s)
+#define SS_ERROR(s) ss_error(s)
 #define setsockopt(a, b, c, d, e) setsockopt(a, b, c, (char *)(d), e)
 
 void winsock_init(void);

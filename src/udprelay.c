@@ -549,7 +549,7 @@ static void udp_remote_send_done_cb(uv_udp_send_t* req, int status) {
     struct udp_remote_ctx_t *remote_ctx = (struct udp_remote_ctx_t *)req->data;
     free(req);
     if (status < 0) {
-        ERROR("[udp] sendto_remote");
+        SS_ERROR("[udp] sendto_remote");
         udp_remote_shutdown(remote_ctx);
     } else {
         /*
@@ -606,7 +606,7 @@ static void query_resolve_cb(struct sockaddr *addr, void *data) {
 #ifdef SET_INTERFACE
                 if (query_ctx->server_ctx->iface) {
                     if (setinterface(remotefd, query_ctx->server_ctx->iface) == -1)
-                        ERROR("setinterface");
+                        SS_ERROR("setinterface");
                 }
 #endif
                 // remote_ctx                  = new_udp_remote(remotefd, query_ctx->server_ctx);
@@ -616,7 +616,7 @@ static void query_resolve_cb(struct sockaddr *addr, void *data) {
                 memcpy(remote_ctx->addr_header, query_ctx->addr_header,
                        query_ctx->addr_header_len);
             } else {
-                ERROR("[udp] bind() error");
+                SS_ERROR("[udp] bind() error");
             }
         } else {
             cache_hit = 1;
@@ -630,7 +630,7 @@ static void query_resolve_cb(struct sockaddr *addr, void *data) {
                                      0, addr, addr_len);
 
             if (s == -1) {
-                ERROR("[udp] sendto_remote");
+                SS_ERROR("[udp] sendto_remote");
                 if (!cache_hit) {
                     udp_remote_shutdown(remote_ctx);
                 }
@@ -814,17 +814,17 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
 
     int src_fd = socket(remote_ctx->src_addr.ss_family, SOCK_DGRAM, 0);
     if (src_fd < 0) {
-        ERROR("[udp] remote_recv_socket");
+        SS_ERROR("[udp] remote_recv_socket");
         goto CLEAN_UP;
     }
     int opt = 1;
     if (setsockopt(src_fd, SOL_IP, IP_TRANSPARENT, &opt, sizeof(opt))) {
-        ERROR("[udp] remote_recv_setsockopt");
+        SS_ERROR("[udp] remote_recv_setsockopt");
         close(src_fd);
         goto CLEAN_UP;
     }
     if (setsockopt(src_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
-        ERROR("[udp] remote_recv_setsockopt");
+        SS_ERROR("[udp] remote_recv_setsockopt");
         close(src_fd);
         goto CLEAN_UP;
     }
@@ -834,7 +834,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
     setsockopt(src_fd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
 #endif
     if (bind(src_fd, (struct sockaddr *)&dst_addr, remote_dst_addr_len) != 0) {
-        ERROR("[udp] remote_recv_bind");
+        SS_ERROR("[udp] remote_recv_bind");
         close(src_fd);
         goto CLEAN_UP;
     }
@@ -842,7 +842,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
     int s = sendto(src_fd, buf->buffer, buf->len, 0,
                    (struct sockaddr *)&remote_ctx->src_addr, remote_src_addr_len);
     if (s == -1) {
-        ERROR("[udp] remote_recv_sendto");
+        SS_ERROR("[udp] remote_recv_sendto");
         close(src_fd);
         goto CLEAN_UP;
     }
@@ -919,10 +919,10 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 
     buf->len = recvmsg(server_ctx->fd, &msg, 0);
     if (buf->len == -1) {
-        ERROR("[udp] server_recvmsg");
+        SS_ERROR("[udp] server_recvmsg");
         goto CLEAN_UP;
     } else if (buf->len > packet_size) {
-        ERROR("[udp] UDP server_recv_recvmsg fragmentation");
+        SS_ERROR("[udp] UDP server_recv_recvmsg fragmentation");
         goto CLEAN_UP;
     }
 
@@ -1225,7 +1225,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 #ifdef SET_INTERFACE
                 if (server_ctx->iface) {
                     if (setinterface(remotefd, server_ctx->iface) == -1)
-                        ERROR("setinterface");
+                        SS_ERROR("setinterface");
                 }
 #endif
                 remote_ctx->src_addr        = src_addr;
@@ -1234,7 +1234,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
                 memcpy(remote_ctx->addr_header, addr_header, addr_header_len);
                 memcpy(&remote_ctx->dst_addr, &dst_addr, sizeof(struct sockaddr_storage));
             } else {
-                ERROR("[udp] bind() error");
+                SS_ERROR("[udp] bind() error");
                 goto CLEAN_UP;
             }
         }
@@ -1248,7 +1248,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
                                  (struct sockaddr *)&dst_addr, addr_len);
 
         if (s == -1) {
-            ERROR("[udp] sendto_remote");
+            SS_ERROR("[udp] sendto_remote");
             if (!cache_hit) {
                 udp_remote_shutdown(remote_ctx);
             }
@@ -1290,7 +1290,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         struct resolv_query *query = 
             resolv_query(host, query_resolve_cb, NULL, query_ctx, htons(atoi(port)));
         if (query == NULL) {
-            ERROR("[udp] unable to create DNS query");
+            SS_ERROR("[udp] unable to create DNS query");
             close_and_free_query(query_ctx);
             goto CLEAN_UP;
         }

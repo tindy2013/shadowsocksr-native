@@ -116,7 +116,7 @@ resolv_init(struct uv_loop_s *loop, char **nameservers, int nameserver_num, int 
                 LOGI("bind UDP resolver to %s", nameservers[0]);
             }
             if (bind_to_address(sockfd, nameservers[0]) == -1)
-                ERROR("bind_to_address");
+                SS_ERROR("bind_to_address");
         }
     }
 

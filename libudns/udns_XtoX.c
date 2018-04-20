@@ -46,6 +46,7 @@ int dns_pton(int af, const char *src, void *dst) {
 
 #include <winsock2.h>          /* includes <windows.h> */
 #include <ws2tcpip.h>          /* needed for struct in6_addr */
+#include <errno.h>
 
 #ifndef EAFNOSUPPORT
 #define EAFNOSUPPORT    WSAEAFNOSUPPORT

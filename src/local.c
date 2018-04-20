@@ -451,7 +451,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     }
                     if (!not_protect) {
                         if (protect_socket(remote->fd) == -1) {
-                            ERROR("protect_socket");
+                            SS_ERROR("protect_socket");
                             tunnel_close_and_free(remote, local);
                             return;
                         }
@@ -1286,7 +1286,7 @@ remote_object_with_addr(struct listener_t *listener, struct sockaddr *addr)
 #ifdef SET_INTERFACE
     if (listener->iface) {
         if (setinterface(uv_stream_fd(&remote->socket), listener->iface) == -1) {
-            ERROR("setinterface");
+            SS_ERROR("setinterface");
         }
     }
 #endif
@@ -2021,11 +2021,11 @@ start_ss_local_server(struct config_t listener)
         int listenfd;
         listenfd = create_and_bind(local_addr, local_port_str);
         if (listenfd == -1) {
-            ERROR("bind()");
+            SS_ERROR("bind()");
             return -1;
         }
         if (listen(listenfd, SOMAXCONN) == -1) {
-            ERROR("listen()");
+            SS_ERROR("listen()");
             return -1;
         }
         setnonblocking(listenfd);

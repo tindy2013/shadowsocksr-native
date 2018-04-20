@@ -234,9 +234,9 @@ parse_server_name_extension(const char *data, size_t data_len,
 
         switch (data[pos]) { /* name type */
         case 0x00:     /* host_name */
-            *hostname = malloc(len + 1);
+            *hostname = (char *) malloc(len + 1);
             if (*hostname == NULL) {
-                ERROR("malloc() failure");
+                SS_ERROR("malloc() failure");
                 return -4;
             }
 

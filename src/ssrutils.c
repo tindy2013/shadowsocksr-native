@@ -56,7 +56,7 @@ int use_syslog = 0;
 
 #ifndef __MINGW32__
 void
-ERROR(const char *s)
+SS_ERROR(const char *s)
 {
     char *msg = strerror(errno);
     LOGE("%s: %s", s, msg);

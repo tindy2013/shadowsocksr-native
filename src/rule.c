@@ -48,7 +48,7 @@ new_rule()
 
     rule = malloc(sizeof(rule_t));
     if (rule == NULL) {
-        ERROR("malloc");
+        SS_ERROR("malloc");
         return NULL;
     }
     memset(rule, 0, sizeof(rule_t));
@@ -62,7 +62,7 @@ accept_rule_arg(rule_t *rule, const char *arg)
     if (rule->pattern == NULL) {
         rule->pattern = strdup(arg);
         if (rule->pattern == NULL) {
-            ERROR("strdup failed");
+            SS_ERROR("strdup failed");
             return -1;
         }
     } else {

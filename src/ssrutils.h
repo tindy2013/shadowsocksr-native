@@ -182,14 +182,14 @@ extern int use_syslog;
 
 #ifdef __MINGW32__
 
-#ifdef ERROR
-#undef ERROR
+#ifdef SS_ERROR
+#undef SS_ERROR
 #endif
-#define ERROR(s) ss_error(s)
+#define SS_ERROR(s) ss_error(s)
 
 #else
 
-void ERROR(const char *s);
+void SS_ERROR(const char *s);
 
 #endif
 
