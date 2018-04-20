@@ -6,6 +6,7 @@
 bool json_iter_extract_string(const char *key, const struct json_object_iter *iter, const char **value) {
     bool result = false;
     do {
+        struct json_object *val;
         if (key == NULL || iter == NULL || value == NULL) {
             break;
         }
@@ -13,7 +14,7 @@ bool json_iter_extract_string(const char *key, const struct json_object_iter *it
         if (strcmp(iter->key, key) != 0) {
             break;
         }
-        struct json_object *val = iter->val;
+        val = iter->val;
         if (json_type_string != json_object_get_type(val)) {
             break;
         }
@@ -26,6 +27,8 @@ bool json_iter_extract_string(const char *key, const struct json_object_iter *it
 bool json_iter_extract_int(const char *key, const struct json_object_iter *iter, int *value) {
     bool result = false;
     do {
+        struct json_object *val;
+
         if (key == NULL || iter == NULL || value == NULL) {
             break;
         }
@@ -33,7 +36,7 @@ bool json_iter_extract_int(const char *key, const struct json_object_iter *iter,
         if (strcmp(iter->key, key) != 0) {
             break;
         }
-        struct json_object *val = iter->val;
+        val = iter->val;
         if (json_type_int != json_object_get_type(val)) {
             break;
         }
@@ -46,6 +49,7 @@ bool json_iter_extract_int(const char *key, const struct json_object_iter *iter,
 bool json_iter_extract_bool(const char *key, const struct json_object_iter *iter, bool *value) {
     bool result = false;
     do {
+        struct json_object *val;
         if (key == NULL || iter == NULL || value == NULL) {
             break;
         }
@@ -53,7 +57,7 @@ bool json_iter_extract_bool(const char *key, const struct json_object_iter *iter
         if (strcmp(iter->key, key) != 0) {
             break;
         }
-        struct json_object *val = iter->val;
+        val = iter->val;
         if (json_type_boolean != json_object_get_type(val)) {
             break;
         }
@@ -67,11 +71,12 @@ bool parse_config_file(const char *file, struct server_config *config) {
     bool result = false;
     json_object *jso = NULL;
     do {
+        struct json_object_iter iter;
+
         jso = json_object_from_file(file);
         if (jso == NULL) {
             break;
         }
-        struct json_object_iter iter;
         json_object_object_foreachC(jso, iter) {
             int obj_int = 0;
             bool obj_bool = false;

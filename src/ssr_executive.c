@@ -108,9 +108,10 @@ static int c_set_compare_element(void *left, void *right) {
 }
 
 struct server_env_t * ssr_cipher_env_create(struct server_config *config, void *data) {
+    struct server_env_t *env;
     srand((unsigned int)time(NULL));
 
-    struct server_env_t *env = calloc(1, sizeof(struct server_env_t));
+    env = (struct server_env_t *) calloc(1, sizeof(struct server_env_t));
     env->cipher = cipher_env_new_instance(config->password, config->method);
     env->config = config;
     env->data = data;
@@ -146,7 +147,7 @@ void ssr_cipher_env_release(struct server_env_t *env) {
 
 bool is_completed_package(struct server_env_t *env, const uint8_t *data, size_t size) {
     (void)data;
-    return size > (enc_get_iv_len(env->cipher) + 1);
+    return size > (size_t)(enc_get_iv_len(env->cipher) + 1);
 }
 
 struct cstl_set * objects_container_create(void) {
@@ -169,11 +170,12 @@ void objects_container_remove(struct cstl_set *set, void *obj) {
 }
 
 void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p) {
+    struct cstl_iterator *iterator;
+    struct cstl_object *element;
     if (set==NULL || fn==NULL) {
         return;
     }
-    struct cstl_iterator *iterator = cstl_set_new_iterator(set);
-    struct cstl_object *element;
+    iterator = cstl_set_new_iterator(set);
     while( (element = iterator->get_next(iterator)) ) {
         void **obj = iterator->get_value(element);
         if (obj) {
@@ -215,12 +217,12 @@ const void * obj_map_find(struct cstl_map *map, const void *key) {
 }
 
 void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const void *value, void *p), void *p) {
+    struct cstl_iterator *iterator;
+    struct cstl_object *element;
     if (map==NULL || fn==NULL) {
         return;
     }
-    struct cstl_iterator *iterator = cstl_map_new_iterator(map);
-    struct cstl_object *element;
-
+    iterator = cstl_map_new_iterator(map);
     while( (element = iterator->get_next(iterator)) ) {
         struct cstl_rb_node *current = (struct cstl_rb_node *)iterator->pCurrentElement;
         const void *key = cstl_object_get_data(current->key);
@@ -243,9 +245,11 @@ void init_obfs(struct server_env_t *env, const char *protocol, const char *obfs)
 }
 
 struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const struct buffer_t *init_pkg) {
+    struct server_info_t server_info = { {0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
     struct server_config *config = env->config;
 
-    struct tunnel_cipher_ctx *tc = calloc(1, sizeof(struct tunnel_cipher_ctx));
+    struct tunnel_cipher_ctx *tc = (struct tunnel_cipher_ctx *) calloc(1, sizeof(struct tunnel_cipher_ctx));
 
     tc->env = env;
 
@@ -255,8 +259,6 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
         tc->d_ctx = enc_ctx_new_instance(env->cipher, false);
     }
     // SSR beg
-
-    struct server_info_t server_info = { {0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     if (config->remote_host && strlen(config->remote_host)) {
         strcpy(server_info.host, config->remote_host);
@@ -283,11 +285,12 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
     server_info.g_data = env->protocol_global;
 
     if (env->protocol_plugin) {
+        int p_len, o_len;
         tc->protocol = env->protocol_plugin->new_obfs();
 
         // overhead must count on this
-        int p_len = env->protocol_plugin->get_overhead(tc->protocol);
-        int o_len = (env->obfs_plugin ? env->obfs_plugin->get_overhead(tc->obfs) : 0);
+        p_len = env->protocol_plugin->get_overhead(tc->protocol);
+        o_len = (env->obfs_plugin ? env->obfs_plugin->get_overhead(tc->obfs) : 0);
         server_info.overhead = (uint16_t)(p_len + o_len);
 
         env->protocol_plugin->set_server_info(tc->protocol, &server_info);
@@ -298,10 +301,11 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
 }
 
 void tunnel_cipher_release(struct tunnel_cipher_ctx *tc) {
+    struct server_env_t *env;
     if (tc == NULL) {
         return;
     }
-    struct server_env_t *env = tc->env;
+    env = tc->env;
     if (tc->e_ctx != NULL) {
         enc_ctx_release_instance(env->cipher, tc->e_ctx);
     }
@@ -339,22 +343,22 @@ bool tunnel_cipher_send_feedback(struct tunnel_cipher_ctx *tc) {
 
 // insert shadowsocks header
 enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) {
-    ASSERT(buf->capacity >= SSR_BUFF_SIZE);
-
+    int err;
+    struct obfs_manager *obfs_plugin;
     struct server_env_t *env = tc->env;
     // SSR beg
     struct obfs_manager *protocol_plugin = env->protocol_plugin;
-
+    ASSERT(buf->capacity >= SSR_BUFF_SIZE);
     if (protocol_plugin && protocol_plugin->client_pre_encrypt) {
         buf->len = (size_t)protocol_plugin->client_pre_encrypt(
             tc->protocol, (char **)&buf->buffer, (int)buf->len, &buf->capacity);
     }
-    int err = ss_encrypt(env->cipher, buf, tc->e_ctx, SSR_BUFF_SIZE);
+    err = ss_encrypt(env->cipher, buf, tc->e_ctx, SSR_BUFF_SIZE);
     if (err != 0) {
         return ssr_error_invalid_password;
     }
 
-    struct obfs_manager *obfs_plugin = env->obfs_plugin;
+    obfs_plugin = env->obfs_plugin;
     if (obfs_plugin && obfs_plugin->client_encode) {
         buf->len = obfs_plugin->client_encode(
             tc->obfs, (char **)&buf->buffer, buf->len, &buf->capacity);
@@ -365,12 +369,14 @@ enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
 
 enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback)
 {
-    ASSERT(buf->len <= SSR_BUFF_SIZE);
-
+    struct obfs_manager *protocol_plugin;
     struct server_env_t *env = tc->env;
 
     // SSR beg
     struct obfs_manager *obfs_plugin = env->obfs_plugin;
+
+    ASSERT(buf->len <= SSR_BUFF_SIZE);
+
     if (obfs_plugin && obfs_plugin->client_decode) {
         int needsendback = 0;
         ssize_t len = obfs_plugin->client_decode(tc->obfs, (char **)&buf->buffer, buf->len, &buf->capacity, &needsendback);
@@ -391,7 +397,7 @@ enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
             return ssr_error_invalid_password;
         }
     }
-    struct obfs_manager *protocol_plugin = env->protocol_plugin;
+    protocol_plugin = env->protocol_plugin;
     if (protocol_plugin && protocol_plugin->client_post_decrypt) {
         ssize_t len = protocol_plugin->client_post_decrypt(
             tc->protocol, (char **)&buf->buffer, (int)buf->len, &buf->capacity);

@@ -84,4 +84,11 @@ void get_server_info(struct obfs_t *obfs, struct server_info_t *server);
 struct obfs_t * new_obfs(void);
 void dispose_obfs(struct obfs_t *obfs);
 
+#if (defined(_MSC_VER) && (_MSC_VER < 1800))
+#include <stdio.h>
+#if !defined(snprintf)
+#define snprintf(dst, size, fmt, ...) _snprintf_s((dst), (size), _TRUNCATE, (fmt), __VA_ARGS__)
+#endif // !defined(snprintf)
+#endif // (defined(_MSC_VER) && (_MSC_VER < 1800))
+
 #endif // _OBFS_OBFS_H

@@ -269,15 +269,20 @@ const char *s5_strerror(s5_err err) {
 
 #include <sockaddr_universal.h>
 uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len) {
+    union sockaddr_universal addr;
+    bool ipV6;
+    size_t in6_addr_w;
+    size_t in4_addr_w;
+    size_t port_w;
+
     if (addr_str == NULL || buf == NULL || buf_len == NULL) {
         return NULL;
     }
 
-    union sockaddr_universal addr;
     if (convert_universal_address(addr_str, port, &addr) != 0) {
         return NULL;
     }
-    bool ipV6 = (addr.addr.sa_family == AF_INET6);
+    ipV6 = (addr.addr.sa_family == AF_INET6);
 
     if (ipV6) {
         if (*buf_len < 22) {
@@ -298,9 +303,9 @@ uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, ui
     buf[2] = 0;  // Reserved.
     buf[3] = (uint8_t)(ipV6 ? 0x04 : 0x01);  // atyp
 
-    size_t in6_addr_w = sizeof(addr.addr6.sin6_addr);
-    size_t in4_addr_w = sizeof(addr.addr4.sin_addr);
-    size_t port_w = sizeof(addr.addr4.sin_port);
+    in6_addr_w = sizeof(addr.addr6.sin6_addr);
+    in4_addr_w = sizeof(addr.addr4.sin_addr);
+    port_w = sizeof(addr.addr4.sin_port);
 
     if (ipV6) {
         *buf_len = 4 + in6_addr_w + port_w;

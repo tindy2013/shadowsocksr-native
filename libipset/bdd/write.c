@@ -154,6 +154,9 @@ save_visit_node(struct save_data *save_data,
         } else {
             /* For nonterminals, we drill down into the node's children
              * first, then output the nonterminal node. */
+            serialized_id  serialized_low;
+            serialized_id  serialized_high;
+            serialized_id  result;
 
             struct ipset_node  *node =
                 ipset_node_cache_get_nonterminal(save_data->cache, node_id);
@@ -162,13 +165,11 @@ save_visit_node(struct save_data *save_data,
 
             /* Output the node's nonterminal children before we output
              * the node itself. */
-            serialized_id  serialized_low;
-            serialized_id  serialized_high;
             rii_check(save_visit_node(save_data, node->low, &serialized_low));
             rii_check(save_visit_node(save_data, node->high, &serialized_high));
 
             /* Output the nonterminal */
-            serialized_id  result = save_data->next_serialized_id--;
+            result = save_data->next_serialized_id--;
             DEBUG("Writing node %u as serialized node %d = (x%u? %d: %d)",
                   node_id, result,
                   node->variable, serialized_low, serialized_high);
@@ -187,6 +188,8 @@ static int
 save_bdd(struct save_data *save_data,
          struct ipset_node_cache *cache, ipset_node_id root)
 {
+    serialized_id  last_serialized_id;
+
     /* First, output the file header. */
 
     DEBUG("Writing file header");
@@ -205,7 +208,6 @@ save_bdd(struct save_data *save_data,
 
     DEBUG("Writing nodes");
 
-    serialized_id  last_serialized_id;
     ei_check(save_visit_node(save_data, root, &last_serialized_id));
 
     /* Finally, output the file footer and cleanup. */
@@ -303,6 +305,9 @@ static int
 write_header_v1(struct save_data *save_data,
                 struct ipset_node_cache *cache, ipset_node_id root)
 {
+    size_t  nonterminal_count;
+    size_t  set_size;
+
     /* Output the magic number for an IP set, and the file format
      * version that we're going to write. */
     rii_check(cork_stream_consumer_data(save_data->stream, NULL, 0, true));
@@ -311,8 +316,8 @@ write_header_v1(struct save_data *save_data,
 
     /* Determine how many reachable nodes there are, to calculate the
      * size of the set. */
-    size_t  nonterminal_count = ipset_node_reachable_count(cache, root);
-    size_t  set_size =
+    nonterminal_count = ipset_node_reachable_count(cache, root);
+    set_size =
         MAGIC_NUMBER_LENGTH +    /* magic number */
         sizeof(uint16_t) +        /* version number  */
         sizeof(uint64_t) +        /* length of set */

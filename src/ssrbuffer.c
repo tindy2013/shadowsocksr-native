@@ -54,22 +54,24 @@ void buffer_reset(struct buffer_t *ptr) {
 }
 
 struct buffer_t * buffer_clone(struct buffer_t *ptr) {
+    struct buffer_t *result = NULL;
     if (ptr == NULL) {
-        return NULL;
+        return result;
     }
-    struct buffer_t *result = buffer_alloc(ptr->capacity);
+    result = buffer_alloc(ptr->capacity);
     result->len = ptr->len;
     memcpy(result->buffer, ptr->buffer, ptr->len);
     return result;
 }
 
 size_t buffer_realloc(struct buffer_t *ptr, size_t capacity) {
+    size_t real_capacity = -1;
     if (ptr == NULL) {
-        return -1;
+        return real_capacity;
     }
-    size_t real_capacity = max(capacity, ptr->capacity);
+    real_capacity = max(capacity, ptr->capacity);
     if (ptr->capacity < real_capacity) {
-        ptr->buffer = realloc(ptr->buffer, real_capacity);
+        ptr->buffer = (uint8_t *) realloc(ptr->buffer, real_capacity);
         ptr->capacity = real_capacity;
     }
     return real_capacity;

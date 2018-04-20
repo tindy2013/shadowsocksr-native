@@ -368,6 +368,12 @@ trimwhitespace(char *str)
 int
 init_acl(const char *path)
 {
+    struct ip_set *list_ipv4;
+    struct ip_set *list_ipv6;
+    struct cork_dllist *rules;
+    FILE *f;
+    char buf[257];
+
     // initialize ipset
     ipset_init_library();
 
@@ -382,31 +388,37 @@ init_acl(const char *path)
     cork_dllist_init(&white_list_rules);
     cork_dllist_init(&outbound_block_list_rules);
 
-    struct ip_set *list_ipv4  = &black_list_ipv4;
-    struct ip_set *list_ipv6  = &black_list_ipv6;
-    struct cork_dllist *rules = &black_list_rules;
+    list_ipv4  = &black_list_ipv4;
+    list_ipv6  = &black_list_ipv6;
+    rules = &black_list_rules;
 
-    FILE *f = fopen(path, "r");
+    f = fopen(path, "r");
     if (f == NULL) {
         LOGE("Invalid acl path.");
         return -1;
     }
 
-    char buf[257];
     while (!feof(f))
         if (fgets(buf, 256, f)) {
+            char *comment;
+            char *line;
+            char host[257];
+            int cidr;
+            struct cork_ip addr;
+            int err;
+
             // Trim the newline
             int len = strlen(buf);
             if (len > 0 && buf[len - 1] == '\n') {
                 buf[len - 1] = '\0';
             }
 
-            char *comment = strchr(buf, '#');
+            comment = strchr(buf, '#');
             if (comment) {
                 *comment = '\0';
             }
 
-            char *line = trimwhitespace(buf);
+            line = trimwhitespace(buf);
             if (strlen(line) == 0) {
                 continue;
             }
@@ -440,12 +452,9 @@ init_acl(const char *path)
                 continue;
             }
 
-            char host[257];
-            int cidr;
             parse_addr_cidr(line, host, &cidr);
 
-            struct cork_ip addr;
-            int err = cork_ip_init(&addr, host);
+            err = cork_ip_init(&addr, host);
             if (!err) {
                 if (addr.version == 4) {
                     if (cidr >= 0) {

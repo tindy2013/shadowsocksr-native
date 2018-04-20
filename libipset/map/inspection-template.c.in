@@ -58,6 +58,8 @@ void
 IPMAP_NAME(set_network)(struct ip_map *map, CORK_IP *elem,
                         unsigned int cidr_prefix, int value)
 {
+    ipset_node_id  new_bdd;
+
     /* Special case — the BDD for a netmask that's out of range never
      * evaluates to true. */
     if (cidr_prefix > IP_BIT_SIZE) {
@@ -67,7 +69,7 @@ IPMAP_NAME(set_network)(struct ip_map *map, CORK_IP *elem,
         return;
     }
 
-    ipset_node_id  new_bdd =
+    new_bdd =
         ipset_node_insert
         (map->cache, map->map_bdd,
          IPMAP_NAME(assignment), elem, cidr_prefix + 1, value);

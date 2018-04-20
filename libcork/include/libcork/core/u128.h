@@ -10,7 +10,7 @@
 #ifndef LIBCORK_CORE_U128_H
 #define LIBCORK_CORE_U128_H
 
-
+#include <stdbool.h>
 #include <libcork/config.h>
 #include <libcork/core/attributes.h>
 #include <libcork/core/byte-order.h>

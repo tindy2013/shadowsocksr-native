@@ -37,6 +37,15 @@
 #include "http.h"
 #include "protocol.h"
 
+#if (defined(_MSC_VER) && (_MSC_VER < 1800))
+static int isblank(int c) {
+    if (c==' ' || c=='\t') {
+        return 1;
+    }
+    return 0;
+}
+#endif // (defined(_MSC_VER) && (_MSC_VER < 1800))
+
 #define SERVER_NAME_LEN 256
 
 static int parse_http_header(const char *, size_t, char **);
@@ -44,8 +53,7 @@ static int get_header(const char *, const char *, int, char **);
 static int next_header(const char **, int *);
 
 static const struct protocol_t http_protocol_st = {
-    .default_port =                 80,
-    .parse_packet = &parse_http_header,
+    80, &parse_http_header,
 };
 const struct protocol_t *const http_protocol = &http_protocol_st;
 
@@ -100,27 +108,27 @@ get_header(const char *header, const char *data, int data_len, char **value)
     header_len = strlen(header);
 
     /* loop through headers stopping at first blank line */
-    while ((len = next_header(&data, &data_len)) != 0)
+    while ((len = next_header(&data, &data_len)) != 0) {
         if (len > header_len && strncasecmp(header, data, header_len) == 0) {
             /* Eat leading whitespace */
-            while (header_len < len && isblank(data[header_len]))
+            while (header_len < len && isblank(data[header_len])) {
                 header_len++;
-
-            *value = malloc(len - header_len + 1);
-            if (*value == NULL)
+            }
+            *value = (char *) malloc(len - header_len + 1);
+            if (*value == NULL) {
                 return -4;
-
+            }
             strncpy(*value, data + header_len, len - header_len);
             (*value)[len - header_len] = '\0';
 
             return len - header_len;
         }
-
+    }
     /* If there is no data left after reading all the headers then we do not
      * have a complete HTTP request, there must be a blank line */
-    if (data_len == 0)
+    if (data_len == 0) {
         return -1;
-
+    }
     return -2;
 }
 

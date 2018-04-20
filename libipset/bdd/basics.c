@@ -105,11 +105,12 @@ ipset_node_cache_alloc_node(struct ipset_node_cache *cache)
         ipset_value  next_index = cache->largest_index++;
         ipset_value  chunk_index = next_index >> IPSET_BDD_NODE_CACHE_BIT_SIZE;
         if (chunk_index >= cork_array_size(&cache->chunks)) {
+            struct ipset_node  *new_chunk;
             /* We've filled up all of the existing chunks, and need to
              * create a new one. */
             DEBUG("        (allocating chunk %zu)",
                   cork_array_size(&cache->chunks));
-            struct ipset_node  *new_chunk = cork_calloc
+            new_chunk = (struct ipset_node *)cork_calloc
                 (IPSET_BDD_NODE_CACHE_SIZE, sizeof(struct ipset_node));
             cork_array_append(&cache->chunks, new_chunk);
         }
@@ -189,6 +190,10 @@ ipset_node_cache_nonterminal(struct ipset_node_cache *cache,
                              ipset_variable variable,
                              ipset_node_id low, ipset_node_id high)
 {
+    struct ipset_node  search_node;
+    bool  is_new = false;
+    struct cork_hash_table_entry  *entry;
+
     /* Don't allow any nonterminals whose low and high subtrees are the
      * same, since the nonterminal would be redundant. */
     if (CORK_UNLIKELY(low == high)) {
@@ -205,15 +210,11 @@ ipset_node_cache_nonterminal(struct ipset_node_cache *cache,
           IPSET_NODE_ID_FORMAT ": " IPSET_NODE_ID_FORMAT ")]",
           variable, IPSET_NODE_ID_VALUES(high), IPSET_NODE_ID_VALUES(low));
 
-    struct ipset_node  search_node;
     search_node.variable = variable;
     search_node.low = low;
     search_node.high = high;
 
-    bool  is_new;
-    struct cork_hash_table_entry  *entry =
-        cork_hash_table_get_or_create
-        (cache->node_cache, &search_node, &is_new);
+    entry = cork_hash_table_get_or_create(cache->node_cache, &search_node, &is_new);
 
     if (!is_new) {
         /* There's already a node with these contents, so return its ID. */

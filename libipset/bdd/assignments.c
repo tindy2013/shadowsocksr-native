@@ -34,6 +34,9 @@ bool
 ipset_assignment_equal(const struct ipset_assignment *assignment1,
                        const struct ipset_assignment *assignment2)
 {
+    unsigned int  size1, size2, smaller_size;
+    unsigned int  i;
+
     /* Identical pointers are trivially equal. */
     if (assignment1 == assignment2) {
         return true;
@@ -41,11 +44,10 @@ ipset_assignment_equal(const struct ipset_assignment *assignment1,
 
     /* Otherwise we compare the assignments piecewise up through the end
      * of the smaller vector. */
-    unsigned int  size1 = cork_array_size(&assignment1->values);
-    unsigned int  size2 = cork_array_size(&assignment2->values);
-    unsigned int  smaller_size = (size1 < size2)? size1: size2;
+    size1 = cork_array_size(&assignment1->values);
+    size2 = cork_array_size(&assignment2->values);
+    smaller_size = (size1 < size2)? size1: size2;
 
-    unsigned int  i;
     for (i = 0; i < smaller_size; i++) {
         if (cork_array_at(&assignment1->values, i) !=
             cork_array_at(&assignment2->values, i)) {

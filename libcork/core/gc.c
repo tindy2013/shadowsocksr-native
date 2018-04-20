@@ -163,9 +163,10 @@ cork_gc_done(void)
 void *
 cork_gc_alloc(size_t instance_size, struct cork_gc_obj_iface *iface)
 {
+    struct cork_gc_header  *header;
     size_t  full_size = instance_size + sizeof(struct cork_gc_header);
     DEBUG("Allocating %zu (%zu) bytes\n", instance_size, full_size);
-    struct cork_gc_header  *header = cork_malloc(full_size);
+    header = cork_malloc(full_size);
     DEBUG("  Result is %p[%p]\n", cork_gc_get_object(header), header);
     header->ref_count_color = cork_gc_ref_count_color(1, false, GC_BLACK);
     header->allocated_size = full_size;
@@ -270,8 +271,9 @@ static void
 cork_gc_mark_gray_step(struct cork_gc *gc, void *obj, void *ud)
 {
     if (obj != NULL) {
+        struct cork_gc_header  *header;
         DEBUG("    cork_gc_mark_gray(%p)\n", obj);
-        struct cork_gc_header  *header = cork_gc_get_header(obj);
+        header = cork_gc_get_header(obj);
         cork_gc_dec_ref_count(header);
         DEBUG("      Reference count now %d\n", cork_gc_get_ref_count(header));
         cork_gc_mark_gray(gc, header);
@@ -334,8 +336,9 @@ static void
 cork_gc_scan(struct cork_gc *gc, void *obj, void *ud)
 {
     if (obj != NULL) {
+        struct cork_gc_header  *header;
         DEBUG("  Scanning possible garbage cycle entry %p\n", obj);
-        struct cork_gc_header  *header = cork_gc_get_header(obj);
+        header = cork_gc_get_header(obj);
         if (cork_gc_get_color(header) == GC_GRAY) {
             if (cork_gc_get_ref_count(header) > 0) {
                 DEBUG("    Remaining references; can't be a cycle\n");

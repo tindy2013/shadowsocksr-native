@@ -19,6 +19,8 @@ size_t
 ipset_node_reachable_count(const struct ipset_node_cache *cache,
                            ipset_node_id node)
 {
+    size_t  node_count;
+
     /* Create a set to track when we've visited a given node. */
     struct cork_hash_table  *visited = cork_pointer_hash_table_new(0, 0);
 
@@ -32,7 +34,7 @@ ipset_node_reachable_count(const struct ipset_node_cache *cache,
     }
 
     /* And somewhere to store the result. */
-    size_t  node_count = 0;
+    node_count = 0;
 
     /* Check each node in turn. */
     while (!cork_array_is_empty(&queue)) {
@@ -41,6 +43,8 @@ ipset_node_reachable_count(const struct ipset_node_cache *cache,
         /* We don't have to do anything if this node is already in the
          * visited set. */
         if (cork_hash_table_get(visited, (void *) (uintptr_t) curr) == NULL) {
+            struct ipset_node  *node;
+
             DEBUG("Visiting node %u for the first time", curr);
 
             /* Add the node to the visited set. */
@@ -53,8 +57,7 @@ ipset_node_reachable_count(const struct ipset_node_cache *cache,
 
             /* And add the node's nonterminal children to the visit
              * queue. */
-            struct ipset_node  *node =
-                ipset_node_cache_get_nonterminal(cache, curr);
+            node = ipset_node_cache_get_nonterminal(cache, curr);
 
             if (ipset_node_get_type(node->low) == IPSET_NONTERMINAL_NODE) {
                 DEBUG("Adding node %u to queue", node->low);

@@ -64,10 +64,10 @@ char http_simple_hex(char c) {
 }
 
 void http_simple_encode_head(http_simple_local_data *local, char *data, int datalength) {
+    int pos = 0;
     if (local->encode_buffer == NULL) {
         local->encode_buffer = (char*)malloc((size_t)(datalength * 3 + 1));
     }
-    int pos = 0;
     for (; pos < datalength; ++pos) {
         local->encode_buffer[pos * 3] = '%';
         local->encode_buffer[pos * 3 + 1] = http_simple_hex(((unsigned char)data[pos] >> 4));
@@ -79,18 +79,21 @@ void http_simple_encode_head(http_simple_local_data *local, char *data, int data
 size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity) {
     char *encryptdata = *pencryptdata;
     http_simple_local_data *local = (http_simple_local_data*)obfs->l_data;
-    if (local->has_sent_header) {
-        return datalength;
-    }
     char hosts[(SSR_BUFF_SIZE / 2)];
     char * phost[128];
     int host_num = 0;
     int pos;
     char hostport[128];
-    size_t head_size = (size_t)obfs->server.head_len + (xorshift128plus() & 0x3F);
+    size_t head_size;
     size_t outlength;
-    char * out_buffer = (char*)malloc((size_t)(datalength + SSR_BUFF_SIZE));
+    char * out_buffer;
     char * body_buffer = NULL;
+
+    if (local->has_sent_header) {
+        return datalength;
+    }
+    head_size = (size_t)obfs->server.head_len + (xorshift128plus() & 0x3F);
+    out_buffer = (char*)malloc((size_t)(datalength + SSR_BUFF_SIZE));
     if ((size_t)head_size > datalength)
         head_size = datalength;
     http_simple_encode_head(local, encryptdata, (int)head_size);
@@ -187,11 +190,13 @@ size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_
 ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback) {
     char *encryptdata = *pencryptdata;
     http_simple_local_data *local = (http_simple_local_data*)obfs->l_data;
+    char* data_begin;
+
     *needsendback = 0;
     if (local->has_recv_header) {
         return (ssize_t)datalength;
     }
-    char* data_begin = strstr(encryptdata, "\r\n\r\n");
+    data_begin = strstr(encryptdata, "\r\n\r\n");
     if (data_begin) {
         ssize_t outlength;
         data_begin += 4;
@@ -221,18 +226,21 @@ void boundary(char result[])
 size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity) {
     char *encryptdata = *pencryptdata;
     http_simple_local_data *local = (http_simple_local_data*)obfs->l_data;
-    if (local->has_sent_header) {
-        return datalength;
-    }
     char hosts[(SSR_BUFF_SIZE / 2)];
     char * phost[128];
     int host_num = 0;
     int pos;
     char hostport[128];
-    size_t head_size = (size_t)obfs->server.head_len + (xorshift128plus() & 0x3F);
+    size_t head_size;
     size_t outlength;
-    char * out_buffer = (char*)malloc((size_t)(datalength + (SSR_BUFF_SIZE * 2)));
+    char * out_buffer;
     char * body_buffer = NULL;
+
+    if (local->has_sent_header) {
+        return datalength;
+    }
+    head_size = (size_t)obfs->server.head_len + (xorshift128plus() & 0x3F);
+    out_buffer = (char*)malloc((size_t)(datalength + (SSR_BUFF_SIZE * 2)));
     if ((size_t)head_size > datalength)
         head_size = datalength;
     http_simple_encode_head(local, encryptdata, (int)head_size);
@@ -278,10 +286,11 @@ size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t 
         }
     }
     host_num = (int)(xorshift128plus() % (uint64_t)host_num);
-    if (obfs->server.port == 80)
+    if (obfs->server.port == 80) {
         snprintf(hostport, sizeof(hostport), "%s", phost[host_num]);
-    else
+    } else {
         snprintf(hostport, sizeof(hostport), "%s:%d", phost[host_num], obfs->server.port);
+    }
     if (body_buffer) {
         snprintf(out_buffer, SSR_BUFF_SIZE,
             "POST /%s HTTP/1.1\r\n"

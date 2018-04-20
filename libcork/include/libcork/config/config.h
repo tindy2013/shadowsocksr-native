@@ -18,6 +18,11 @@
 #define CORK_CONFIG_SKIP_AUTODETECT  0
 #endif
 
+#ifndef __cplusplus
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define inline __inline
+#endif // defined(_MSC_VER) && (_MSC_VER < 1800)
+#endif // __cplusplus
 
 #if CORK_CONFIG_SKIP_AUTODETECT
 /* The user has promised that they'll define everything themselves. */
@@ -78,5 +83,11 @@
 
 #endif  /* autodetect or not */
 
+#if (defined(_MSC_VER) && (_MSC_VER < 1800))
+#include <stdio.h>
+#if !defined(snprintf)
+#define snprintf(dst, size, fmt, ...) _snprintf_s((dst), (size), _TRUNCATE, (fmt), __VA_ARGS__)
+#endif // !defined(snprintf)
+#endif // (defined(_MSC_VER) && (_MSC_VER < 1800))
 
 #endif /* LIBCORK_CONFIG_CONFIG_H */

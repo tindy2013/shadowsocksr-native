@@ -155,31 +155,31 @@ verify_cap(size_t bytes_read, size_t cap)
 static ipset_node_id
 load_v1(FILE *stream, struct ipset_node_cache *cache)
 {
-    DEBUG("Stream contains v1 IP set");
     ipset_node_id  result;
     struct cork_hash_table  *cache_ids = cork_pointer_hash_table_new(0, 0);
+    uint64_t  length;
+    size_t  bytes_read = 0;
+    size_t  cap;
+    uint32_t  nonterminal_count;
+    size_t  i;
+
+    DEBUG("Stream contains v1 IP set");
 
     /* We've already read in the magic number and version.  Next should
      * be the length of the encoded set. */
-    uint64_t  length;
     DEBUG("Reading encoded length");
-    ei_check(read_uint64(stream, &length));
+    ei_check((int)read_uint64(stream, &length));
 
     /* The length includes the magic number, version number, and the
      * length field itself.  Remove those to get the cap on the
      * remaining stream. */
 
-    size_t  bytes_read = 0;
-    size_t  cap = length -
-        MAGIC_NUMBER_LENGTH -
-        sizeof(uint16_t) -
-        sizeof(uint64_t);
+    cap = (size_t)length - MAGIC_NUMBER_LENGTH - sizeof(uint16_t) - sizeof(uint64_t);
 
     DEBUG("Length cap is %zu bytes.", cap);
 
     /* Read in the number of nonterminals. */
 
-    uint32_t  nonterminal_count;
     DEBUG("Reading number of nonterminals");
     ei_check(read_uint32(stream, &nonterminal_count));
     bytes_read += sizeof(uint32_t);
@@ -206,9 +206,12 @@ load_v1(FILE *stream, struct ipset_node_cache *cache)
      * number consecutively from -1), and its ID in the node cache
      * (which could be anything). */
 
-    size_t  i;
     for (i = 0; i < nonterminal_count; i++) {
         serialized_id  _serialized_id = -((serialized_id)(i+1));
+        int32_t  low;
+        int32_t  high;
+        ipset_node_id  low_id;
+        ipset_node_id  high_id;
 
         /* Each serialized node consists of a variable index, a low
          * pointer, and a high pointer. */
@@ -217,11 +220,9 @@ load_v1(FILE *stream, struct ipset_node_cache *cache)
         ei_check(read_uint8(stream, &variable));
         bytes_read += sizeof(uint8_t);
 
-        int32_t  low;
         ei_check(read_uint32(stream, (uint32_t *) &low));
         bytes_read += sizeof(int32_t);
 
-        int32_t  high;
         ei_check(read_uint32(stream, (uint32_t *) &high));
         bytes_read += sizeof(int32_t);
 
@@ -231,8 +232,6 @@ load_v1(FILE *stream, struct ipset_node_cache *cache)
         /* Turn the low pointer into a node ID.  If the pointer is >= 0,
          * it's a terminal value.  Otherwise, its a nonterminal ID,
          * indexing into the serialized nonterminal array.*/
-
-        ipset_node_id  low_id;
 
         if (low >= 0) {
             low_id = ipset_terminal_node_id(low);
@@ -250,8 +249,6 @@ load_v1(FILE *stream, struct ipset_node_cache *cache)
         }
 
         /* Do the same for the high pointer. */
-
-        ipset_node_id  high_id;
 
         if (high >= 0) {
             high_id = ipset_terminal_node_id(high);
@@ -303,6 +300,7 @@ ipset_node_id
 ipset_node_cache_load(FILE *stream, struct ipset_node_cache *cache)
 {
     size_t bytes_read;
+    uint16_t  version;
 
     /* First, read in the magic number from the stream to ensure that
      * this is an IP set. */
@@ -336,7 +334,6 @@ ipset_node_cache_load(FILE *stream, struct ipset_node_cache *cache)
     /* Read in the version number and dispatch to the right reading
      * function. */
 
-    uint16_t  version;
     DEBUG("Reading IP set version");
     xi_check(0, read_uint16(stream, &version));
 

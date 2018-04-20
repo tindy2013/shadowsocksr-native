@@ -30,6 +30,10 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 
 #ifndef __cplusplus
 
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define _Bool unsigned char 
+#endif // defined(_MSC_VER) && (_MSC_VER < 1800)
+
 #define bool	_Bool
 #define true	1
 #define false	0

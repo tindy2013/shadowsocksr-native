@@ -59,6 +59,8 @@ find_last_non_either_bit(struct ipset_assignment *assignment,
 static void
 create_ip_address(struct ipset_iterator *iterator)
 {
+    unsigned int  i;
+
     struct cork_ip  *addr = &iterator->addr;
     struct ipset_expanded_assignment  *exp = iterator->assignment_iterator;
 
@@ -71,7 +73,6 @@ create_ip_address(struct ipset_iterator *iterator)
     /* Copy bits from the expanded assignment.  The number of bits to
      * copy is given as the current netmask.  We'll have calculated that
      * already based on the non-expanded assignment. */
-    unsigned int  i;
     for (i = 0; i < iterator->cidr_prefix; i++) {
         IPSET_BIT_SET(&addr->ip, i, IPSET_BIT_GET(exp->values.buf, i+1));
     }
@@ -218,6 +219,8 @@ process_assignment(struct ipset_iterator *iterator)
 {
     while (!iterator->bdd_iterator->finished) {
         if (iterator->bdd_iterator->value == iterator->desired_value) {
+            enum ipset_tribool  address_type;
+
             /* If the BDD iterator hasn't finished, and the result of
              * the function with this assignment matches what the caller
              * wants, then we've found an assignment to generate IP
@@ -228,8 +231,7 @@ process_assignment(struct ipset_iterator *iterator)
              * current address is IPv4; 128 + 1 if it's IPv6. */
 
             DEBUG("Got a matching BDD assignment");
-            enum ipset_tribool  address_type = ipset_assignment_get
-                (iterator->bdd_iterator->assignment, 0);
+            address_type = ipset_assignment_get(iterator->bdd_iterator->assignment, 0);
 
             if (address_type == IPSET_FALSE) {
                 /* FALSE means IPv6*/
@@ -280,7 +282,7 @@ static struct ipset_iterator *
 create_iterator(struct ip_set *set, bool desired_value, bool summarize)
 {
     /* First allocate the iterator itself. */
-    struct ipset_iterator  *iterator = cork_new(struct ipset_iterator);
+    struct ipset_iterator *iterator = (struct ipset_iterator *) cork_new(struct ipset_iterator);
     iterator->finished = false;
     iterator->assignment_iterator = NULL;
     iterator->desired_value = desired_value;

@@ -58,6 +58,9 @@ bool
 IPSET_NAME(add_network)(struct ip_set *set, CORK_IP *elem,
                         unsigned int cidr_prefix)
 {
+    ipset_node_id  new_bdd;
+    bool  result;
+
     /* Special case — the BDD for a netmask that's out of range never
      * evaluates to true. */
     if (cidr_prefix > IP_BIT_SIZE) {
@@ -67,11 +70,11 @@ IPSET_NAME(add_network)(struct ip_set *set, CORK_IP *elem,
         return false;
     }
 
-    ipset_node_id  new_bdd =
+    new_bdd =
         ipset_node_insert
         (set->cache, set->set_bdd,
          IPSET_NAME(assignment), elem, cidr_prefix + 1, 1);
-    bool  result = (new_bdd == set->set_bdd);
+    result = (new_bdd == set->set_bdd);
     ipset_node_decref(set->cache, set->set_bdd);
     set->set_bdd = new_bdd;
     return result;
@@ -110,6 +113,9 @@ bool
 IPSET_NAME(remove_network)(struct ip_set *set, CORK_IP *elem,
                            unsigned int cidr_prefix)
 {
+    ipset_node_id  new_bdd;
+    bool  result;
+
     /* Special case — the BDD for a netmask that's out of range never
      * evaluates to true. */
     if (cidr_prefix > IP_BIT_SIZE) {
@@ -119,11 +125,11 @@ IPSET_NAME(remove_network)(struct ip_set *set, CORK_IP *elem,
         return false;
     }
 
-    ipset_node_id  new_bdd =
+    new_bdd =
         ipset_node_insert
         (set->cache, set->set_bdd,
          IPSET_NAME(assignment), elem, cidr_prefix + 1, 0);
-    bool  result = (new_bdd == set->set_bdd);
+    result = (new_bdd == set->set_bdd);
     ipset_node_decref(set->cache, set->set_bdd);
     set->set_bdd = new_bdd;
     return result;

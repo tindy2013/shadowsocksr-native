@@ -77,6 +77,7 @@ static void *
 cork_alloc__default_xmalloc(const struct cork_alloc *alloc, size_t size)
 {
     cork_abort("%s isn't defined", "cork_alloc:xmalloc");
+    return NULL;
 }
 
 static void *

@@ -146,12 +146,12 @@ int
 cache_clear(struct cache *cache, ev_tstamp age)
 {
     struct cache_entry *entry, *tmp;
-
+    ev_tstamp now;
     if (!cache) {
         return EINVAL;
     }
 
-    ev_tstamp now = _ev_time();
+    now = _ev_time();
 
     HASH_ITER(hh, cache->entries, entry, tmp){
         if (now - entry->ts > age) {

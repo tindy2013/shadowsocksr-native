@@ -145,17 +145,18 @@ cork_mempool_set_callbacks(struct cork_mempool *mp,
 static void
 cork_mempool_new_block(struct cork_mempool *mp)
 {
+    size_t  index;
     /* Allocate the new block and add it to mp's block list. */
     struct cork_mempool_block  *block;
     void  *vblock;
     DEBUG("Allocating new %zu-byte block\n", mp->block_size);
-    block = cork_malloc(mp->block_size);
+    block = (struct cork_mempool_block *) cork_malloc(mp->block_size);
     block->next_block = mp->blocks;
     mp->blocks = block;
     vblock = block;
 
     /* Divide the block's memory region into a bunch of objects. */
-    size_t  index = sizeof(struct cork_mempool_block);
+    index = sizeof(struct cork_mempool_block);
     for (index = sizeof(struct cork_mempool_block);
          (index + cork_mempool_object_size(mp)) <= mp->block_size;
          index += cork_mempool_object_size(mp)) {

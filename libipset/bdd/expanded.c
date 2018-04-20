@@ -24,13 +24,13 @@ initialize(struct ipset_expanded_assignment *exp,
 {
     /* First loop through all of the variables in the assignment vector,
      * making sure not to go further than the caller requested. */
+    ipset_variable  var;
 
     ipset_variable  last_assignment = cork_array_size(&assignment->values);
     if (var_count < last_assignment) {
         last_assignment = var_count;
     }
 
-    ipset_variable  var;
     for (var = 0; var < last_assignment; var++) {
         enum ipset_tribool  curr_value =
             cork_array_at(&assignment->values, var);
@@ -99,6 +99,8 @@ ipset_expanded_assignment_free(struct ipset_expanded_assignment *exp)
 void
 ipset_expanded_assignment_advance(struct ipset_expanded_assignment *exp)
 {
+    size_t  i;
+
     /* If we're already at the end of the iterator, don't do anything. */
     if (CORK_UNLIKELY(exp->finished)) {
         return;
@@ -110,7 +112,6 @@ ipset_expanded_assignment_advance(struct ipset_expanded_assignment *exp)
      * set it to 1 and return.  Otherwise we set it to 0 and carry up to
      * the previous indeterminate bit. */
 
-    size_t  i;
     for (i = cork_array_size(&exp->eithers); i > 0; i--) {
         size_t  idx = i - 1;
         ipset_variable  either_var = cork_array_at(&exp->eithers, idx);

@@ -38,10 +38,11 @@
 
 #define WNOHANG 1
 
-#if defined(_WIN32) && defined(_MSC_VER)
+#if (defined(_WIN32) || defined(WIN32)) && defined(_MSC_VER)
+#include <WinSock2.h>
 #include <Windows.h>
 static inline int mkdir(const char *path) {
-    CreateDirectory(path, NULL);
+    CreateDirectoryA(path, NULL);
     return 0;
 }
 

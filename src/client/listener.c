@@ -67,8 +67,9 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ss
     struct addrinfo hints;
     struct ssr_client_state *state;
     int err;
+    uv_getaddrinfo_t *req;
 
-    loop = calloc(1, sizeof(uv_loop_t));
+    loop = (uv_loop_t *) calloc(1, sizeof(uv_loop_t));
     uv_loop_init(loop);
 
     state = (struct ssr_client_state *) calloc(1, sizeof(*state));
@@ -87,7 +88,7 @@ int ssr_run_loop_begin(struct server_config *cf, void(*feedback_state)(struct ss
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
-    uv_getaddrinfo_t *req = (uv_getaddrinfo_t *)malloc(sizeof(*req));
+    req = (uv_getaddrinfo_t *)calloc(1, sizeof(*req));
 
     err = uv_getaddrinfo(loop, req, getaddrinfo_done_cb, cf->listen_host, NULL, &hints);
     if (err != 0) {
@@ -149,6 +150,7 @@ void ssr_run_loop_shutdown(struct ssr_client_state *state) {
     if (state->listeners && state->listener_count) {
         size_t n = 0;
         for (n = 0; n < (size_t) state->listener_count; ++n) {
+            struct udp_listener_ctx_t *udp_server;
             struct listener_t *listener = state->listeners + n;
 
             uv_tcp_t *tcp_server = listener->tcp_server;
@@ -157,7 +159,7 @@ void ssr_run_loop_shutdown(struct ssr_client_state *state) {
             }
 
 #if UDP_RELAY_ENABLE
-            struct udp_listener_ctx_t *udp_server = listener->udp_server;
+            udp_server = listener->udp_server;
             if (udp_server) {
                 udprelay_shutdown(udp_server);
             }
@@ -230,10 +232,14 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
     }
 
     state->listener_count = (ipv4_naddrs + ipv6_naddrs);
-    state->listeners = calloc(state->listener_count, sizeof(state->listeners[0]));
+    state->listeners = (struct listener_t *) calloc(state->listener_count, sizeof(state->listeners[0]));
 
     n = 0;
     for (ai = addrs; ai != NULL; ai = ai->ai_next) {
+        struct listener_t *listener;
+        uv_tcp_t *tcp_server;
+        uint16_t port;
+
         if (ai->ai_family != AF_INET && ai->ai_family != AF_INET6) {
             continue;
         }
@@ -254,10 +260,10 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             UNREACHABLE();
         }
 
-        struct listener_t *listener = state->listeners + n;
+        listener = state->listeners + n;
 
         listener->tcp_server = (uv_tcp_t *)calloc(1, sizeof(listener->tcp_server[0]));
-        uv_tcp_t *tcp_server = listener->tcp_server;
+        tcp_server = listener->tcp_server;
         VERIFY(0 == uv_tcp_init(loop, tcp_server));
 
         what = "uv_tcp_bind";
@@ -278,8 +284,8 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
             break;
         }
 
-        uint16_t port = get_socket_port(tcp_server);
-        
+        port = get_socket_port(tcp_server);
+
         pr_info("listening on     %s:%hu\n", addrbuf, port);
 
 #if UDP_RELAY_ENABLE
@@ -318,9 +324,11 @@ static void signal_quit(uv_signal_t* handle, int signum) {
     case SIGUSR1:
 #endif
     {
+        struct server_env_t *env;
+        struct ssr_client_state *state;
         ASSERT(handle);
-        struct server_env_t *env = (struct server_env_t *)handle->loop->data;
-        struct ssr_client_state *state = (struct ssr_client_state *)env->data;
+        env = (struct server_env_t *)handle->loop->data;
+        state = (struct ssr_client_state *)env->data;
         ASSERT(state);
         ssr_run_loop_shutdown(state);
     }

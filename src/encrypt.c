@@ -362,10 +362,11 @@ cipher_key_size(const struct cipher_wrapper *cipher)
 void
 bytes_to_key_with_size(const char *pass, size_t len, uint8_t *md, size_t md_size)
 {
+    int i;
     uint8_t result[128];
     enc_md5((const unsigned char *)pass, len, result);
     memcpy(md, result, 16);
-    int i = 16;
+    i = 16;
     for (; i < (int)md_size; i += 16) {
         memcpy(result + 16, pass, len);
         enc_md5(result, 16 + len, result);
@@ -378,7 +379,6 @@ bytes_to_key(const struct cipher_wrapper *cipher, const digest_type_t *md,
              const uint8_t *pass, uint8_t *key)
 {
     size_t datal;
-    datal = strlen((const char *)pass);
 
 #if defined(USE_CRYPTO_OPENSSL)
 
@@ -387,6 +387,7 @@ bytes_to_key(const struct cipher_wrapper *cipher, const digest_type_t *md,
     int nkey;
     unsigned int i, mds;
 
+    datal = strlen((const char *)pass);
     mds  = 16;
     nkey = 16;
     if (cipher != NULL) {
@@ -423,6 +424,7 @@ bytes_to_key(const struct cipher_wrapper *cipher, const digest_type_t *md,
     int addmd;
     unsigned int i, j, mds;
 
+    datal = strlen((const char *)pass);
     nkey = 16;
     if (cipher != NULL) {
         nkey = cipher_key_size(cipher);
@@ -467,6 +469,7 @@ rand_bytes(uint8_t *output, int len)
 const cipher_core_t *
 get_cipher_of_type(enum ss_cipher_type method)
 {
+    const char *cipherName;
     if (method >= ss_cipher_salsa20) {
         return NULL;
     }
@@ -475,19 +478,19 @@ get_cipher_of_type(enum ss_cipher_type method)
         method = ss_cipher_rc4;
     }
 
-    const char *cipherName = ss_cipher_name_of_type(method);
+    cipherName = ss_cipher_name_of_type(method);
     if (cipherName == NULL) {
         return NULL;
     }
 #if defined(USE_CRYPTO_OPENSSL)
     return EVP_get_cipherbyname(cipherName);
 #elif defined(USE_CRYPTO_MBEDTLS)
-    const char *mbedtlsname = ss_mbedtls_cipher_name_by_type(method);
-    if (strcmp(mbedtlsname, CIPHER_UNSUPPORTED) == 0) {
-        LOGE("Cipher %s currently is not supported by mbed TLS library", mbedtlsname);
+    cipherName = ss_mbedtls_cipher_name_by_type(method);
+    if (strcmp(cipherName, CIPHER_UNSUPPORTED) == 0) {
+        LOGE("Cipher %s currently is not supported by mbed TLS library", cipherName);
         return NULL;
     }
-    return mbedtls_cipher_info_from_string(mbedtlsname);
+    return mbedtls_cipher_info_from_string(cipherName);
 #endif
 }
 
@@ -509,6 +512,9 @@ get_digest_type(const char *digest)
 void
 cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, bool encrypt)
 {
+    const cipher_core_t *cipher;
+    const char *cipherName;
+    cipher_core_ctx_t *core_ctx;
     enum ss_cipher_type method = env->enc_method;
 
     if (method >= ss_cipher_salsa20) {
@@ -516,16 +522,16 @@ cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, bool enc
         return;
     }
 
-    const char *cipherName = ss_cipher_name_of_type(method);
+    cipherName = ss_cipher_name_of_type(method);
     if (cipherName == NULL) {
         return;
     }
 
-    const cipher_core_t *cipher = get_cipher_of_type(method);
+    cipher = get_cipher_of_type(method);
 
 #if defined(USE_CRYPTO_OPENSSL)
     ctx->core_ctx = EVP_CIPHER_CTX_new();
-    cipher_core_ctx_t *core_ctx = ctx->core_ctx;
+    core_ctx = ctx->core_ctx;
 
     if (cipher == NULL) {
         LOGE("Cipher %s not found in OpenSSL library", cipherName);
@@ -550,7 +556,7 @@ cipher_context_init(struct cipher_env_t *env, struct cipher_ctx_t *ctx, bool enc
         LOGE("Cipher %s not found in mbed TLS library", cipherName);
         FATAL("Cannot initialize mbed TLS cipher");
     }
-    cipher_core_ctx_t *core_ctx = calloc(1, sizeof(cipher_core_ctx_t));
+    core_ctx = (cipher_core_ctx_t *) calloc(1, sizeof(cipher_core_ctx_t));
     mbedtls_cipher_init(core_ctx);
     if (mbedtls_cipher_setup(core_ctx, cipher) != 0) {
         FATAL("Cannot initialize mbed TLS cipher context");
@@ -564,6 +570,7 @@ cipher_context_set_iv(struct cipher_env_t *env, struct cipher_ctx_t *ctx, uint8_
                       int enc)
 {
     const unsigned char *true_key;
+    cipher_core_ctx_t *core_ctx;
 
     if (iv == NULL) {
         LOGE("cipher_context_set_iv(): IV is null");
@@ -587,7 +594,7 @@ cipher_context_set_iv(struct cipher_env_t *env, struct cipher_ctx_t *ctx, uint8_
     } else {
         true_key = env->enc_key;
     }
-    cipher_core_ctx_t *core_ctx = ctx->core_ctx;
+    core_ctx = ctx->core_ctx;
     if (core_ctx == NULL) {
         LOGE("cipher_context_set_iv(): Cipher context is null");
         return;
@@ -732,16 +739,19 @@ ss_encrypt_all(struct cipher_env_t *env, struct buffer_t *plain, size_t capacity
 {
     enum ss_cipher_type method = env->enc_method;
     if (method > ss_cipher_table) {
+        size_t iv_len;
+        int err;
+        struct buffer_t *cipher;
         struct cipher_ctx_t cipher_ctx;
+        uint8_t iv[MAX_IV_LENGTH];
+
         cipher_context_init(env, &cipher_ctx, 1);
 
-        size_t iv_len = (size_t) env->enc_iv_len;
-        int err       = 1;
+        iv_len = (size_t) env->enc_iv_len;
+        err = 1;
 
-        struct buffer_t *cipher = buffer_alloc(max(iv_len + plain->len, capacity));
+        cipher = buffer_alloc(max(iv_len + plain->len, capacity));
         cipher->len = plain->len;
-
-        uint8_t iv[MAX_IV_LENGTH];
 
         rand_bytes(iv, (int)iv_len);
         cipher_context_set_iv(env, &cipher_ctx, iv, iv_len, 1);
@@ -797,11 +807,12 @@ ss_encrypt(struct cipher_env_t *env, struct buffer_t *plain, struct enc_ctx *ctx
     if (ctx != NULL) {
         int err       = 1;
         size_t iv_len = 0;
+        struct buffer_t *cipher;
         if (!ctx->init) {
             iv_len = (size_t)env->enc_iv_len;
         }
 
-        struct buffer_t *cipher = buffer_alloc(max(iv_len + plain->len, capacity));
+        cipher = buffer_alloc(max(iv_len + plain->len, capacity));
         cipher->len = plain->len;
 
         if (!ctx->init) {
@@ -873,18 +884,19 @@ ss_decrypt_all(struct cipher_env_t *env, struct buffer_t *cipher, size_t capacit
     if (method > ss_cipher_table) {
         size_t iv_len = (size_t)env->enc_iv_len;
         int ret       = 1;
+        struct cipher_ctx_t cipher_ctx;
+        struct buffer_t *plain;
+        uint8_t iv[MAX_IV_LENGTH];
 
         if (cipher->len <= iv_len) {
             return -1;
         }
 
-        struct cipher_ctx_t cipher_ctx;
         cipher_context_init(env, &cipher_ctx, 0);
 
-        struct buffer_t *plain = buffer_alloc(max(cipher->len, capacity));
+        plain = buffer_alloc(max(cipher->len, capacity));
         plain->len = cipher->len - iv_len;
 
-        uint8_t iv[MAX_IV_LENGTH];
         memcpy(iv, cipher->buffer, iv_len);
         cipher_context_set_iv(env, &cipher_ctx, iv, iv_len, 0);
 
@@ -1019,10 +1031,11 @@ ss_decrypt(struct cipher_env_t *env, struct buffer_t *cipher, struct enc_ctx *ct
 int
 ss_encrypt_buffer(struct cipher_env_t *env, struct enc_ctx *ctx, char *in, size_t in_size, char *out, size_t *out_size)
 {
+    int s;
     struct buffer_t *cipher = buffer_alloc(in_size + 32);
     cipher->len = in_size;
     memcpy(cipher->buffer, in, in_size);
-    int s = ss_encrypt(env, cipher, ctx, in_size + 32);
+    s = ss_encrypt(env, cipher, ctx, in_size + 32);
     if (s == 0) {
         *out_size = cipher->len;
         memcpy(out, cipher->buffer, cipher->len);
@@ -1034,10 +1047,11 @@ ss_encrypt_buffer(struct cipher_env_t *env, struct enc_ctx *ctx, char *in, size_
 int
 ss_decrypt_buffer(struct cipher_env_t *env, struct enc_ctx *ctx, char *in, size_t in_size, char *out, size_t *out_size)
 {
+    int s;
     struct buffer_t *cipher = buffer_alloc(in_size + 32);
     cipher->len = in_size;
     memcpy(cipher->buffer, in, in_size);
-    int s = ss_decrypt(env, cipher, ctx, in_size + 32);
+    s = ss_decrypt(env, cipher, ctx, in_size + 32);
     if (s == 0) {
         *out_size = cipher->len;
         memcpy(out, cipher->buffer, cipher->len);
@@ -1117,6 +1131,9 @@ enc_table_init(struct cipher_env_t * env, enum ss_cipher_type method, const char
 void
 enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *pass)
 {
+    struct cipher_wrapper *cipher;
+    const digest_type_t *md;
+
     if (method < ss_cipher_none || method >= ss_cipher_max) {
         LOGE("enc_key_init(): Illegal method");
         return;
@@ -1127,11 +1144,9 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
 
 #if defined(USE_CRYPTO_OPENSSL)
     OpenSSL_add_all_algorithms();
-#else
-    cipher_core_t cipher_info = { 0 };
 #endif
 
-    struct cipher_wrapper *cipher = (struct cipher_wrapper *)calloc(1, sizeof(struct cipher_wrapper));
+    cipher = (struct cipher_wrapper *)calloc(1, sizeof(struct cipher_wrapper));
 
     // Initialize sodium for random generator
     if (sodium_init() == -1) {
@@ -1147,6 +1162,7 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
 #if defined(USE_CRYPTO_MBEDTLS)
         // XXX: key_length changed to key_bitlen in mbed TLS 2.0.0
 
+        cipher_core_t cipher_info = { MBEDTLS_CIPHER_NONE };
         cipher_info.base = NULL;
         cipher_info.key_bitlen = (unsigned int)ss_cipher_key_size(method) * 8;
         cipher_info.iv_size = (unsigned int)ss_cipher_iv_size(method);
@@ -1162,7 +1178,7 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
         FATAL("Cannot initialize cipher");
     }
 
-    const digest_type_t *md = get_digest_type("MD5");
+    md = get_digest_type("MD5");
     if (md == NULL) {
         FATAL("MD5 Digest not found in crypto library");
     }

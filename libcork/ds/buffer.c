@@ -165,6 +165,10 @@ cork_buffer_append_vprintf(struct cork_buffer *buffer, const char *format,
     size_t  format_size;
     va_list  args1;
 
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define va_copy(dest, src) ((dest) = (src))
+#endif
+
     va_copy(args1, args);
     format_size = vsnprintf((char *)buffer->buf + buffer->size,
                             buffer->allocated_size - buffer->size,

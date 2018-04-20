@@ -81,8 +81,9 @@ uint32_t adler32(unsigned char *buffer, unsigned int size) {
 #undef NMAX
 
 void filladler32(unsigned char *buffer, unsigned int size) {
+    uint32_t checksum;
     size -= 4;
-    uint32_t checksum = adler32(buffer, size);
+    checksum = adler32(buffer, size);
     buffer += size;
     buffer[0] = (unsigned char)checksum;
     buffer[1] = (unsigned char)(checksum >> 8);
@@ -91,8 +92,9 @@ void filladler32(unsigned char *buffer, unsigned int size) {
 }
 
 int checkadler32(unsigned char *buffer, unsigned int size) {
+    uint32_t checksum;
     size -= 4;
-    uint32_t checksum = adler32(buffer, size);
+    checksum = adler32(buffer, size);
     buffer += size;
     return checksum == (((uint32_t)buffer[3] << 24)
             | ((uint32_t)buffer[2] << 16)

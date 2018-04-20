@@ -187,16 +187,18 @@ static int ssr_server_run_loop(struct server_config *config) {
     loop->data = state->env;
 
     {
-        uv_tcp_t *listener = calloc(1, sizeof(uv_tcp_t));
+        union sockaddr_universal addr = { 0 };
+        int error;
+        uv_tcp_t *listener = (uv_tcp_t *) calloc(1, sizeof(uv_tcp_t));
+
         uv_tcp_init(loop, listener);
 
-        union sockaddr_universal addr = { 0 };
         addr.addr4.sin_family = AF_INET;
         addr.addr4.sin_port = htons(config->listen_port);
         addr.addr4.sin_addr.s_addr = htonl(INADDR_ANY);
         uv_tcp_bind(listener, &addr.addr, 0);
 
-        int error = uv_listen((uv_stream_t *)listener, SSR_MAX_CONN, tunnel_establish_init_cb);
+        error = uv_listen((uv_stream_t *)listener, SSR_MAX_CONN, tunnel_establish_init_cb);
 
         if (error != 0) {
             return fprintf(stderr, "Error on listening: %s.\n", uv_strerror(error));
@@ -313,8 +315,9 @@ void server_shutdown(struct server_env_t *env) {
 }
 
 void signal_quit_cb(uv_signal_t *handle, int signum) {
+    struct server_env_t *env;
     ASSERT(handle);
-    struct server_env_t *env = (struct server_env_t *)handle->loop->data;
+    env = (struct server_env_t *)handle->loop->data;
     switch (signum) {
     case SIGINT:
     case SIGTERM:
@@ -451,7 +454,9 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
     do {
+        struct buffer_t *feedback = NULL;
         const uint8_t *buf = (const uint8_t *)incoming->buf->base;
+
         ASSERT(socket == incoming);
 
         ASSERT(incoming->rdstate == socket_done);
@@ -469,7 +474,6 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         ASSERT(ctx->cipher == NULL);
         ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg); // FIXME: error init_pkg
 
-        struct buffer_t *feedback = NULL;
         if (ssr_ok != tunnel_decrypt(ctx->cipher, ctx->init_pkg, &feedback)) {
             // TODO: report_addr(server->fd, MALICIOUS);
             tunnel_shutdown(tunnel);
@@ -520,11 +524,14 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *outgoing = tunnel->outgoing;
     size_t offset     = 0;
     const char *host = NULL;
+    struct socks5_address *s5addr;
+    union sockaddr_universal target;
+    bool ipFound = true;
 
     ASSERT(incoming == socket);
 
     // get remote addr and port
-    struct socks5_address *s5addr = tunnel->desired_addr;
+    s5addr = tunnel->desired_addr;
     memset(s5addr, 0, sizeof(*s5addr));
     if (socks5_address_parse(ctx->init_pkg->buffer, ctx->init_pkg->len, s5addr) == false) {
         // report_addr(server->fd, MALFORMED);
@@ -538,8 +545,6 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
 
     host = s5addr->addr.domainname;
 
-    union sockaddr_universal target;
-    bool ipFound = true;
     if (socks5_address_to_universal(s5addr, &target) == false) {
         ASSERT(s5addr->addr_type == SOCKS5_ADDRTYPE_DOMAINNAME);
 

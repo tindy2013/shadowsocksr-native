@@ -44,7 +44,7 @@ to_string(const json_value *value)
     if (value->type == json_string) {
         return ss_strndup(value->u.string.ptr, value->u.string.length);
     } else if (value->type == json_integer) {
-        return strdup(ss_itoa(value->u.integer));
+        return strdup(ss_itoa((int)value->u.integer));
     } else if (value->type == json_null) {
         return "null";
     } else {
@@ -122,11 +122,11 @@ parse_ss_server(ss_server_t *server, json_value* json)
         } else if (strcmp(name, "server_port") == 0) {
             check_json_value_type(value, json_integer,
                                   "invalid config file: option 'server_port' must be an integer");
-            server->server_port = value->u.integer;
+            server->server_port = (int) value->u.integer;
         } else if (strcmp(name, "server_udp_port") == 0) { // SSR
             check_json_value_type(value, json_integer,
                                   "invalid config file: option 'server_udp_port' must be an integer");
-            server->server_udp_port = value->u.integer;
+            server->server_udp_port = (int) value->u.integer;
         } else if (strcmp(name, "password") == 0) {
             server->password = to_string(value);
         } else if (strcmp(name, "method") == 0) {
@@ -157,33 +157,37 @@ jconf_t *
 read_jconf(const char *file)
 {
     static jconf_t conf;
+    json_value *obj;
+    char *buf;
+    FILE *f;
+    long pos;
+    int nread;
+    json_settings settings = { 0UL, 0, NULL, NULL, NULL };
+    char error_buf[512];
 
     memset(&conf, 0, sizeof(jconf_t));
 
     conf.conf_ver = CONF_VER_LEGACY; // try legacy version first
 
-    char *buf;
-    json_value *obj;
-
-    FILE *f = fopen(file, "rb");
+    f = fopen(file, "rb");
     if (f == NULL) {
         FATAL("Invalid config path.");
     }
 
     fseek(f, 0, SEEK_END);
-    long pos = ftell(f);
+    pos = ftell(f);
     fseek(f, 0, SEEK_SET);
 
     if (pos >= MAX_CONF_SIZE) {
         FATAL("Too large config file.");
     }
 
-    buf = ss_malloc(pos + 1);
+    buf = (char *) ss_malloc(pos + 1);
     if (buf == NULL) {
         FATAL("No enough memory.");
     }
 
-    int nread = fread(buf, pos, 1, f);
+    nread = fread(buf, pos, 1, f);
     if (!nread) {
         FATAL("Failed to read the config file.");
     }
@@ -191,8 +195,6 @@ read_jconf(const char *file)
 
     buf[pos] = '\0'; // end of string
 
-    json_settings settings = { 0UL, 0, NULL, NULL, NULL };
-    char error_buf[512];
     obj = json_parse_ex(&settings, buf, pos, error_buf);
 
     if (obj == NULL) {
@@ -212,11 +214,13 @@ read_jconf(const char *file)
                 if (strcmp(name, "server") == 0) {
                     if (value->type == json_array) {
                         for (j = 0; j < value->u.array.length; j++) {
+                            json_value *v;
+                            char *addr_str;
                             if (j >= MAX_REMOTE_NUM) {
                                 break;
                             }
-                            json_value *v = value->u.array.values[j];
-                            char *addr_str = to_string(v);
+                            v = value->u.array.values[j];
+                            addr_str = to_string(v);
                             parse_addr(addr_str, conf.server_legacy.remote_addr + j);
                             ss_free(addr_str);
                             conf.server_legacy.remote_num = j + 1;
@@ -229,10 +233,11 @@ read_jconf(const char *file)
                 } else if (strcmp(name, "port_password") == 0) {
                     if (value->type == json_object) {
                         for (j = 0; j < value->u.object.length; j++) {
+                            json_value *v;
                             if (j >= MAX_PORT_NUM) {
                                 break;
                             }
-                            json_value *v = value->u.object.values[j].value;
+                            v = value->u.object.values[j].value;
                             if (v->type == json_string) {
                                 conf.server_legacy.port_password[j].port = ss_strndup(value->u.object.values[j].name,
                                                                         value->u.object.values[j].name_length);
@@ -274,11 +279,12 @@ read_jconf(const char *file)
 
                     if (value->type == json_array) {
                         for (j = 0; j < value->u.array.length; j++) {
+                            json_value *v;
                             if (conf.server_new_1.server_num >= MAX_SERVER_NUM) {
                                 LOGI("Max servers exceed, ignore remain server defines.");
                                 break;
                             }
-                            json_value *v = value->u.array.values[j];
+                            v = value->u.array.values[j];
 
                             if(v->type == json_object) {
                                 parse_ss_server(&conf.server_new_1.servers[conf.server_new_1.server_num], v);
@@ -297,7 +303,7 @@ read_jconf(const char *file)
                 } else if (strcmp(name, "nofile") == 0) {
                     check_json_value_type(value, json_integer,
                                           "invalid config file: option 'nofile' must be an integer");
-                    conf.nofile = value->u.integer;
+                    conf.nofile = (int)value->u.integer;
                 } else if (strcmp(name, "nameserver") == 0) {
                     conf.nameserver = to_string(value);
                 } else if (strcmp(name, "tunnel_address") == 0) {
@@ -318,7 +324,7 @@ read_jconf(const char *file)
                 } else if (strcmp(name, "mtu") == 0) {
                     check_json_value_type(value, json_integer,
                                           "invalid config file: option 'mtu' must be an integer");
-                    conf.mtu = value->u.integer;
+                    conf.mtu = (int)value->u.integer;
                 } else if (strcmp(name, "mptcp") == 0) {
                     check_json_value_type(value, json_boolean,
                                           "invalid config file: option 'mptcp' must be a boolean");
@@ -373,7 +379,7 @@ free_jconf(jconf_t *conf)
         ss_free(legacy->obfs_param);
     } else {
         ss_server_new_1_t *ss_server_new_1 = &conf->server_new_1;
-        for(i = 0; i < ss_server_new_1->server_num; i++){
+        for(i = 0; i < (int)ss_server_new_1->server_num; i++){
             ss_server_t *serv = &ss_server_new_1->servers[i];
 
             ss_free(serv->server);

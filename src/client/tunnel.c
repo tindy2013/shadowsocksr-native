@@ -97,6 +97,7 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, bool(*init
     struct socket_ctx *outgoing;
     struct tunnel_ctx *tunnel;
     uv_loop_t *loop = listener->loop;
+    bool success = false;
 
     tunnel = (struct tunnel_ctx *) calloc(1, sizeof(*tunnel));
 
@@ -125,7 +126,6 @@ void tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout, bool(*init
     VERIFY(0 == uv_tcp_init(loop, &outgoing->handle.tcp));
     tunnel->outgoing = outgoing;
 
-    bool success = false;
     if (init_done_cb) {
         success = init_done_cb(tunnel, p);
     }

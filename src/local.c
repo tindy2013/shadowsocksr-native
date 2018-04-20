@@ -289,22 +289,27 @@ free_connections(void)
 }
 
 int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
+    struct server_env_t *env;
+    struct obfs_manager *protocol_plugin;
+    int err;
+    struct obfs_manager *obfs_plugin;
+
     assert(buf->capacity >= SSR_BUFF_SIZE);
 
-    struct server_env_t *env = local->server_env;
+    env = local->server_env;
     // SSR beg
-    struct obfs_manager *protocol_plugin = env->protocol_plugin;
+    protocol_plugin = env->protocol_plugin;
 
     if (protocol_plugin && protocol_plugin->client_pre_encrypt) {
         buf->len = (size_t)protocol_plugin->client_pre_encrypt(
             local->protocol, (char **)&buf->buffer, (int)buf->len, &buf->capacity);
     }
-    int err = ss_encrypt(env->cipher, buf, local->e_ctx, SSR_BUFF_SIZE);
+    err = ss_encrypt(env->cipher, buf, local->e_ctx, SSR_BUFF_SIZE);
     if (err != 0) {
         return -1;
     }
 
-    struct obfs_manager *obfs_plugin = env->obfs_plugin;
+    obfs_plugin = env->obfs_plugin;
     if (obfs_plugin && obfs_plugin->client_encode) {
         buf->len = obfs_plugin->client_encode(
             local->obfs, (char **)&buf->buffer, buf->len, &buf->capacity);
@@ -315,12 +320,16 @@ int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
 
 int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t **feedback)
 {
+    struct server_env_t *env;
+    struct obfs_manager *obfs_plugin;
+    struct obfs_manager *protocol_plugin;
+
     assert(buf->len <= SSR_BUFF_SIZE);
 
-    struct server_env_t *env = local->server_env;
+    env = local->server_env;
 
     // SSR beg
-    struct obfs_manager *obfs_plugin = env->obfs_plugin;
+    obfs_plugin = env->obfs_plugin;
     if (obfs_plugin && obfs_plugin->client_decode) {
         int needsendback = 0;
         ssize_t len = obfs_plugin->client_decode(local->obfs, (char **)&buf->buffer, buf->len, &buf->capacity, &needsendback);
@@ -341,7 +350,7 @@ int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t
             return -1;
         }
     }
-    struct obfs_manager *protocol_plugin = env->protocol_plugin;
+    protocol_plugin = env->protocol_plugin;
     if (protocol_plugin && protocol_plugin->client_post_decrypt) {
         ssize_t len = (size_t)protocol_plugin->client_post_decrypt(
             local->protocol, (char **)&buf->buffer, (int)buf->len, &buf->capacity);
@@ -412,10 +421,12 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
     while (1) {
         // local socks5 server
         if (local->stage == STAGE_STREAM) {
+            int r;
+
             assert(remote);
 
             // insert shadowsocks header
-            int r = _tunnel_encrypt(local, remote->buf);
+            r = _tunnel_encrypt(local, remote->buf);
             if (r < 0) {
                 LOGE("local invalid password or cipher");
                 tunnel_close_and_free(remote, local);
@@ -427,6 +438,8 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             }
 #endif
             if (!remote->connected) {
+                uv_connect_t *connect;
+                struct sockaddr *addr;
 #ifdef ANDROID
                 if (vpn) {
                     int not_protect = 0;
@@ -447,10 +460,10 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 #endif
                 local_read_stop(local);
 
-                uv_connect_t *connect = (uv_connect_t *)ss_malloc(sizeof(uv_connect_t));
+                connect = (uv_connect_t *)ss_malloc(sizeof(uv_connect_t));
                 connect->data = remote;
 
-                struct sockaddr *addr = (struct sockaddr*)&(remote->addr);
+                addr = (struct sockaddr*)&(remote->addr);
                 uv_tcp_connect(connect, &remote->socket, addr, remote_connected_cb);
                 return;
             } else {
@@ -464,6 +477,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             // all processed
             return;
         } else if (local->stage == STAGE_INIT) {
+            int off;
             struct method_select_request *request = (struct method_select_request *)buf->buffer;
 
             struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
@@ -476,7 +490,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
             local->stage = STAGE_HANDSHAKE;
 
-            int off = (request->nmethods & 0xff) + sizeof(*request);
+            off = (request->nmethods & 0xff) + sizeof(*request);
             if ((request->ver == SOCKS5_VERSION) && (off < (int)(buf->len))) {
                 memmove(buf->buffer, buf->buffer + off, buf->len - off);
                 buf->len -= off;
@@ -492,21 +506,29 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             struct sockaddr_in sock_addr = { 0 };
 
             int udp_assc = 0;
+            char host[257], ip[INET6_ADDRSTRLEN], port[16];
+            struct buffer_t *abuf;
+            char addr_type;
+            char *addr_n_port;
+            size_t abuf_len;
+            int sni_detected;
 
             if (request->cmd == SOCKS5_COMMAND_UDPASSOC) {
+                socklen_t addr_len;
                 udp_assc = 1;
-                socklen_t addr_len = sizeof(sock_addr);
+                addr_len = sizeof(sock_addr);
                 getsockname(uv_stream_fd(&local->socket), (struct sockaddr *)&sock_addr, &addr_len);
                 if (verbose) {
                     LOGI("udp assc request accepted");
                 }
             } else if (request->cmd != SOCKS5_COMMAND_CONNECT) {
-                LOGE("unsupported cmd: 0x%02X", (uint8_t)request->cmd);
                 struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
                 size_t size = 0;
                 struct socks5_response *response =
                         build_socks5_response(SOCKS5_REPLY_CMDUNSUPP, SOCKS5_ADDRTYPE__IPV4,
                                               &sock_addr, (char *)buffer->buffer, buffer->capacity, &size);
+
+                LOGE("unsupported cmd: 0x%02X", (uint8_t)request->cmd);
 
                 local_send_data(local, (char *)response, (unsigned int)size);
 
@@ -534,15 +556,13 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 }
             }
 
-            char host[257], ip[INET6_ADDRSTRLEN], port[16];
+            abuf = buffer_alloc(SSR_BUFF_SIZE);
 
-            struct buffer_t *abuf = buffer_alloc(SSR_BUFF_SIZE);
-
-            char addr_type = request->addr_type;
+            addr_type = request->addr_type;
 
             abuf->buffer[abuf->len++] = addr_type;
 
-            char *addr_n_port = request->addr_n_port;
+            addr_n_port = request->addr_n_port;
 
             // get remote addr and port
             if (addr_type == SOCKS5_ADDRTYPE__IPV4) {
@@ -587,8 +607,8 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 return;
             }
 
-            size_t abuf_len  = abuf->len;
-            int sni_detected = 0;
+            abuf_len  = abuf->len;
+            sni_detected = 0;
 
             if (addr_type == SOCKS5_ADDRTYPE__IPV4 || addr_type == SOCKS5_ADDRTYPE__IPV6) {
                 char *hostname = NULL;
@@ -639,6 +659,12 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             }
 
             if (acl) {
+                int host_match;
+                int bypass;
+                int resolved;
+                struct sockaddr_storage storage;
+                int err;
+
                 if (outbound_block_match_host(host) == 1) {
                     if (verbose) {
                         LOGI("outbound blocked %s", host);
@@ -647,12 +673,10 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     return;
                 }
 
-                int host_match = acl_match_host(host);
-                int bypass = 0;
-                int resolved = 0;
-                struct sockaddr_storage storage;
+                host_match = acl_match_host(host);
+                bypass = 0;
+                resolved = 0;
                 memset(&storage, 0, sizeof(struct sockaddr_storage));
-                int err;
 
                 if (verbose) {
                     LOGI("acl_match_host %s result %d", host, host_match);
@@ -662,6 +686,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 } else if (host_match < 0) {
                     bypass = 1;                 // proxy hostnames in white list
                 } else {
+                    int ip_match;
 #ifndef ANDROID
                     if (addr_type == SOCKS5_ADDRTYPE__NAME) {            // resolve domain so we can bypass domain with geoip
                         err = (int) get_sockaddr(host, port, &storage, 0, ipv6first);
@@ -692,7 +717,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                         return;
                     }
 
-                    int ip_match = acl_match_host(ip);// -1 if IP in white list or 1 if IP in black list
+                    ip_match = acl_match_host(ip);// -1 if IP in white list or 1 if IP in black list
                     if (verbose) {
                         LOGI("acl_match_host ip %s result %d mode %d",
                              ip, ip_match, get_acl_mode());
@@ -707,6 +732,9 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 }
 
                 if (bypass) {
+                    struct sockaddr_storage storage;
+                    ssize_t err;
+
                     if (verbose) {
                         if (sni_detected || addr_type == SOCKS5_ADDRTYPE__NAME) {
                             LOGI("bypass %s:%s", host, port);
@@ -716,9 +744,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                             LOGI("bypass [%s]:%s", ip, port);
                         }
                     }
-                    struct sockaddr_storage storage;
                     memset(&storage, 0, sizeof(struct sockaddr_storage));
-                    ssize_t err;
 #ifndef ANDROID
                     if (addr_type == SOCKS5_ADDRTYPE__NAME && resolved != 1) {
                         err = get_sockaddr(host, port, &storage, 0, ipv6first);
@@ -767,6 +793,8 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
             {
                 struct server_env_t *server_env = local->server_env;
+                struct server_info_t server_info;
+                size_t total_len;
 
                 // init server cipher
                 if (cipher_env_enc_method(server_env->cipher) > ss_cipher_table) {
@@ -777,7 +805,6 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     local->d_ctx = NULL;
                 }
                 // SSR beg
-                struct server_info_t server_info;
                 memset(&server_info, 0, sizeof(struct server_info_t));
                 if (server_env->hostname) {
                     strcpy(server_info.host, server_env->hostname);
@@ -815,7 +842,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 }
                 // SSR end
 
-                size_t total_len = abuf->len + buf->len;
+                total_len = abuf->len + buf->len;
                 buffer_realloc(remote->buf, total_len * 2);
                 remote->buf->len = total_len;
 
@@ -838,8 +865,10 @@ static void
 local_send_cb(uv_write_t* req, int status)
 {
     struct local_t *local = (struct local_t *) req->data;
+    struct remote_t *remote;
+
     assert(local);
-    struct remote_t *remote = local->remote;
+    remote = local->remote;
 
     free(req);
 
@@ -873,8 +902,10 @@ static void
 remote_connected_cb(uv_connect_t* req, int status)
 {
     struct remote_t *remote = (struct remote_t *)req->data;
+    struct local_t *local;
+
     assert(remote);
-    struct local_t *local = remote->local;
+    local = remote->local;
 
     free(req);
 
@@ -919,9 +950,15 @@ static void
 remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 {
     struct remote_t *remote = cork_container_of(stream, struct remote_t, socket);
+    struct local_t *local;
+    struct server_env_t *server_env;
+    size_t FIXED_BUFF_SIZE;
+    char *guard;
+    char *iter;
+
     assert(remote);
-    struct local_t *local = remote->local;
-    struct server_env_t *server_env = local->server_env;
+    local = remote->local;
+    server_env = local->server_env;
 
     (void)server_env;
 
@@ -951,16 +988,18 @@ remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
         return;
     }
 
-    static const size_t FIXED_BUFF_SIZE = SSR_BUFF_SIZE;
+    FIXED_BUFF_SIZE = SSR_BUFF_SIZE;
 
     buffer_realloc(local->buf, FIXED_BUFF_SIZE);
 
-    char *guard = buf0->base + nread;
+    guard = buf0->base + nread;
 
-    char *iter = NULL;
+    iter = NULL;
     for (iter = buf0->base; iter < guard; iter += FIXED_BUFF_SIZE) {
         size_t remain = guard - iter;
         size_t len = remain > FIXED_BUFF_SIZE ? FIXED_BUFF_SIZE : remain;
+        struct buffer_t *feedback;
+        int r;
 
         memcpy(local->buf->buffer, iter, (size_t)len);
         local->buf->len = len;
@@ -970,8 +1009,8 @@ remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             rx += local->buf->len;
         }
 #endif
-        struct buffer_t *feedback = NULL;
-        int r = _tunnel_decrypt(local, local->buf, &feedback);
+        feedback = NULL;
+        r = _tunnel_decrypt(local, local->buf, &feedback);
         if (feedback != NULL) {
             buffer_store(remote->buf, feedback->buffer, feedback->len);
             buffer_free(feedback);
@@ -997,9 +1036,12 @@ static void
 remote_send_cb(uv_write_t* req, int status)
 {
     struct remote_t *remote = (struct remote_t *)req->data;
+    struct local_t *local;
+    struct buffer_t *buf;
+
     assert(remote);
-    struct local_t *local = remote->local;
-    struct buffer_t *buf = remote->buf;
+    local = remote->local;
+    buf = remote->buf;
 
     free(req);
 
@@ -1044,7 +1086,8 @@ local_send_data(struct local_t *local, char *data, unsigned int size)
 static struct remote_t *
 remote_new_object(uv_loop_t *loop, int timeout)
 {
-    struct remote_t *remote = ss_malloc(sizeof(struct remote_t));
+    struct remote_t *remote = (struct remote_t *)calloc(1, sizeof(struct remote_t));
+    int timeMax;
 
     uv_tcp_init(loop, &remote->socket);
 
@@ -1054,7 +1097,7 @@ remote_new_object(uv_loop_t *loop, int timeout)
     remote->recv_ctx->remote    = remote;
     remote->send_ctx->remote    = remote;
 
-    int timeMax = min(MAX_CONNECT_TIMEOUT * SECONDS_PER_MINUTE, timeout);
+    timeMax = min(MAX_CONNECT_TIMEOUT * SECONDS_PER_MINUTE, timeout);
     uv_timer_init(loop, &remote->send_ctx->watcher);
     remote->send_ctx->watcher_interval = (uint64_t) timeMax;
 
@@ -1114,9 +1157,11 @@ remote_close_and_free(struct remote_t *remote)
 static struct local_t *
 local_new_object(struct listener_t *listener)
 {
+    struct local_t *local;
+
     assert(listener);
 
-    struct local_t *local = ss_malloc(sizeof(struct local_t));
+    local = (struct local_t *) calloc(1, sizeof(struct local_t));
 
     local->listener = listener;
     local->buf = buffer_alloc(SSR_BUFF_SIZE);
@@ -1128,8 +1173,8 @@ local_new_object(struct listener_t *listener)
 static void
 listener_release(struct listener_t *listener)
 {
+    size_t i = 0;
     ss_free(listener->iface);
-    int i = 0;
     for(i = 0; i < listener->server_num; i++) {
         struct server_env_t *server_env = &listener->servers[i];
 
@@ -1275,12 +1320,14 @@ void
 accept_cb(uv_stream_t* server, int status)
 {
     struct listener_t *listener = cork_container_of(server, struct listener_t, socket);
+    struct local_t *local;
+    int r;
 
     assert(status == 0);
 
-    struct local_t *local = local_new_object(listener);
+    local = local_new_object(listener);
 
-    int r = uv_tcp_init(server->loop, &local->socket);
+    r = uv_tcp_init(server->loop, &local->socket);
     if (r != 0) {
         LOGE("uv_tcp_init error: %s\n", uv_strerror(r));
         return;
@@ -1341,7 +1388,7 @@ main(int argc, char **argv)
     int use_new_listener = 0;
     jconf_t *conf = NULL;
 
-    struct ss_host_port tunnel_addr = { .host = NULL, .port = NULL };
+    struct ss_host_port tunnel_addr = { NULL, NULL };
     char *tunnel_addr_str = NULL;
 
     int option_index                    = 0;
@@ -1635,8 +1682,9 @@ main(int argc, char **argv)
         parse_addr(tunnel_addr_str, &tunnel_addr);
     }
     
-    struct server_config *local_config = config_create();
     {
+        struct server_config *local_config = config_create();
+
         local_config->idle_timeout = (unsigned int)atoi(timeout);
         
         if (remote_num > 0) {
@@ -1655,13 +1703,12 @@ main(int argc, char **argv)
         string_safe_assign(&local_config->protocol_param, protocol_param);
         string_safe_assign(&local_config->obfs, obfs);
         string_safe_assign(&local_config->obfs_param, obfs_param);
-    }
 
-    i = ssr_local_main_loop(local_config, NULL, NULL);
+        i = ssr_local_main_loop(local_config, NULL, NULL);
     
-    config_release(local_config);
-    free_jconf(conf);
-    
+        config_release(local_config);
+        free_jconf(conf);
+    }
     return i;
 }
 
@@ -1674,14 +1721,23 @@ int ssr_Local_listen_socket_fd(struct ssr_local_state *state) {
 }
 
 int ssr_local_main_loop(const struct server_config *config, void(*feedback_state)(struct ssr_local_state *state, void *p), void *p) {
+    struct ss_host_port tunnel_addr = { NULL, NULL };
+    struct listener_t *listener;
+    uv_loop_t *loop;
+    uv_signal_t sigint_watcher;
+    uv_signal_t sigterm_watcher;
+    struct listener_t *listen_ctx;
+    uv_tcp_t *listener_socket;
+    int listenfd;
+    uint16_t port;
+    struct udp_listener_ctx_t *udp_server;
+
 #ifdef __MINGW32__
     winsock_init();
 #endif
 
-    struct ss_host_port tunnel_addr = { .host = NULL, .port = NULL };
-
     // Setup listeners
-    struct listener_t *listener = (struct listener_t *)ss_malloc(sizeof(struct listener_t));
+    listener = (struct listener_t *)ss_malloc(sizeof(struct listener_t));
 
     listener->timeout = config->idle_timeout * SECONDS_PER_MINUTE;
     //listener->iface = ss_strdup(config->iface);
@@ -1744,17 +1800,19 @@ int ssr_local_main_loop(const struct server_config *config, void(*feedback_state
     } else
      */
     {
-        int i = 0;
+        size_t i = 0;
         listener->server_num = 1; // config->remote_num;
         for(i = 0; i < listener->server_num; i++) {
             char swap_buff[257] = { 0 };
             struct server_env_t *serv = &listener->servers[i];
             char *host = config->remote_host;
+            char *port;
+            struct sockaddr_storage *storage;
             
             sprintf(swap_buff, "%d", config->remote_port);
-            char *port = swap_buff;
+            port = swap_buff;
 
-            struct sockaddr_storage *storage = ss_malloc(sizeof(struct sockaddr_storage));
+            storage = (struct sockaddr_storage *) calloc(1, sizeof(struct sockaddr_storage));
             if (get_sockaddr(host, port, storage, 1, ipv6first) == -1) {
                 FATAL("failed to resolve the provided hostname");
             }
@@ -1778,21 +1836,18 @@ int ssr_local_main_loop(const struct server_config *config, void(*feedback_state
     // Init listeners
     current_listener = listener;
 
-    uv_loop_t *loop = uv_default_loop();
+    loop = uv_default_loop();
 
     // Setup signal handler
-    uv_signal_t sigint_watcher;
-    uv_signal_t sigterm_watcher;
     uv_signal_init(loop, &sigint_watcher);
     uv_signal_init(loop, &sigterm_watcher);
     uv_signal_start(&sigint_watcher, signal_cb, SIGINT);
     uv_signal_start(&sigterm_watcher, signal_cb, SIGTERM);
 
-    struct listener_t *listen_ctx = current_listener;
+    listen_ctx = current_listener;
 
-    uv_tcp_t *listener_socket = &listen_ctx->socket;
+    listener_socket = &listen_ctx->socket;
 
-    int listenfd;
     {
         // Setup socket
 #ifdef HAVE_LAUNCHD
@@ -1811,9 +1866,9 @@ int ssr_local_main_loop(const struct server_config *config, void(*feedback_state
 
     listenfd = uv_stream_fd(listener_socket);
     
-    uint16_t port = get_socket_port(listener_socket);
+    port = get_socket_port(listener_socket);
 
-    struct udp_listener_ctx_t *udp_server = NULL;
+    udp_server = NULL;
     // Setup UDP
     if (config->udp) {
         LOGI("udprelay enabled");

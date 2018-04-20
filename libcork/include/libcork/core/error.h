@@ -19,6 +19,9 @@
 #include <libcork/core/attributes.h>
 #include <libcork/core/types.h>
 
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define __func__ __FUNCTION__
+#endif // defined(_MSC_VER) && (_MSC_VER < 1800)
 
 /* Should be a hash of a string representing the error code. */
 typedef uint32_t  cork_error;

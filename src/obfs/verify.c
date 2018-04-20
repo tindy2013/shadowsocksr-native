@@ -78,15 +78,22 @@ ssize_t verify_simple_client_post_decrypt(struct obfs_t *obfs, char **pplaindata
     char *plaindata = *pplaindata;
     verify_simple_local_data *local = (verify_simple_local_data*)obfs->l_data;
     uint8_t * recv_buffer = (uint8_t *)local->recv_buffer;
+    char * out_buffer;
+    char * buffer;
+    int len;
+
     if (local->recv_buffer_size + datalength > 16384)
         return -1;
     memmove(recv_buffer + local->recv_buffer_size, plaindata, datalength);
     local->recv_buffer_size += datalength;
 
-    char * out_buffer = (char*)malloc((size_t)local->recv_buffer_size);
-    char * buffer = out_buffer;
+    out_buffer = (char*)malloc((size_t)local->recv_buffer_size);
+    buffer = out_buffer;
     while (local->recv_buffer_size > 2) {
         int length = ((int)recv_buffer[0] << 8) | recv_buffer[1];
+        int crc;
+        int data_size;
+
         if (length >= 8192 || length < 7) {
             free(out_buffer);
             local->recv_buffer_size = 0;
@@ -95,18 +102,18 @@ ssize_t verify_simple_client_post_decrypt(struct obfs_t *obfs, char **pplaindata
         if (length > local->recv_buffer_size)
             break;
 
-        int crc = (int)crc32_imp((unsigned char*)recv_buffer, (unsigned int)length);
+        crc = (int)crc32_imp((unsigned char*)recv_buffer, (unsigned int)length);
         if (crc != -1) {
             free(out_buffer);
             local->recv_buffer_size = 0;
             return -1;
         }
-        int data_size = length - recv_buffer[2] - 6;
+        data_size = length - recv_buffer[2] - 6;
         memmove(buffer, recv_buffer + 2 + recv_buffer[2], data_size);
         buffer += data_size;
         memmove(recv_buffer, recv_buffer + length, local->recv_buffer_size -= length);
     }
-    int len = (int)(buffer - out_buffer);
+    len = (int)(buffer - out_buffer);
     if ((int)*capacity < len) {
         *pplaindata = (char*)realloc(*pplaindata, *capacity = (size_t)(len * 2));
         plaindata = *pplaindata;

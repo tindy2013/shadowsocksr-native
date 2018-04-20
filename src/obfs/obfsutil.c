@@ -5,9 +5,10 @@
 #include "../encrypt.h"
 
 int get_head_size(const uint8_t *plaindata, int size, int def_size) {
+    int head_type;
     if (plaindata == NULL || size < 2)
         return def_size;
-    int head_type = plaindata[0] & 0x7;
+    head_type = plaindata[0] & 0x7;
     if (head_type == 1)
         return 7;
     if (head_type == 4)
@@ -22,8 +23,8 @@ static uint64_t shift128plus_s[2] = {0x10000000, 0xFFFFFFFF};
 
 void init_shift128plus(void) {
     if (shift128plus_init_flag == 0) {
-        shift128plus_init_flag = 1;
         uint32_t seed = (uint32_t)time(NULL);
+        shift128plus_init_flag = 1;
         shift128plus_s[0] = seed | 0x100000000L;
         shift128plus_s[1] = ((uint64_t)seed << 32) | 0x1;
     }
@@ -42,22 +43,24 @@ uint64_t xorshift128plus(void) {
 
 int ss_md5_hmac(char *auth, char *msg, int msg_len, uint8_t *iv, int enc_iv_len, uint8_t *enc_key, int enc_key_len)
 {
+    int result;
     size_t len = ss_max_iv_length() + ss_max_key_length();
     uint8_t *auth_key = (uint8_t *) calloc(len, sizeof(auth_key[0]));
     memcpy(auth_key, iv, enc_iv_len);
     memcpy(auth_key + enc_iv_len, enc_key, enc_key_len);
-    int result = ss_md5_hmac_with_key(auth, msg, msg_len, auth_key, enc_iv_len + enc_key_len);
+    result = ss_md5_hmac_with_key(auth, msg, msg_len, auth_key, enc_iv_len + enc_key_len);
     free(auth_key);
     return result;
 }
 
 int ss_sha1_hmac(char *auth, char *msg, int msg_len, const uint8_t *iv, int enc_iv_len, uint8_t *enc_key, int enc_key_len)
 {
+    int result;
     size_t len = ss_max_iv_length() + ss_max_key_length();
     uint8_t *auth_key = (uint8_t *) calloc(len, sizeof(auth_key[0]));
     memcpy(auth_key, iv, enc_iv_len);
     memcpy(auth_key + enc_iv_len, enc_key, enc_key_len);
-    int result = ss_sha1_hmac_with_key(auth, msg, msg_len, auth_key, enc_iv_len + enc_key_len);
+    result = ss_sha1_hmac_with_key(auth, msg, msg_len, auth_key, enc_iv_len + enc_key_len);
     free(auth_key);
     return result;
 }

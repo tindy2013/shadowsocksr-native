@@ -308,7 +308,7 @@ udprelay_parse_header(const char *buf, size_t buf_len,
     } else if ((addr_type & ADDRTYPE_MASK) == SOCKS5_ADDRTYPE_DOMAINNAME) {
         // Domain name
         uint8_t name_len = *(uint8_t *)(buf + offset);
-        if (name_len + 4 <= buf_len) {
+        if ((size_t)(name_len + 4) <= buf_len) {
             if (storage != NULL) {
                 char tmp[257] = { 0 };
                 union sockaddr_universal addr_u;
@@ -368,11 +368,13 @@ static char *
 get_addr_str(const struct sockaddr *sa)
 {
     static char s[SS_ADDRSTRLEN];
-    memset(s, 0, SS_ADDRSTRLEN);
     char addr[INET6_ADDRSTRLEN] = { 0 };
     char port[PORTSTRLEN]       = { 0 };
     uint16_t p;
+    size_t addr_len;
+    size_t port_len;
 
+    memset(s, 0, SS_ADDRSTRLEN);
     switch (sa->sa_family) {
     case AF_INET:
         uv_inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr),
@@ -392,8 +394,8 @@ get_addr_str(const struct sockaddr *sa)
         strncpy(s, "Unknown AF", SS_ADDRSTRLEN);
     }
 
-    size_t addr_len = strlen(addr);
-    size_t port_len = strlen(port);
+    addr_len = strlen(addr);
+    port_len = strlen(port);
     memcpy(s, addr, addr_len);
     memcpy(s + addr_len + 1, port, port_len);
     s[addr_len] = ':';
@@ -403,10 +405,10 @@ get_addr_str(const struct sockaddr *sa)
 
 int udp_create_remote_socket(bool ipv6, uv_loop_t *loop, uv_udp_t *udp) {
     int err = 0;
+    union sockaddr_universal addr = { 0 };
 
     uv_udp_init(loop, udp);
 
-    union sockaddr_universal addr = { 0 };
     if (ipv6) {
         // Try to bind IPv6 first
         addr.addr6.sin6_family = AF_INET6;
@@ -667,6 +669,9 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
     struct udp_remote_ctx_t *remote_ctx = CONTAINER_OF(handle, struct udp_remote_ctx_t, io);
     struct udp_listener_ctx_t *server_ctx = remote_ctx->server_ctx;
     struct buffer_t *buf = NULL;
+    int err;
+    int len;
+    size_t remote_src_addr_len;
 
     uv_timer_stop(&remote_ctx->watcher);
 
@@ -693,7 +698,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
     udp_uv_release_buffer((uv_buf_t *)buf0);
 
 #ifdef MODULE_LOCAL
-    int err = ss_decrypt_all(server_ctx->cipher_env, buf, buf_size);
+    err = ss_decrypt_all(server_ctx->cipher_env, buf, buf_size);
     if (err) {
         // drop the packet silently
         goto CLEAN_UP;
@@ -719,7 +724,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
 #ifdef MODULE_REDIR
     struct sockaddr_storage dst_addr;
     memset(&dst_addr, 0, sizeof(struct sockaddr_storage));
-    int len = udprelay_parse_header(buf->buffer, buf->len, NULL, NULL, &dst_addr);
+    len = udprelay_parse_header(buf->buffer, buf->len, NULL, NULL, &dst_addr);
 
     if (dst_addr.ss_family != AF_INET && dst_addr.ss_family != AF_INET6) {
         LOGI("[udp] ss-redir does not support domain name");
@@ -734,7 +739,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
         LOGI("[udp] recv %s via %s", dst, src);
     }
 #else
-    int len = udprelay_parse_header((const char *)buf->buffer, buf->len, NULL, NULL, NULL);
+    len = udprelay_parse_header((const char *)buf->buffer, buf->len, NULL, NULL, NULL);
 #endif
 
     if (len == 0) {
@@ -800,7 +805,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
         goto CLEAN_UP;
     }
 
-    size_t remote_src_addr_len = get_sockaddr_len((struct sockaddr *)&remote_ctx->src_addr);
+    remote_src_addr_len = get_sockaddr_len((struct sockaddr *)&remote_ctx->src_addr);
     (void)remote_src_addr_len;
 
 #ifdef MODULE_REDIR
@@ -844,12 +849,13 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
     close(src_fd);
 
 #else
-
+    {
+    uv_buf_t tmp;
     uv_udp_send_t *req = (uv_udp_send_t *)calloc(1, sizeof(uv_udp_send_t));
     req->data = server_ctx;
-    uv_buf_t tmp = uv_buf_init((char *)buf->buffer, (unsigned int) buf->len);
+    tmp = uv_buf_init((char *)buf->buffer, (unsigned int) buf->len);
     uv_udp_send(req, &server_ctx->io, &tmp, 1, (const struct sockaddr *)&remote_ctx->src_addr, udp_send_done_cb);
-
+    }
 #endif
 
 CLEAN_UP:
@@ -862,19 +868,35 @@ CLEAN_UP:
 static void 
 udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const struct sockaddr* addr, unsigned flags)
 {
+    struct udp_listener_ctx_t *server_ctx;
+    struct sockaddr_storage src_addr;
+    struct buffer_t *buf;
+    socklen_t src_addr_len;
+    unsigned int offset;
+    char addr_header[512] = { 0 };
+    int addr_header_len   = 0;
+    uint8_t frag = 0;
+
+    char host[257] = { 0 };
+    char port[65]  = { 0 };
+
+    struct udp_remote_ctx_t *remote_ctx = NULL;
+    const struct sockaddr *remote_addr;
+    int err;
+
     if (NULL == addr) {
         return;
     }
 
-    struct udp_listener_ctx_t *server_ctx = CONTAINER_OF(handle, struct udp_listener_ctx_t, io);
+    server_ctx = CONTAINER_OF(handle, struct udp_listener_ctx_t, io);
     ASSERT(server_ctx);
 
-    struct sockaddr_storage src_addr = *(struct sockaddr_storage *)addr;
+    src_addr = *(struct sockaddr_storage *)addr;
 
-    struct buffer_t *buf = buffer_alloc(max((size_t)buf_size, (size_t)nread));
+    buf = buffer_alloc(max((size_t)buf_size, (size_t)nread));
 
-    socklen_t src_addr_len = sizeof(src_addr);
-    unsigned int offset    = 0;
+    src_addr_len = sizeof(src_addr);
+    offset    = 0;
     (void)src_addr_len;
 
 #ifdef MODULE_REDIR
@@ -1003,18 +1025,15 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 
 #elif MODULE_LOCAL
 
-    char addr_header[512] = { 0 };
-    int addr_header_len   = 0;
-    uint8_t frag = 0;
-
-    char host[257] = { 0 };
-    char port[65]  = { 0 };
     if (server_ctx->tunnel_addr.host && server_ctx->tunnel_addr.port) {
+        uint16_t port_num;
+        uint16_t port_net_num;
+        union sockaddr_universal addr;
+
         strncpy(host, server_ctx->tunnel_addr.host, 256);
         strncpy(port, server_ctx->tunnel_addr.port, 64);
-        uint16_t port_num     = (uint16_t)atoi(port);
-        uint16_t port_net_num = htons(port_num);
-        union sockaddr_universal addr;
+        port_num     = (uint16_t)atoi(port);
+        port_net_num = htons(port_num);
         
         if (convert_universal_address(host, port_num, &addr) == 0) {
             if (addr.addr4.sin_family == AF_INET) {
@@ -1055,10 +1074,10 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         buf->len += addr_header_len;
 
     } else {
+        struct sockaddr_storage dst_addr;
 
         frag = *(uint8_t *)(buf->buffer + 2);
         offset += 3;
-        struct sockaddr_storage dst_addr;
         memset(&dst_addr, 0, sizeof(struct sockaddr_storage));
 
         addr_header_len = udprelay_parse_header((const char *)(buf->buffer + offset), buf->len - offset,
@@ -1086,8 +1105,6 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 
 #endif
 
-    struct udp_remote_ctx_t *remote_ctx = NULL;
-
 #ifdef MODULE_LOCAL
 
 #if !defined(MODULE_TUNNEL) && !defined(MODULE_REDIR)
@@ -1097,14 +1114,16 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
     }
 #endif
 
-    const struct sockaddr *remote_addr = &server_ctx->remote_addr.addr;
+    remote_addr = &server_ctx->remote_addr.addr;
 
     {
-        remote_ctx = calloc(1, sizeof(struct udp_remote_ctx_t));
+        bool ipv6;
+        int remotefd;
+        remote_ctx = (struct udp_remote_ctx_t *) calloc(1, sizeof(struct udp_remote_ctx_t));
 
         // Bind to any port
-        bool ipv6 = (remote_addr->sa_family == AF_INET6);
-        int remotefd = udp_create_remote_socket(ipv6, server_ctx->io.loop, &remote_ctx->io);
+        ipv6 = (remote_addr->sa_family == AF_INET6);
+        remotefd = udp_create_remote_socket(ipv6, server_ctx->io.loop, &remote_ctx->io);
         if (remotefd < 0) {
             LOGE("[udp] udprelay bind() error");
             goto CLEAN_UP;
@@ -1138,7 +1157,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
     }
     //SSR end
 
-    int err = ss_encrypt_all(server_ctx->cipher_env, buf, buf->len);
+    err = ss_encrypt_all(server_ctx->cipher_env, buf, buf->len);
 
     if (err) {
         // drop the packet silently
@@ -1149,12 +1168,13 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         LOGE("[udp] server_recv_sendto fragmentation");
         goto CLEAN_UP;
     }
-
+    {
+    uv_buf_t tmp;
     uv_udp_send_t *req = (uv_udp_send_t *)calloc(1, sizeof(uv_udp_send_t));
     req->data = server_ctx;
-    uv_buf_t tmp = uv_buf_init((char *)buf->buffer, (unsigned int) buf->len);
+    tmp = uv_buf_init((char *)buf->buffer, (unsigned int) buf->len);
     uv_udp_send(req, &remote_ctx->io, &tmp, 1, remote_addr, udp_send_done_cb);
-
+    }
 #if !defined(MODULE_TUNNEL) && !defined(MODULE_REDIR)
 #ifdef ANDROID
     if (log_tx_rx)
@@ -1291,6 +1311,10 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     int mtu, int timeout, struct cipher_env_t *cipher_env,
     const char *protocol, const char *protocol_param)
 {
+    struct udp_listener_ctx_t *server_ctx;
+    int serverfd;
+    struct server_info_t server_info = { 0 };
+
     // Initialize MTU
     if (mtu > 0) {
         packet_size = mtu - 1 - 28 - 2 - 64;
@@ -1300,10 +1324,10 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     // ////////////////////////////////////////////////
     // Setup server context
 
-    struct udp_listener_ctx_t *server_ctx = (struct udp_listener_ctx_t *)calloc(1, sizeof(struct udp_listener_ctx_t));
+    server_ctx = (struct udp_listener_ctx_t *)calloc(1, sizeof(struct udp_listener_ctx_t));
 
     // Bind to port
-    int serverfd = udp_create_local_listener(server_host, server_port, loop, &server_ctx->io);
+    serverfd = udp_create_local_listener(server_host, server_port, loop, &server_ctx->io);
     if (serverfd < 0) {
         FATAL("[udp] bind() error");
     }
@@ -1322,8 +1346,6 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
         server_ctx->protocol = server_ctx->protocol_plugin->new_obfs();
         server_ctx->protocol_global = server_ctx->protocol_plugin->init_data();
     }
-
-    struct server_info_t server_info = { 0 };
 
     strcpy(server_info.host, server_host);
     server_info.port = server_port;

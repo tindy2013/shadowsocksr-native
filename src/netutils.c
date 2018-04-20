@@ -145,12 +145,12 @@ get_sockaddr(char *host, char *port,
     } else {
         struct addrinfo hints;
         struct addrinfo *result = NULL, *rp;
+        int err = 0, i;
+        int prefer_af;
 
         memset(&hints, 0, sizeof(struct addrinfo));
         hints.ai_family   = AF_UNSPEC;   /* Return IPv4 and IPv6 choices */
         hints.ai_socktype = SOCK_STREAM; /* We want a TCP socket */
-
-        int err = 0, i;
 
         for (i = 1; i < 8; i++) {
             err = getaddrinfo(host, port, &hints, &result);
@@ -174,8 +174,8 @@ get_sockaddr(char *host, char *port,
             return -1;
         }
 
-        int prefer_af = ipv6first ? AF_INET6 : AF_INET;
-        for (rp = result; rp != NULL; rp = rp->ai_next)
+        prefer_af = ipv6first ? AF_INET6 : AF_INET;
+        for (rp = result; rp != NULL; rp = rp->ai_next) {
             if (rp->ai_family == prefer_af) {
                 if (rp->ai_family == AF_INET)
                     memcpy(storage, rp->ai_addr, sizeof(struct sockaddr_in));
@@ -183,7 +183,7 @@ get_sockaddr(char *host, char *port,
                     memcpy(storage, rp->ai_addr, sizeof(struct sockaddr_in6));
                 break;
             }
-
+        }
         if (rp == NULL) {
             for (rp = result; rp != NULL; rp = rp->ai_next) {
                 if (rp->ai_family == AF_INET)
@@ -267,6 +267,7 @@ sockaddr_cmp_addr(struct sockaddr_storage *addr1,
 int
 validate_hostname(const char *hostname, size_t hostname_len)
 {
+    const char *label;
     if (hostname == NULL)
         return 0;
 
@@ -276,25 +277,26 @@ validate_hostname(const char *hostname, size_t hostname_len)
     if (hostname[0] == '.')
         return 0;
 
-    const char *label = hostname;
+    label = hostname;
     while (label < hostname + hostname_len) {
+        const char *next_dot;
         size_t label_len = hostname_len - (label - hostname);
-        char *next_dot   = strchr(label, '.');
-        if (next_dot != NULL)
+        next_dot = strchr(label, '.');
+        if (next_dot != NULL) {
             label_len = next_dot - label;
-
-        if (label + label_len > hostname + hostname_len)
+        }
+        if (label + label_len > hostname + hostname_len) {
             return 0;
-
-        if (label_len > 63 || label_len < 1)
+        }
+        if (label_len > 63 || label_len < 1) {
             return 0;
-
-        if (label[0] == '-' || label[label_len - 1] == '-')
+        }
+        if (label[0] == '-' || label[label_len - 1] == '-') {
             return 0;
-
-        if (strspn(label, valid_label_bytes) < label_len)
+        }
+        if (strspn(label, valid_label_bytes) < label_len) {
             return 0;
-
+        }
         label += label_len + 1;
     }
 
