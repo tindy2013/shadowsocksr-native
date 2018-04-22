@@ -28,12 +28,13 @@
 #include "common.h"
 #include "ssr_executive.h"
 #include "ssr_client_api.h"
+#include "cmd_line_parser.h"
+#include "daemon_wrapper.h"
 
 #if HAVE_UNISTD_H
 #include <unistd.h>  /* getopt */
 #endif
 
-static const char * parse_opts(int argc, char **argv);
 static void usage(void);
 
 struct ssr_client_state *g_state = NULL;
@@ -43,22 +44,28 @@ void print_remote_info(const struct server_config *config);
 int main(int argc, char **argv) {
     struct server_config *config = NULL;
     int err = -1;
-    const char *config_path = NULL;
+    struct cmd_line_info *cmds = NULL;
 
     do {
         set_app_name(argv[0]);
 
-        config_path = DEFAULT_CONF_PATH;
         if (argc > 1) {
-            config_path = parse_opts(argc, argv);
+            cmds = parse_command_line(argc, argv);
         }
 
-        if (config_path == NULL) {
+        if (cmds == NULL) {
+            break;
+        }
+        if (cmds->help_flag) {
             break;
         }
 
+        if (cmds->cfg_file == NULL) {
+            string_safe_assign(&cmds->cfg_file, DEFAULT_CONF_PATH);
+        }
+
         config = config_create();
-        if (parse_config_file(config_path, config) == false) {
+        if (parse_config_file(cmds->cfg_file, config) == false) {
             break;
         }
 
@@ -70,6 +77,12 @@ int main(int argc, char **argv) {
             break;
         }
 
+        if (cmds->daemon_flag) {
+            char param[257] = { 0 };
+            sprintf(param, "-c %s", cmds->cfg_file);
+            daemon_wrapper(argv[0], param);
+        }
+
         print_remote_info(config);
 
         ssr_run_loop_begin(config, &feedback_state, NULL);
@@ -77,6 +90,11 @@ int main(int argc, char **argv) {
 
         err = 0;
     } while(0);
+
+    if (cmds) {
+        object_safe_free((void **)&cmds->cfg_file);
+        free(cmds);
+    }
 
     config_release(config);
 
@@ -127,31 +145,16 @@ void feedback_state(struct ssr_client_state *state, void *p) {
     (void)p;
 }
 
-static const char * parse_opts(int argc, char **argv) {
-    int opt;
-
-    while (-1 != (opt = getopt(argc, argv, "c:h"))) {
-        switch (opt) {
-        case 'c':
-            return optarg;
-            break;
-        case 'h':
-        default:
-            break;
-        }
-    }
-    return NULL;
-}
-
 static void usage(void) {
     printf("ShadowsocksR native client\n"
         "\n"
         "Usage:\n"
         "\n"
-        "  %s [-c <config file>] [-h]\n"
+        "  %s [-d] [-c <config file>] [-h]\n"
         "\n"
         "Options:\n"
         "\n"
+        "  -d                     Run in background as a daemon.\n"
         "  -c <config file>       Configure file path.\n"
         "                         Default: " DEFAULT_CONF_PATH "\n"
         "  -h                     Show this help message.\n"

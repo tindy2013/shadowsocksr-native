@@ -14,6 +14,7 @@
 #include "udprelay.h"
 #include "tunnel.h"
 #include "daemon_wrapper.h"
+#include "cmd_line_parser.h"
 
 #ifndef SSR_MAX_CONN
 #define SSR_MAX_CONN 1024
@@ -52,12 +53,6 @@ struct address_timestamp {
     time_t timestamp;
 };
 
-struct cmd_line_info {
-    char * cfg_file;
-    bool daemon_flag;
-    bool help_flag;
-};
-
 static int ssr_server_run_loop(struct server_config *config);
 void ssr_server_run_loop_shutdown(struct ssr_server_state *state);
 
@@ -92,7 +87,6 @@ static int resolved_ips_compare_key(void *left, void *right);
 static void resolved_ips_destroy_object(void *obj);
 
 void print_server_info(const struct server_config *config);
-static struct cmd_line_info * parse_opts(int argc, char * const argv[]);
 static void usage(void);
 
 int main(int argc, char * const argv[]) {
@@ -104,7 +98,7 @@ int main(int argc, char * const argv[]) {
         set_app_name(argv[0]);
 
         if (argc > 1) {
-            cmds = parse_opts(argc, argv);
+            cmds = parse_command_line(argc, argv);
         }
 
         if (cmds == NULL) {
@@ -755,28 +749,6 @@ void print_server_info(const struct server_config *config) {
         pr_info("obfs_param       %s", config->obfs_param);
     }
     pr_info("udp relay        %s\n", config->udp ? "yes" : "no");
-}
-
-static struct cmd_line_info * parse_opts(int argc, char * const argv[]) {
-    int opt;
-
-    struct cmd_line_info *info = (struct cmd_line_info *)calloc(1, sizeof(*info));
-
-    while (-1 != (opt = getopt(argc, argv, "c:dh"))) {
-        switch (opt) {
-        case 'c':
-            string_safe_assign(&info->cfg_file, optarg);
-            break;
-        case 'd':
-            info->daemon_flag = true;
-            break;
-        case 'h':
-        default:
-            info->help_flag = true;
-            break;
-        }
-    }
-    return info;
 }
 
 static void usage(void) {
