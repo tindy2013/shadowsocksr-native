@@ -13,6 +13,7 @@
 #include "sockaddr_universal.h"
 #include "udprelay.h"
 #include "tunnel.h"
+#include "daemon_wrapper.h"
 
 #ifndef SSR_MAX_CONN
 #define SSR_MAX_CONN 1024
@@ -134,23 +135,9 @@ int main(int argc, char * const argv[]) {
         }
 
         if (cmds->daemon_flag) {
-#if !(defined(_WIN32) || defined(WIN32))
-            #if defined(__APPLE__)
-            #pragma GCC diagnostic push
-            #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-            #endif
-
-            if(daemon(0, 0) == -1 && errno != 0) {
-                pr_err("failed to put the process in background: %s", strerror(errno));
-            } else {
-                // when in background, write log to a file
-                //log_to_file = 1;
-            }
-
-            #if defined(__APPLE__)
-            #pragma GCC diagnostic pop
-            #endif
-#endif
+            char param[257] = { 0 };
+            sprintf(param, "-c %s", cmds->cfg_file);
+            daemon_wrapper(argv[0], param);
         }
 
         print_server_info(config);

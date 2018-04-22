@@ -71,6 +71,8 @@ set(SOURCE_FILES_CLIENT
         client/client.c
         dump_info.c
         dump_info.h
+        daemon_wrapper.c
+        daemon_wrapper.h
         ${SOURCE_FILES_OBFS}
         client/ssr_client_api.h)
 
@@ -98,6 +100,8 @@ set(SOURCE_FILES_SERVER
         netutils.c
         ssr_executive.c
         ssr_executive.h
+        daemon_wrapper.c
+        daemon_wrapper.h
         config_json.c
         config_json.h
         sockaddr_universal.h
