@@ -29,3 +29,10 @@ struct cmd_line_info * parse_command_line(int argc, char * const argv[]) {
     }
     return info;
 }
+
+void cmd_line_info_destroy(struct cmd_line_info *info) {
+    if (info) {
+        object_safe_free((void **)&info->cfg_file);
+        free(info);
+    }
+}

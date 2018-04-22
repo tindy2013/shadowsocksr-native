@@ -14,5 +14,6 @@ struct cmd_line_info {
 };
 
 struct cmd_line_info * parse_command_line(int argc, char * const argv[]);
+void cmd_line_info_destroy(struct cmd_line_info *info);
 
 #endif // __SSR_NATIVE_CMD_LINE_H__

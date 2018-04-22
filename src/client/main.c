@@ -91,10 +91,7 @@ int main(int argc, char **argv) {
         err = 0;
     } while(0);
 
-    if (cmds) {
-        object_safe_free((void **)&cmds->cfg_file);
-        free(cmds);
-    }
+    cmd_line_info_destroy(cmds);
 
     config_release(config);
 
