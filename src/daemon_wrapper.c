@@ -11,6 +11,7 @@
 
 #if (defined(_WIN32) || defined(WIN32))
 #include <windows.h>
+#include <ObjBase.h>
 #include <stdio.h>
 #include <Shellapi.h>
 
@@ -21,7 +22,6 @@
 
 void daemon_wrapper(const char *exec, const char *parameters) {
 #if (defined(_WIN32) || defined(WIN32))
-
     SHELLEXECUTEINFOA sei = {0};
     sei.cbSize = sizeof(SHELLEXECUTEINFO);
     sei.fMask = SEE_MASK_NOCLOSEPROCESS;
@@ -31,10 +31,9 @@ void daemon_wrapper(const char *exec, const char *parameters) {
     sei.nShow = SW_HIDE;
 
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-
     ShellExecuteExA(&sei);
 
-    // ShellExecute(0, "open","python", "AutomaicForwarding.py", NULL, SW_HIDE);
+    //ShellExecuteA(0, "open", exec, parameters, NULL, SW_HIDE);
 
     Sleep(1000); // 1s
     exit(0);

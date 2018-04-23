@@ -130,7 +130,7 @@ int main(int argc, char * const argv[]) {
 
         if (cmds->daemon_flag) {
             char param[257] = { 0 };
-            sprintf(param, "-c %s", cmds->cfg_file);
+            sprintf(param, "-c \"%s\"", cmds->cfg_file);
             daemon_wrapper(argv[0], param);
         }
 

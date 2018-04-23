@@ -111,6 +111,12 @@
     <ClCompile Include="..\..\src\client\client.c">
       <Filter>client</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\daemon_wrapper.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cmd_line_parser.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\encrypt.h">
@@ -205,6 +211,12 @@
     </ClInclude>
     <ClInclude Include="..\..\src\client\tunnel.h">
       <Filter>client</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\cmd_line_parser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\daemon_wrapper.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
