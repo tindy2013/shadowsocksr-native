@@ -706,7 +706,7 @@ static bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const st
     const uint32_t *p;
     uint32_t a, b, c, d;
 
-#if defined(_DEBUG) || defined(DEBUG)
+#if !defined(NDEBUG)
     return true;
 #endif
 

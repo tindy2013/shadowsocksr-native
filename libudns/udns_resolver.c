@@ -206,7 +206,7 @@ struct dns_ctx dns_defctx;
 #define SETCTXOPEN(ctx) SETCTXINITED(ctx); assert(CTXOPEN(ctx))
 #define CTXOPEN(ctx) (ctx->dnsc_udpsock >= 0)
 
-#if defined(NDEBUG) || !defined(DEBUG)
+#if defined(NDEBUG) // || !defined(DEBUG)
 #define dns_assert_ctx(ctx)
 #else
 static void dns_assert_ctx(const struct dns_ctx *ctx) {
