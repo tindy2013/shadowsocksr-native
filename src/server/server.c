@@ -98,7 +98,7 @@ int main(int argc, char * const argv[]) {
         set_app_name(argv[0]);
 
         if (argc > 1) {
-            cmds = parse_command_line(argc, argv);
+            cmds = cmd_line_info_create(argc, argv);
         }
 
         if (cmds == NULL) {

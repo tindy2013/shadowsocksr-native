@@ -8,7 +8,7 @@
 #include "cmd_line_parser.h"
 #include "ssr_executive.h"
 
-struct cmd_line_info * parse_command_line(int argc, char * const argv[]) {
+struct cmd_line_info * cmd_line_info_create(int argc, char * const argv[]) {
     int opt;
 
     struct cmd_line_info *info = (struct cmd_line_info *)calloc(1, sizeof(*info));
