@@ -24,12 +24,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+// for ntohs
+#if defined(WIN32) || defined(_WIN32)
+#include <winsock2.h>
+#else
+#include <netinet/in.h>
+#endif
+
 #include "common.h"
 #include "ssr_executive.h"
 #include "encrypt.h"
 #include "obfsutil.h"
 #include "ssrbuffer.h"
 #include "obfs.h"
+#include "crc32.h"
 #include "cstl_lib.h"
 
 const char * ssr_strerror(enum ssr_error err) {
@@ -408,5 +417,82 @@ enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
     }
     // SSR end
     return ssr_ok;
+}
+
+bool pre_parse_header(struct buffer_t *data) {
+    uint8_t datatype = 0;
+    size_t rand_data_size = 0;
+    size_t hdr_len = 0;
+
+    if (data==NULL || data->buffer==NULL || data->len==0) {
+        return false;
+    }
+
+    datatype = data->buffer[0];
+
+    if (datatype == 0x80) {
+        if (data->len <= 2) {
+            return false;
+        }
+        rand_data_size = (size_t) data->buffer[1];
+        hdr_len = rand_data_size + 2;
+        if (hdr_len >= data->len) {
+            // header too short, maybe wrong password or encryption method
+            return false;
+        }
+
+        memmove(data->buffer, data->buffer + hdr_len, data->len - hdr_len);
+        data->len -= hdr_len;
+
+        return true;
+    }
+    if (datatype == 0x81) {
+        hdr_len = 1;
+        memmove(data->buffer, data->buffer + hdr_len, data->len - hdr_len);
+        data->len -= hdr_len;
+        return true;
+    }
+    if (datatype == 0x82) {
+        if (data->len <= 3) {
+            return false;
+        }
+        rand_data_size = (size_t) ntohs( *((uint16_t *)(data->buffer+1)) );
+        hdr_len = rand_data_size + 3;
+        if (hdr_len >= data->len) {
+            // header too short, maybe wrong password or encryption method
+            return false;
+        }
+        memmove(data->buffer, data->buffer + hdr_len, data->len - hdr_len);
+        data->len -= hdr_len;
+        return true;
+    }
+    if ((datatype == 0x88) || (~datatype == 0x88)) {
+        uint32_t crc = 0;
+        size_t data_size = 0;
+        size_t start_pos = 0;
+        size_t origin_len = data->len;
+        if (data->len <= (7 + 7)) {
+            return false;
+        }
+        data_size = (size_t) ntohs( *((uint16_t *)(data->buffer+1)) );
+        crc = crc32_imp(data->buffer, data_size);
+        if (crc != 0xffffffff) {
+            // uncorrect CRC32, maybe wrong password or encryption method
+            return false;
+        }
+        start_pos = (size_t)(3 + data->buffer[3]);
+
+        data->len = data_size - (4 + start_pos);
+        memmove(data->buffer, data->buffer + start_pos, data->len);
+
+        if (data_size < origin_len) {
+            size_t len2 = origin_len - data_size;
+            memmove(data->buffer + data->len, data->buffer + data_size, len2);
+            data->len += len2;
+        }
+        return true;
+    }
+
+    return true;
 }
 
