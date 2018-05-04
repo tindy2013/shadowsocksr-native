@@ -18,6 +18,7 @@ set(SOURCE_FILES_OBFS
         obfs/obfs.c
         obfs/obfsutil.c
         obfs/tls1.2_ticket.c
+        obfs/tls1.2_ticket.h
         obfs/verify.c)
 
 set(SOURCE_FILES_LOCAL
@@ -66,8 +67,8 @@ set(SOURCE_FILES_CLIENT
         config_json.h
         sockaddr_universal.h
         sockaddr_universal.c
-        client/tunnel.c
-        client/tunnel.h
+        tunnel.c
+        tunnel.h
         client/client.c
         dump_info.c
         dump_info.h
@@ -110,8 +111,8 @@ set(SOURCE_FILES_SERVER
         config_json.h
         sockaddr_universal.h
         sockaddr_universal.c
-        client/tunnel.c
-        client/tunnel.h
+        tunnel.c
+        tunnel.h
         server/server.c
         server/server.h
         ${SOURCE_FILES_OBFS})

@@ -66,7 +66,7 @@
     <ClCompile Include="..\..\src\client\s5.c">
       <Filter>client</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\client\tunnel.c">
+    <ClCompile Include="..\..\src\tunnel.c">
       <Filter>client</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\ssrutils.c">
@@ -209,7 +209,7 @@
     <ClInclude Include="..\..\src\config_json.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\client\tunnel.h">
+    <ClInclude Include="..\..\src\tunnel.h">
       <Filter>client</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\cmd_line_parser.h">
