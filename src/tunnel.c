@@ -70,12 +70,12 @@ size_t _update_tcp_mss(struct socket_ctx *socket) {
     size_t _tcp_mss = SS_TCP_MSS;
     int fd = uv_stream_fd(&socket->handle.tcp);
 
-    size_t mss = 0;
+    int mss = 0;
     socklen_t len = sizeof(mss);
 
     getsockopt(fd, IPPROTO_TCP, TCP_MAXSEG, &mss, &len);
     if (50 < mss && mss <= NETWORK_MTU) {
-        _tcp_mss = mss;
+        _tcp_mss = (size_t) mss;
     }
     return _tcp_mss;
 }
