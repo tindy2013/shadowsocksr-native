@@ -63,6 +63,23 @@ uint16_t get_socket_port(const uv_tcp_t *tcp) {
     }
 }
 
+size_t _update_tcp_mss(struct socket_ctx *socket) {
+#define NETWORK_MTU 1500
+#define SS_TCP_MSS (NETWORK_MTU - 40)
+
+    size_t _tcp_mss = SS_TCP_MSS;
+    int fd = uv_stream_fd(&socket->handle.tcp);
+
+    size_t mss = 0;
+    socklen_t len = sizeof(mss);
+
+    getsockopt(fd, IPPROTO_TCP, TCP_MAXSEG, &mss, &len);
+    if (50 < mss && mss <= NETWORK_MTU) {
+        _tcp_mss = mss;
+    }
+    return _tcp_mss;
+}
+
 static bool tunnel_is_in_streaming_wrapper(struct tunnel_ctx *tunnel) {
     return (tunnel && tunnel->tunnel_is_in_streaming && tunnel->tunnel_is_in_streaming(tunnel));
 }
