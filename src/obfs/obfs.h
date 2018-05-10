@@ -17,6 +17,8 @@
 #define SSR_BUFF_SIZE 2048
 #endif // !SSR_BUFF_SIZE
 
+struct buffer_t;
+
 struct server_info_t {
     char host[256];
     uint16_t port;
@@ -74,6 +76,13 @@ struct obfs_manager {
             char **pplaindata,
             size_t datalength,
             size_t* capacity);
+
+    bool (*server_pre_encrypt)(struct obfs_t *obfs, struct buffer_t *buf);
+    bool (*server_encode)(struct obfs_t *obfs, struct buffer_t *buf);
+    bool (*server_decode)(struct obfs_t *obfs, struct buffer_t *buf, bool *need_decrypt, bool *need_feedback);
+    bool (*server_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf);
+    bool (*server_udp_pre_encrypt)(struct obfs_t *obfs, struct buffer_t *buf);
+    bool (*server_udp_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf);
 };
 
 struct obfs_manager * new_obfs_manager(const char *plugin_name);
