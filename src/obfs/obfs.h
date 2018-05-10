@@ -80,9 +80,9 @@ struct obfs_manager {
     bool (*server_pre_encrypt)(struct obfs_t *obfs, struct buffer_t *buf);
     bool (*server_encode)(struct obfs_t *obfs, struct buffer_t *buf);
     bool (*server_decode)(struct obfs_t *obfs, struct buffer_t *buf, bool *need_decrypt, bool *need_feedback);
-    bool (*server_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf);
+    bool (*server_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf, bool *flag);
     bool (*server_udp_pre_encrypt)(struct obfs_t *obfs, struct buffer_t *buf);
-    bool (*server_udp_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf);
+    bool (*server_udp_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf, uint32_t *uid);
 };
 
 struct obfs_manager * new_obfs_manager(const char *plugin_name);
