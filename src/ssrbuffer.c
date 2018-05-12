@@ -84,11 +84,30 @@ size_t buffer_store(struct buffer_t *ptr, const uint8_t *data, size_t size) {
     return min(size, result);
 }
 
+void buffer_replace(struct buffer_t *dst, const struct buffer_t *src) {
+    if (dst==NULL || src==NULL) { return; }
+    buffer_store(dst, src->buffer, src->len);
+}
+
 size_t buffer_concatenate(struct buffer_t *ptr, const uint8_t *data, size_t size) {
     size_t result = buffer_realloc(ptr, ptr->len + size);
     memcpy(ptr->buffer + ptr->len, data, size);
     ptr->len += size;
     return min(ptr->len, result);
+}
+
+size_t buffer_concatenate2(struct buffer_t *dst, const struct buffer_t *src) {
+    if (dst==NULL || src==NULL) { return 0; }
+    return buffer_concatenate(dst, src->buffer, src->len);
+}
+
+void buffer_shorten(struct buffer_t *ptr, size_t begin, size_t len) {
+    if (ptr && (0 <= begin && begin < ptr->len) && (len <= (ptr->len - begin))) {
+        if (begin != 0) {
+            memmove(ptr->buffer, ptr->buffer + begin, len);
+        }
+        ptr->len = len;
+    }
 }
 
 void buffer_free(struct buffer_t *ptr) {
