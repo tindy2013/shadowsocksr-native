@@ -53,7 +53,7 @@ void buffer_reset(struct buffer_t *ptr) {
     }
 }
 
-struct buffer_t * buffer_clone(struct buffer_t *ptr) {
+struct buffer_t * buffer_clone(const struct buffer_t *ptr) {
     struct buffer_t *result = NULL;
     if (ptr == NULL) {
         return result;
@@ -65,7 +65,7 @@ struct buffer_t * buffer_clone(struct buffer_t *ptr) {
 }
 
 size_t buffer_realloc(struct buffer_t *ptr, size_t capacity) {
-    size_t real_capacity = -1;
+    size_t real_capacity = 0;
     if (ptr == NULL) {
         return real_capacity;
     }
@@ -102,7 +102,7 @@ size_t buffer_concatenate2(struct buffer_t *dst, const struct buffer_t *src) {
 }
 
 void buffer_shorten(struct buffer_t *ptr, size_t begin, size_t len) {
-    if (ptr && (0 <= begin && begin < ptr->len) && (len <= (ptr->len - begin))) {
+    if (ptr && (0 <= begin && begin <= ptr->len) && (len <= (ptr->len - begin))) {
         if (begin != 0) {
             memmove(ptr->buffer, ptr->buffer + begin, len);
         }
