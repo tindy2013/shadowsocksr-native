@@ -13,8 +13,8 @@ int rand_bytes(uint8_t *output, int len);
 #include "auth.h"
 #include "auth_chain.h"
 
-#include "../encrypt.h"
-#include "ssr_cipher_names.h"
+#include "encrypt.h"
+#include "ssrbuffer.h"
 
 void *
 init_data(void)
@@ -64,10 +64,10 @@ bool generic_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
     return true;
 }
 
-bool generic_server_decode(struct obfs_t *obfs, struct buffer_t *buf, bool *need_decrypt, bool *need_feedback) {
+struct buffer_t * generic_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback) {
     if (need_decrypt) { *need_decrypt = true; }
     if (need_feedback) { *need_feedback = false; }
-    return true;
+    return buffer_clone(buf);
 }
 
 bool generic_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *flag) {
@@ -158,7 +158,7 @@ new_obfs_manager(const char *plugin_name)
 
         plugin->server_pre_encrypt = generic_server_pre_encrypt;
         plugin->server_encode = generic_server_encode;
-        plugin->server_decode = generic_server_decode;
+        plugin->server_decode = tls12_ticket_auth_server_decode;
         plugin->server_post_decrypt = generic_server_post_decrypt;
         plugin->server_udp_pre_encrypt = generic_server_udp_pre_encrypt;
         plugin->server_udp_post_decrypt = generic_server_udp_post_decrypt;
