@@ -393,8 +393,124 @@ bool tls12_ticket_auth_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *
 }
 
 struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
-    // TODO : need implementation future.
-    return generic_server_encode(obfs, buf);
+    struct tls12_ticket_auth_local_data *local = (struct tls12_ticket_auth_local_data*)obfs->l_data;
+    struct tls12_ticket_auth_global_data *global = (struct tls12_ticket_auth_global_data*)obfs->server.g_data;
+    uint8_t rand_buf[SSR_BUFF_SIZE] = { 0 };
+    uint8_t auth_data[32] = { 0 };
+    size_t size = 0;
+    uint16_t size2 = 0;
+
+    if (local->handshake_status == -1) {
+        return buffer_clone(buf);
+    }
+    if ((local->handshake_status & 8) == 8 ) {
+        struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+        while (buf->len > SSR_BUFF_SIZE) {
+            rand_bytes(rand_buf, 2);
+            size = min((size_t)ntohs(*((uint16_t *)rand_buf)) % 4096 + 100, buf->len);
+            size2 = htons((uint16_t)size);
+
+            buffer_concatenate(ret, (uint8_t *)"\x17", 1);
+            buffer_concatenate2(ret, tls_version);
+            buffer_concatenate(ret, (uint8_t *)&size2, sizeof(size2));
+            buffer_concatenate(ret, buf->buffer, size);
+
+            buffer_shorten(buf, size, buf->len - size);
+        }
+        if (buf->len > 0) {
+            size2 = htons((uint16_t)buf->len);
+
+            buffer_concatenate(ret, (uint8_t *)"\x17", 1);
+            buffer_concatenate2(ret, tls_version);
+            buffer_concatenate(ret, (uint8_t *)&size2, sizeof(size2));
+            buffer_concatenate(ret, buf->buffer, buf->len);
+        }
+
+        return ret;
+    }
+
+    {
+        struct buffer_t *chunk1 = NULL;
+        struct buffer_t *chunk2 = NULL;
+        struct buffer_t *data = NULL;
+        uint16_t size3 = 0;
+
+        local->handshake_status |= 8;
+        tls12_ticket_pack_auth_data(obfs, local->client_id->buffer, auth_data);
+
+        // data = self.tls_version + self.pack_auth_data(self.client_id) + b"\x20" + self.client_id + binascii.unhexlify(b"c02f000005ff01000100")
+        chunk1 = buffer_alloc(SSR_BUFF_SIZE);
+        buffer_concatenate2(chunk1, tls_version);
+        buffer_concatenate(chunk1, auth_data, sizeof(auth_data));
+        buffer_concatenate(chunk1, (uint8_t *) "\x20", 1);
+        buffer_concatenate2(chunk1, local->client_id);
+        buffer_concatenate(chunk1, (uint8_t *) "\xc0\x2f\x00\x00\x05\xff\x01\x00\x01\x00", 10);
+
+        // data = b"\x02\x00" + struct.pack('>H', len(data)) + data #server hello
+        chunk2 = buffer_alloc(SSR_BUFF_SIZE);
+        buffer_concatenate(chunk2, (uint8_t *)"\x02\x00", 2);
+        size2 = htons((uint16_t)chunk1->len);
+        buffer_concatenate(chunk2, (uint8_t *)&size2, sizeof(size2));
+        buffer_concatenate2(chunk2, chunk1);
+
+        // data = b"\x16" + self.tls_version + struct.pack('>H', len(data)) + data
+        data = buffer_alloc(SSR_BUFF_SIZE);
+        buffer_concatenate(data, (uint8_t *)"\x16", 1);
+        buffer_concatenate2(data, tls_version);
+        size2 = htons((uint16_t)chunk2->len);
+        buffer_concatenate(data, (uint8_t *)&size2, sizeof(size2));
+        buffer_concatenate2(data, chunk2);
+
+        if ((rand() % 8) < 1) {
+            rand_bytes(rand_buf, 2);
+            size = (size_t)((ntohs(*((uint16_t *)rand_buf)) % 164) * 2 + 64);
+            rand_bytes(rand_buf, (int)size);
+            size2 = htons((uint16_t)(size + 4));
+            size3 = htons((uint16_t)size);
+
+            // data += b"\x16" + self.tls_version + ticket #New session ticket
+            buffer_concatenate(data, (uint8_t *)"\x16", 1);
+            buffer_concatenate2(data, tls_version);
+
+            // ticket = struct.pack('>H', len(ticket) + 4) + b"\x04\x00" + struct.pack('>H', len(ticket)) + ticket
+            buffer_concatenate(data, (uint8_t *)&size2, sizeof(size2));
+            buffer_concatenate(data, (uint8_t *)"\x04\x00", 2);
+            buffer_concatenate(data, (uint8_t *)&size3, sizeof(size3));
+            buffer_concatenate(data, (uint8_t *)rand_buf, size);
+        }
+
+        // data += b"\x14" + self.tls_version + b"\x00\x01\x01" #ChangeCipherSpec
+        buffer_concatenate(data, (uint8_t *)"\x14", 1);
+        buffer_concatenate2(data, tls_version);
+        buffer_concatenate(data, (uint8_t *)"\x00\x01\x01", 3);
+
+        // data += b"\x16" + self.tls_version + struct.pack('>H', finish_len) + os.urandom(finish_len - 10) #Finished
+        size2 = (uint16_t)((rand() % 8) + 32);
+        rand_bytes(rand_buf, (int)(size2 - 10));
+        size3 = htons(size2);
+        buffer_concatenate(data, (uint8_t *)"\x16", 1);
+        buffer_concatenate2(data, tls_version);
+        buffer_concatenate(data, (uint8_t *)&size3, sizeof(size3));
+        buffer_concatenate(data, (uint8_t *)rand_buf, (size_t)(size2 - 10));
+
+        // data += hmac.new(self.server_info.key + self.client_id, data, hashlib.sha1).digest()[:10]
+        {
+            char sha1[SHA1_BYTES];
+            tls12_sha1_hmac(obfs, local->client_id, data, sha1);
+            buffer_concatenate(data, sha1, OBFS_HMAC_SHA1_LEN);
+        }
+
+        if (buf && buf->len) {
+            struct buffer_t *tmp = tls12_ticket_auth_server_encode(obfs, buf);
+            buffer_concatenate2(data, tmp);
+            buffer_free(tmp);
+        }
+
+        buffer_free(chunk1);
+        buffer_free(chunk2);
+
+        return data;
+    }
 }
 
 struct buffer_t * decode_error_return(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback) {
