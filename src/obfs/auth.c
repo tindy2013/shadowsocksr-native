@@ -9,7 +9,7 @@
 #include "obfs.h"
 
 static int auth_simple_pack_unit_size = 2000;
-typedef int (*hmac_with_key_func)(char *auth, char *msg, int msg_len, uint8_t *auth_key, int key_len);
+typedef size_t (*hmac_with_key_func)(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint8_t *auth_key, size_t key_len);
 typedef int (*hash_func)(char *auth, char *msg, int msg_len);
 
 typedef struct _auth_simple_global_data {

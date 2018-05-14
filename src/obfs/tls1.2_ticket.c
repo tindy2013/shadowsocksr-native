@@ -67,9 +67,22 @@ void tls12_ticket_auth_dispose(struct obfs_t *obfs) {
     dispose_obfs(obfs);
 }
 
-static int tls12_ticket_pack_auth_data(struct obfs_t *obfs, uint8_t *outdata) {
+static void tls12_sha1_hmac(struct obfs_t *obfs,
+                            const struct buffer_t *client_id,
+                            const struct buffer_t *msg,
+                            uint8_t digest[SHA1_BYTES])
+{
+    size_t id_size = client_id->len;
+    size_t key_size = obfs->server.key_len;
+    uint8_t *key = (uint8_t*)malloc(key_size + id_size);
+    memcpy(key, obfs->server.key, key_size);
+    memcpy(key + key_size, client_id->buffer, id_size);
+    ss_sha1_hmac_with_key(digest, msg->buffer, msg->len, key, (key_size + id_size));
+    free(key);
+}
+
+static int tls12_ticket_pack_auth_data(struct obfs_t *obfs, const uint8_t client_id[32], uint8_t outdata[32]) {
     struct server_info_t *server = &obfs->server;
-    struct tls12_ticket_auth_global_data *global = (struct tls12_ticket_auth_global_data*)obfs->server.g_data;
     uint8_t *key;
     char hash[SHA1_BYTES];
     int out_size = 32;
@@ -80,11 +93,11 @@ static int tls12_ticket_pack_auth_data(struct obfs_t *obfs, uint8_t *outdata) {
     outdata[3] = (uint8_t)t;
     rand_bytes((uint8_t*)outdata + 4, 18);
 
-    key = (uint8_t*)malloc(server->key_len + 32);
-    memcpy(key, server->key, server->key_len);
-    memcpy(key + server->key_len, global->local_client_id, 32);
-    ss_sha1_hmac_with_key(hash, (char *)outdata, out_size - OBFS_HMAC_SHA1_LEN, key, (server->key_len + 32));
-    free(key);
+    {
+        BUFFER_CONSTANT_INSTANCE(pClientID, client_id, 32);
+        BUFFER_CONSTANT_INSTANCE(pMsg, outdata, 22);
+        tls12_sha1_hmac(obfs, pClientID, pMsg, hash);
+    }
     memcpy(outdata + out_size - OBFS_HMAC_SHA1_LEN, hash, OBFS_HMAC_SHA1_LEN);
     return out_size;
 }
@@ -260,7 +273,7 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
         pdata -= 32; len += 32;
         pdata[-1] = 0x20;
         pdata -= 1; len += 1;
-        tls12_ticket_pack_auth_data(obfs, pdata - 32);
+        tls12_ticket_pack_auth_data(obfs, global->local_client_id, pdata - 32);
         pdata -= 32; len += 32;
         pdata[-1] = 0x3;
         pdata[-2] = 0x3; // tls version
@@ -299,11 +312,11 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
         rand_bytes((uint8_t*)pdata, 22);
         pdata += 22;
 
-        key = (uint8_t*)malloc(obfs->server.key_len + 32);
-        memcpy(key, obfs->server.key, obfs->server.key_len);
-        memcpy(key + obfs->server.key_len, global->local_client_id, 32);
-        ss_sha1_hmac_with_key(hash, (char *)out_buffer, (int)(pdata - out_buffer), key, (int)(obfs->server.key_len + 32));
-        free(key);
+        {
+            BUFFER_CONSTANT_INSTANCE(pClientID, global->local_client_id, 32);
+            BUFFER_CONSTANT_INSTANCE(pMsg, out_buffer, (pdata - out_buffer));
+            tls12_sha1_hmac(obfs, pClientID, pMsg, hash);
+        }
         memcpy(pdata, hash, OBFS_HMAC_SHA1_LEN);
 
         pdata += OBFS_HMAC_SHA1_LEN;
@@ -360,12 +373,10 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
         return -1;
     }
     {
-    uint8_t *key = (uint8_t*)malloc(obfs->server.key_len + 32);
-    char hash[SHA1_BYTES];
-    memcpy(key, obfs->server.key, obfs->server.key_len);
-    memcpy(key + obfs->server.key_len, global->local_client_id, 32);
-    ss_sha1_hmac_with_key(hash, encryptdata + 11, 22, key, (int)obfs->server.key_len + 32);
-    free(key);
+        char hash[SHA1_BYTES];
+        BUFFER_CONSTANT_INSTANCE(pClientID, global->local_client_id, 32);
+        BUFFER_CONSTANT_INSTANCE(pMsg, encryptdata + 11, 22);
+        tls12_sha1_hmac(obfs, pClientID, pMsg, hash);
 
     if (memcmp(encryptdata + 33, hash, OBFS_HMAC_SHA1_LEN)) {
         return -1;
@@ -381,7 +392,7 @@ bool tls12_ticket_auth_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *
     return generic_server_pre_encrypt(obfs, buf);
 }
 
-bool tls12_ticket_auth_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
+struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
     // TODO : need implementation future.
     return generic_server_encode(obfs, buf);
 }
@@ -492,13 +503,8 @@ struct buffer_t * tls12_ticket_auth_server_decode(struct obfs_t *obfs, const str
             return buffer_alloc(SSR_BUFF_SIZE);
         }
         {
-            size_t id_size = local->client_id->len;
-            size_t key_size = obfs->server.key_len;
-            uint8_t *key = (uint8_t*)malloc(key_size + id_size);
-            memcpy(key, obfs->server.key, key_size);
-            memcpy(key + key_size, local->client_id->buffer, id_size);
-            ss_sha1_hmac_with_key(hash, (char *)verify->buffer, (int)verify_len, key, (int)(key_size + id_size));
-            free(key);
+            BUFFER_CONSTANT_INSTANCE(pMsg, verify->buffer, verify_len);
+            tls12_sha1_hmac(obfs, local->client_id, pMsg, hash);
         }
         if (memcmp(hash, verify->buffer+verify_len, OBFS_HMAC_SHA1_LEN) != 0) {
             return NULL;
@@ -574,13 +580,8 @@ struct buffer_t * tls12_ticket_auth_server_decode(struct obfs_t *obfs, const str
         buffer_shorten(buf_copy, sessionid_len + 1, buf_copy->len - (sessionid_len + 1));
         buffer_replace(local->client_id, sessionid);
         {
-            size_t id_size = local->client_id->len;
-            size_t key_size = obfs->server.key_len;
-            uint8_t *key = (uint8_t*)malloc(key_size + id_size);
-            memcpy(key, obfs->server.key, key_size);
-            memcpy(key + key_size, local->client_id->buffer, id_size);
-            ss_sha1_hmac_with_key(sha1, (char *)verifyid->buffer, (int)22, key, (int)(key_size + id_size));
-            free(key);
+            BUFFER_CONSTANT_INSTANCE(pMsg, verifyid->buffer, 22);
+            tls12_sha1_hmac(obfs, local->client_id, pMsg, sha1);
         }
         utc_time = (uint32_t) ntohl(*(uint32_t *)verifyid->buffer);
         time_dif = (uint32_t)(time(NULL) & 0xffffffff) - utc_time;

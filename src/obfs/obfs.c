@@ -60,8 +60,8 @@ bool generic_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
     return true;
 }
 
-bool generic_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
-    return true;
+struct buffer_t * generic_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
+    return buffer_clone(buf);
 }
 
 struct buffer_t * generic_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback) {
@@ -157,7 +157,7 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_decode = tls12_ticket_auth_client_decode;
 
         plugin->server_pre_encrypt = generic_server_pre_encrypt;
-        plugin->server_encode = generic_server_encode;
+        plugin->server_encode = tls12_ticket_auth_server_encode;
         plugin->server_decode = tls12_ticket_auth_server_decode;
         plugin->server_post_decrypt = generic_server_post_decrypt;
         plugin->server_udp_pre_encrypt = generic_server_udp_pre_encrypt;
