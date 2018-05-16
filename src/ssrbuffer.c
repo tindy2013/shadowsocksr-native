@@ -91,7 +91,7 @@ void buffer_replace(struct buffer_t *dst, const struct buffer_t *src) {
 
 size_t buffer_concatenate(struct buffer_t *ptr, const uint8_t *data, size_t size) {
     size_t result = buffer_realloc(ptr, ptr->len + size);
-    memcpy(ptr->buffer + ptr->len, data, size);
+    memmove(ptr->buffer + ptr->len, data, size);
     ptr->len += size;
     return min(ptr->len, result);
 }
