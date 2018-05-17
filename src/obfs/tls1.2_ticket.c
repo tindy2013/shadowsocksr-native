@@ -387,8 +387,7 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
     }
 }
 
-bool tls12_ticket_auth_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
-    // TODO : need implementation future.
+struct buffer_t * tls12_ticket_auth_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
     return generic_server_pre_encrypt(obfs, buf);
 }
 
@@ -732,9 +731,9 @@ struct buffer_t * tls12_ticket_auth_server_decode(struct obfs_t *obfs, const str
     }
 }
 
-bool tls12_ticket_auth_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *flag) {
+struct buffer_t * tls12_ticket_auth_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback) {
     // TODO : need implementation future.
-    return generic_server_post_decrypt(obfs, buf, flag);
+    return generic_server_post_decrypt(obfs, buf, need_feedback);
 }
 
 bool tls12_ticket_auth_server_udp_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {

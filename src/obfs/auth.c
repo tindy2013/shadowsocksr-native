@@ -31,6 +31,7 @@ typedef struct _auth_simple_local_data {
     hash_func hash;
     int hash_len;
     int last_data_len;
+    size_t unit_len;
 } auth_simple_local_data;
 
 void
@@ -47,6 +48,7 @@ auth_simple_local_data_init(auth_simple_local_data* local)
     local->hash = 0;
     local->hash_len = 0;
     local->salt = "";
+    local->unit_len = 2000; // 8100
 }
 
 void *
@@ -727,8 +729,10 @@ get_rand_len(int datalength, int fulldatalength, auth_simple_local_data *local, 
 }
 
 int
-auth_aes128_sha1_pack_data(char *data, int datalength, int fulldatalength, char *outdata, auth_simple_local_data *local, struct server_info_t *server)
+auth_aes128_sha1_pack_data(char *data, int datalength, int fulldatalength, char *outdata, struct obfs_t *obfs)
 {
+    auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
+    struct server_info_t *server = &obfs->server;
     uint8_t key_len;
     uint8_t *key;
     unsigned int rand_len = get_rand_len(datalength, fulldatalength, local, server) + 1;
@@ -911,13 +915,13 @@ auth_aes128_sha1_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int 
         local->has_sent_header = 1;
     }
     while ( len > auth_simple_pack_unit_size ) {
-        pack_len = auth_aes128_sha1_pack_data(data, auth_simple_pack_unit_size, datalength, buffer, local, &obfs->server);
+        pack_len = auth_aes128_sha1_pack_data(data, auth_simple_pack_unit_size, datalength, buffer, obfs);
         buffer += pack_len;
         data += auth_simple_pack_unit_size;
         len -= auth_simple_pack_unit_size;
     }
     if (len > 0) {
-        pack_len = auth_aes128_sha1_pack_data(data, len, datalength, buffer, local, &obfs->server);
+        pack_len = auth_aes128_sha1_pack_data(data, len, datalength, buffer, obfs);
         buffer += pack_len;
     }
     len = (int)(buffer - out_buffer);
@@ -1098,4 +1102,34 @@ auth_aes128_sha1_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     }
 
     return (ssize_t)(datalength - 4);
+}
+
+struct buffer_t * auth_aes128_sha1_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
+    // TODO : need implementation future.
+    return generic_server_pre_encrypt(obfs, buf);
+}
+
+struct buffer_t * auth_aes128_sha1_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
+    // TODO : need implementation future.
+    return generic_server_encode(obfs, buf);
+}
+
+struct buffer_t * auth_aes128_sha1_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback) {
+    // TODO : need implementation future.
+    return generic_server_decode(obfs, buf, need_decrypt, need_feedback);
+}
+
+struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback) {
+    // TODO : need implementation future.
+    return generic_server_post_decrypt(obfs, buf, need_feedback);
+}
+
+bool auth_aes128_sha1_server_udp_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
+    // TODO : need implementation future.
+    return generic_server_udp_pre_encrypt(obfs, buf);
+}
+
+bool auth_aes128_sha1_server_udp_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, uint32_t *uid) {
+    // TODO : need implementation future.
+    return generic_server_udp_post_decrypt(obfs, buf, uid);
 }

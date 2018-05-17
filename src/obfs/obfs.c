@@ -56,8 +56,8 @@ get_server_info(struct obfs_t *obfs, struct server_info_t *server)
     memmove(server, &obfs->server, sizeof(struct server_info_t));
 }
 
-bool generic_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
-    return true;
+struct buffer_t * generic_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
+    return buffer_clone(buf);
 }
 
 struct buffer_t * generic_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
@@ -70,9 +70,9 @@ struct buffer_t * generic_server_decode(struct obfs_t *obfs, const struct buffer
     return buffer_clone(buf);
 }
 
-bool generic_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *flag) {
-    if (flag) { *flag = false; }
-    return true;
+struct buffer_t * generic_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback) {
+    if (need_feedback) { *need_feedback = false; }
+    return buffer_clone(buf);
 }
 
 bool generic_server_udp_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
@@ -156,10 +156,10 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_encode = tls12_ticket_auth_client_encode;
         plugin->client_decode = tls12_ticket_auth_client_decode;
 
-        plugin->server_pre_encrypt = generic_server_pre_encrypt;
+        plugin->server_pre_encrypt = tls12_ticket_auth_server_pre_encrypt;
         plugin->server_encode = tls12_ticket_auth_server_encode;
         plugin->server_decode = tls12_ticket_auth_server_decode;
-        plugin->server_post_decrypt = generic_server_post_decrypt;
+        plugin->server_post_decrypt = tls12_ticket_auth_server_post_decrypt;
         plugin->server_udp_pre_encrypt = generic_server_udp_pre_encrypt;
         plugin->server_udp_post_decrypt = generic_server_udp_post_decrypt;
 
@@ -283,10 +283,10 @@ new_obfs_manager(const char *plugin_name)
         plugin->client_udp_pre_encrypt = auth_aes128_sha1_client_udp_pre_encrypt;
         plugin->client_udp_post_decrypt = auth_aes128_sha1_client_udp_post_decrypt;
 
-        plugin->server_pre_encrypt = generic_server_pre_encrypt;
+        plugin->server_pre_encrypt = auth_aes128_sha1_server_pre_encrypt;
         plugin->server_encode = generic_server_encode;
         plugin->server_decode = generic_server_decode;
-        plugin->server_post_decrypt = generic_server_post_decrypt;
+        plugin->server_post_decrypt = auth_aes128_sha1_server_post_decrypt;
         plugin->server_udp_pre_encrypt = generic_server_udp_pre_encrypt;
         plugin->server_udp_post_decrypt = generic_server_udp_post_decrypt;
 
