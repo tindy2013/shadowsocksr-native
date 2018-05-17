@@ -1105,8 +1105,28 @@ auth_aes128_sha1_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
 }
 
 struct buffer_t * auth_aes128_sha1_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
-    // TODO : need implementation future.
-    return generic_server_pre_encrypt(obfs, buf);
+    struct buffer_t *ret = NULL;
+    auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
+    size_t ogn_data_len = buf->len;
+
+    char * out_buffer = (char*)calloc((size_t)(ogn_data_len * 2 + (SSR_BUFF_SIZE * 2)), sizeof(char));
+    char * buffer = out_buffer;
+
+    size_t pack_len;
+    size_t unit_len = local->unit_len;
+
+    while (buf->len > unit_len) {
+        pack_len = auth_aes128_sha1_pack_data(buf->buffer, unit_len, ogn_data_len, buffer, obfs);
+        buffer += pack_len;
+        buffer_shorten(buf, unit_len, buf->len - unit_len);
+    }
+    if (buf->len > 0) {
+        pack_len = auth_aes128_sha1_pack_data(buf->buffer, buf->len, ogn_data_len, buffer, obfs);
+        buffer += pack_len;
+    }
+    ret = buffer_create_from(out_buffer, buffer-out_buffer);
+    free(out_buffer);
+    return ret;
 }
 
 struct buffer_t * auth_aes128_sha1_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
