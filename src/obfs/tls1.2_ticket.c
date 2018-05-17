@@ -3,7 +3,11 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdbool.h>
+#if defined(WIN32) || defined(_WIN32)
+#include <winsock2.h>
+#else
 #include <netinet/in.h>
+#endif
 
 #include "obfs.h"
 #include "tls1.2_ticket.h"
@@ -83,8 +87,7 @@ static void tls12_sha1_hmac(struct obfs_t *obfs,
 
 static int tls12_ticket_pack_auth_data(struct obfs_t *obfs, const uint8_t client_id[32], uint8_t outdata[32]) {
     struct server_info_t *server = &obfs->server;
-    uint8_t *key;
-    char hash[SHA1_BYTES];
+    uint8_t hash[SHA1_BYTES];
     int out_size = 32;
     time_t t = time(NULL);
     outdata[0] = (uint8_t)(t >> 24);
@@ -299,8 +302,7 @@ size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata,
     } else if (datalength == 0 || local->fastauth) {
         size_t tmp = datalength;
         uint8_t *pdata;
-        uint8_t *key;
-        char hash[SHA1_BYTES];
+        uint8_t hash[SHA1_BYTES];
 
         datalength = local->send_buffer_size + 43;
         out_buffer = (uint8_t *)malloc(datalength);

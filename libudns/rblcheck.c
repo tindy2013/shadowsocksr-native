@@ -102,7 +102,7 @@ static void addzone(char *zone) {
     char **zs = (char**)ecalloc(sizeof(char*), (nzalloc += 16));
     if (zones) {
       memcpy(zs, zones, nzones * sizeof(char*));
-      free(zones);
+      free((void *)zones);
     }
     zones = zs;
   }
