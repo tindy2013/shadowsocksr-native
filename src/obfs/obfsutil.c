@@ -41,9 +41,9 @@ uint64_t xorshift128plus(void) {
     return x + y;
 }
 
-int ss_md5_hmac(char *auth, char *msg, int msg_len, uint8_t *iv, int enc_iv_len, uint8_t *enc_key, int enc_key_len)
+size_t ss_md5_hmac(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint8_t *iv, size_t enc_iv_len, const uint8_t *enc_key, size_t enc_key_len)
 {
-    int result;
+    size_t result;
     size_t len = ss_max_iv_length() + ss_max_key_length();
     uint8_t *auth_key = (uint8_t *) calloc(len, sizeof(auth_key[0]));
     memcpy(auth_key, iv, enc_iv_len);
@@ -53,9 +53,9 @@ int ss_md5_hmac(char *auth, char *msg, int msg_len, uint8_t *iv, int enc_iv_len,
     return result;
 }
 
-int ss_sha1_hmac(char *auth, char *msg, int msg_len, const uint8_t *iv, int enc_iv_len, uint8_t *enc_key, int enc_key_len)
+size_t ss_sha1_hmac(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint8_t *iv, size_t enc_iv_len, const uint8_t *enc_key, size_t enc_key_len)
 {
-    int result;
+    size_t result;
     size_t len = ss_max_iv_length() + ss_max_key_length();
     uint8_t *auth_key = (uint8_t *) calloc(len, sizeof(auth_key[0]));
     memcpy(auth_key, iv, enc_iv_len);
