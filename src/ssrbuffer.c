@@ -46,6 +46,23 @@ struct buffer_t * buffer_create_from(const uint8_t *data, size_t len) {
     return result;
 }
 
+int buffer_compare(const struct buffer_t *ptr1, const struct buffer_t *ptr2) {
+    if (ptr1==NULL && ptr2==NULL) {
+        return 0;
+    }
+    if (ptr1 && ptr2==NULL) {
+        return -1;
+    }
+    if (ptr1==NULL && ptr2) {
+        return 1;
+    }
+    {
+        size_t size = min(ptr1->len, ptr2->len);
+        int ret = memcmp(ptr1->buffer, ptr2->buffer, size);
+        return (ret != 0) ? ret : ((ptr1->len == ptr2->len) ? 0 : ((size == ptr1->len) ? 1 : -1));
+    }
+}
+
 void buffer_reset(struct buffer_t *ptr) {
     if (ptr && ptr->buffer) {
         ptr->len = 0;
