@@ -32,6 +32,7 @@ typedef struct _auth_simple_local_data {
     int hash_len;
     int last_data_len;
     size_t unit_len;
+    bool has_recv_header;
 } auth_simple_local_data;
 
 void
@@ -49,6 +50,7 @@ auth_simple_local_data_init(auth_simple_local_data* local)
     local->hash_len = 0;
     local->salt = "";
     local->unit_len = 2000; // 8100
+    local->has_recv_header = false;
 }
 
 void *
@@ -100,6 +102,18 @@ int
 auth_aes128_sha1_get_overhead(struct obfs_t *obfs)
 {
     return 9;
+}
+
+static struct buffer_t * auth_aes128_not_match_return(struct obfs_t *obfs, struct buffer_t *buf, bool *feedback) {
+    auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
+    obfs->server.overhead = 0;
+    if (feedback) { *feedback = false; }
+    if (local->salt && strlen(local->salt)) {
+        struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+        memset(ret->buffer, 'E', SSR_BUFF_SIZE);
+        return ret;
+    }
+    return buffer_clone(buf);
 }
 
 void
@@ -1140,8 +1154,33 @@ struct buffer_t * auth_aes128_sha1_server_decode(struct obfs_t *obfs, const stru
 }
 
 struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback) {
-    // TODO : need implementation future.
-    return generic_server_post_decrypt(obfs, buf, need_feedback);
+    struct buffer_t *mac_key = NULL;
+    uint8_t sha1data[SHA1_BYTES] = { 0 };
+    auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
+    buffer_concatenate2(local->recv_buffer, buf);
+    struct buffer_t *out_buf = buffer_alloc(SSR_BUFF_SIZE);
+    if (need_feedback) { *need_feedback = true; }
+
+    mac_key = buffer_create_from(obfs->server.recv_iv, obfs->server.recv_iv_len);
+    buffer_concatenate(mac_key, obfs->server.key, obfs->server.key_len);
+
+    if (local->has_recv_header == false) {
+        size_t len = local->recv_buffer->len;
+        if ((len >= 7) || (len==2 || len==3)) {
+            size_t recv_len = min(len, 7);
+            local->hmac(sha1data, local->recv_buffer->buffer, 1, mac_key->buffer, mac_key->len);
+            if (memcmp(sha1data, local->recv_buffer->buffer+1, recv_len - 1) != 0) {
+                return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
+            }
+        }
+        if (local->recv_buffer->len < 31) {
+            if (need_feedback) { *need_feedback = false; }
+            return buffer_alloc(1);
+        }
+
+    }
+
+    return out_buf;
 }
 
 bool auth_aes128_sha1_server_udp_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
