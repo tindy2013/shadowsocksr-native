@@ -140,11 +140,11 @@ void ssr_cipher_env_release(struct server_env_t *env) {
     object_safe_free(&env->protocol_global);
     object_safe_free(&env->obfs_global);
     if (env->protocol_plugin) {
-        free_obfs_manager(env->protocol_plugin);
+        free_obfs_instance(env->protocol_plugin);
         env->protocol_plugin = NULL;
     }
     if (env->obfs_plugin) {
-        free_obfs_manager(env->obfs_plugin);
+        free_obfs_instance(env->obfs_plugin);
         env->obfs_plugin = NULL;
     }
     cipher_env_release(env->cipher);
@@ -242,12 +242,12 @@ void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const voi
 }
 
 void init_obfs(struct server_env_t *env, const char *protocol, const char *obfs) {
-    env->protocol_plugin = new_obfs_manager(protocol);
+    env->protocol_plugin = new_obfs_instance(protocol);
     if (env->protocol_plugin) {
         env->protocol_global = env->protocol_plugin->init_data();
     }
 
-    env->obfs_plugin = new_obfs_manager(obfs);
+    env->obfs_plugin = new_obfs_instance(obfs);
     if (env->obfs_plugin) {
         env->obfs_global = env->obfs_plugin->init_data();
     }
@@ -286,7 +286,7 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
     server_info.g_data = env->obfs_global;
 
     if (env->obfs_plugin) {
-        tc->obfs = env->obfs_plugin->new_obfs();
+        tc->obfs = env->obfs_plugin;
         env->obfs_plugin->set_server_info(tc->obfs, &server_info);
     }
 
@@ -295,7 +295,7 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
 
     if (env->protocol_plugin) {
         int p_len, o_len;
-        tc->protocol = env->protocol_plugin->new_obfs();
+        tc->protocol = env->protocol_plugin;
 
         // overhead must count on this
         p_len = env->protocol_plugin->get_overhead(tc->protocol);
@@ -321,17 +321,6 @@ void tunnel_cipher_release(struct tunnel_cipher_ctx *tc) {
     if (tc->d_ctx != NULL) {
         enc_ctx_release_instance(env->cipher, tc->d_ctx);
     }
-    // SSR beg
-    if (env->obfs_plugin) {
-        env->obfs_plugin->dispose(tc->obfs);
-        tc->obfs = NULL;
-    }
-    if (env->protocol_plugin) {
-        env->protocol_plugin->dispose(tc->protocol);
-        tc->protocol = NULL;
-    }
-    // SSR end
-
     free(tc);
 }
 
@@ -353,10 +342,10 @@ bool tunnel_cipher_send_feedback(struct tunnel_cipher_ctx *tc) {
 // insert shadowsocks header
 enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) {
     int err;
-    struct obfs_manager *obfs_plugin;
+    struct obfs_t *obfs_plugin;
     struct server_env_t *env = tc->env;
     // SSR beg
-    struct obfs_manager *protocol_plugin = env->protocol_plugin;
+    struct obfs_t *protocol_plugin = env->protocol_plugin;
     ASSERT(buf->capacity >= SSR_BUFF_SIZE);
     if (protocol_plugin && protocol_plugin->client_pre_encrypt) {
         buf->len = (size_t)protocol_plugin->client_pre_encrypt(
@@ -378,11 +367,11 @@ enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
 
 enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback)
 {
-    struct obfs_manager *protocol_plugin;
+    struct obfs_t *protocol_plugin;
     struct server_env_t *env = tc->env;
 
     // SSR beg
-    struct obfs_manager *obfs_plugin = env->obfs_plugin;
+    struct obfs_t *obfs_plugin = env->obfs_plugin;
 
     ASSERT(buf->len <= SSR_BUFF_SIZE);
 

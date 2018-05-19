@@ -17,11 +17,20 @@ void verify_simple_local_data_init(verify_simple_local_data* local) {
     local->recv_buffer_size = 0;
 }
 
-struct obfs_t * verify_simple_new_obfs(void) {
-    struct obfs_t * obfs = new_obfs();
+void verify_simple_new_obfs(struct obfs_t * obfs) {
+    obfs->init_data = init_data;
+    obfs->need_feedback = need_feedback_false;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = set_server_info;
+    obfs->dispose = verify_simple_dispose;
+
+    obfs->client_pre_encrypt = verify_simple_client_pre_encrypt;
+    obfs->client_post_decrypt = verify_simple_client_post_decrypt;
+    obfs->client_udp_pre_encrypt = NULL;
+    obfs->client_udp_post_decrypt = NULL;
+
     obfs->l_data = malloc(sizeof(verify_simple_local_data));
     verify_simple_local_data_init((verify_simple_local_data*)obfs->l_data);
-    return obfs;
 }
 
 void verify_simple_dispose(struct obfs_t *obfs) {

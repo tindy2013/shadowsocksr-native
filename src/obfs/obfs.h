@@ -41,11 +41,8 @@ struct server_info_t {
 struct obfs_t {
     struct server_info_t server;
     void *l_data;
-};
 
-struct obfs_manager {
     void * (*init_data)(void);
-    struct obfs_t * (*new_obfs)(void);
     int  (*get_overhead)(struct obfs_t *obfs);
     bool (*need_feedback)(struct obfs_t *obfs);
     void (*get_server_info)(struct obfs_t *obfs, struct server_info_t *server);
@@ -86,12 +83,16 @@ struct obfs_manager {
     bool (*server_udp_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf, uint32_t *uid);
 };
 
-struct obfs_manager * new_obfs_manager(const char *plugin_name);
-void free_obfs_manager(struct obfs_manager *plugin);
+void * init_data(void);
+int get_overhead(struct obfs_t *obfs);
+bool need_feedback_false(struct obfs_t *obfs);
+bool need_feedback_true(struct obfs_t *obfs);
+
+struct obfs_t * new_obfs_instance(const char *plugin_name);
+void free_obfs_instance(struct obfs_t *plugin);
 
 void set_server_info(struct obfs_t *obfs, struct server_info_t *server);
 void get_server_info(struct obfs_t *obfs, struct server_info_t *server);
-struct obfs_t * new_obfs(void);
 void dispose_obfs(struct obfs_t *obfs);
 
 struct buffer_t * generic_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf);

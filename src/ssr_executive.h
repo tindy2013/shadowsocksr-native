@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 struct cipher_env_t;
-struct obfs_manager;
+struct obfs_t;
 struct tunnel_ctx;
 struct cstl_set;
 
@@ -40,8 +40,8 @@ struct server_env_t {
 
     struct cipher_env_t *cipher;
 
-    struct obfs_manager *protocol_plugin;
-    struct obfs_manager *obfs_plugin;
+    struct obfs_t *protocol_plugin;
+    struct obfs_t *obfs_plugin;
 
     void *protocol_global;
     void *obfs_global;
@@ -52,8 +52,8 @@ struct tunnel_cipher_ctx {
     struct server_env_t *env; // __weak_ptr
     struct enc_ctx *e_ctx;
     struct enc_ctx *d_ctx;
-    struct obfs_t *protocol;
-    struct obfs_t *obfs;
+    struct obfs_t *protocol; // __weak_ptr
+    struct obfs_t *obfs; // __weak_ptr
 };
 
 #define SSR_ERR_MAP(V)                                                         \

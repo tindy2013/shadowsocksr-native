@@ -290,9 +290,9 @@ free_connections(void)
 
 int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
     struct server_env_t *env;
-    struct obfs_manager *protocol_plugin;
+    struct obfs_t *protocol_plugin;
     int err;
-    struct obfs_manager *obfs_plugin;
+    struct obfs_t *obfs_plugin;
 
     assert(buf->capacity >= SSR_BUFF_SIZE);
 
@@ -321,8 +321,8 @@ int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
 int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t **feedback)
 {
     struct server_env_t *env;
-    struct obfs_manager *obfs_plugin;
-    struct obfs_manager *protocol_plugin;
+    struct obfs_t *obfs_plugin;
+    struct obfs_t *protocol_plugin;
 
     assert(buf->len <= SSR_BUFF_SIZE);
 
@@ -601,6 +601,10 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     sprintf(port, "%d", p);
                 }
             } else {
+                if (udp_assc) {
+                    // Wait until client closes the connection
+                    return;
+                }
                 buffer_free(abuf);
                 LOGE("unsupported addrtype: 0x%02X", (uint8_t)addr_type);
                 tunnel_close_and_free(remote, local);
@@ -827,7 +831,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 server_info.cipher_env = server_env->cipher;
 
                 if (server_env->obfs_plugin) {
-                    local->obfs = server_env->obfs_plugin->new_obfs();
+                    local->obfs = server_env->obfs_plugin;
                     server_env->obfs_plugin->set_server_info(local->obfs, &server_info);
                 }
 
@@ -835,7 +839,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 server_info.g_data = server_env->protocol_global;
 
                 if (server_env->protocol_plugin) {
-                    local->protocol = server_env->protocol_plugin->new_obfs();
+                    local->protocol = server_env->protocol_plugin;
                     server_info.overhead = server_env->protocol_plugin->get_overhead(local->protocol)
                         + (server_env->obfs_plugin ? server_env->obfs_plugin->get_overhead(local->obfs) : 0);
                     server_env->protocol_plugin->set_server_info(local->protocol, &server_info);
@@ -1194,10 +1198,10 @@ listener_release(struct listener_t *listener)
         ss_free(server_env->protocol_global);
         ss_free(server_env->obfs_global);
         if(server_env->protocol_plugin){
-            free_obfs_manager(server_env->protocol_plugin);
+            free_obfs_instance(server_env->protocol_plugin);
         }
         if(server_env->obfs_plugin){
-            free_obfs_manager(server_env->obfs_plugin);
+            free_obfs_instance(server_env->obfs_plugin);
         }
         ss_free(server_env->id);
         ss_free(server_env->group);
@@ -1230,16 +1234,6 @@ local_destroy(struct local_t *local)
         if (local->d_ctx != NULL) {
             enc_ctx_release_instance(server_env->cipher, local->d_ctx);
         }
-        // SSR beg
-        if (server_env->obfs_plugin) {
-            server_env->obfs_plugin->dispose(local->obfs);
-            local->obfs = NULL;
-        }
-        if (server_env->protocol_plugin) {
-            server_env->protocol_plugin->dispose(local->protocol);
-            local->protocol = NULL;
-        }
-        // SSR end
     }
 
     ss_free(local);
@@ -1347,10 +1341,10 @@ init_obfs(struct server_env_t *env, const char *protocol, const char *protocol_p
 {
     env->protocol_name = ss_strdup(protocol);
     env->protocol_param = ss_strdup(protocol_param);
-    env->protocol_plugin = new_obfs_manager(protocol);
+    env->protocol_plugin = new_obfs_instance(protocol);
     env->obfs_name = ss_strdup(obfs);
     env->obfs_param = ss_strdup(obfs_param);
-    env->obfs_plugin = new_obfs_manager(obfs);
+    env->obfs_plugin = new_obfs_instance(obfs);
 
     if (env->obfs_plugin) {
         env->obfs_global = env->obfs_plugin->init_data();

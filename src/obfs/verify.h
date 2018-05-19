@@ -9,7 +9,7 @@
 
 #include <unistd.h>
 
-struct obfs_t * verify_simple_new_obfs(void);
+void verify_simple_new_obfs(struct obfs_t * obfs);
 void verify_simple_dispose(struct obfs_t *obfs);
 
 int verify_simple_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);

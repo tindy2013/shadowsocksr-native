@@ -41,11 +41,18 @@ void http_simple_local_data_init(http_simple_local_data* local) {
     }
 }
 
-struct obfs_t * http_simple_new_obfs(void) {
-    struct obfs_t * obfs = new_obfs();
+void http_simple_new_obfs(struct obfs_t * obfs) {
+    obfs->init_data = init_data;
+    obfs->get_overhead = get_overhead;
+    obfs->need_feedback = need_feedback_false;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = set_server_info;
+    obfs->dispose = http_simple_dispose;
+    obfs->client_encode = http_simple_client_encode;
+    obfs->client_decode = http_simple_client_decode;
+
     obfs->l_data = malloc(sizeof(http_simple_local_data));
     http_simple_local_data_init((http_simple_local_data*)obfs->l_data);
-    return obfs;
 }
 
 void http_simple_dispose(struct obfs_t *obfs) {

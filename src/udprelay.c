@@ -122,8 +122,7 @@ struct udp_listener_ctx_t {
 //#endif
     struct cipher_env_t *cipher_env;
     // SSR
-    struct obfs_t *protocol;
-    struct obfs_manager *protocol_plugin;
+    struct obfs_t *protocol_plugin;
     void *protocol_global;
 };
 
@@ -706,9 +705,9 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
 
     //SSR beg
     if (server_ctx->protocol_plugin) {
-        struct obfs_manager *protocol_plugin = server_ctx->protocol_plugin;
+        struct obfs_t *protocol_plugin = server_ctx->protocol_plugin;
         if (protocol_plugin->client_udp_post_decrypt) {
-            buf->len = (ssize_t) protocol_plugin->client_udp_post_decrypt(server_ctx->protocol, (char **)&buf->buffer, buf->len, &buf->capacity);
+            buf->len = (ssize_t) protocol_plugin->client_udp_post_decrypt(protocol_plugin, (char **)&buf->buffer, buf->len, &buf->capacity);
             if ((ssize_t)buf->len < 0) {
                 LOGE("client_udp_post_decrypt");
                 udp_remote_shutdown(remote_ctx);
@@ -1150,9 +1149,9 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 
     // SSR beg
     if (server_ctx->protocol_plugin) {
-        struct obfs_manager *protocol_plugin = server_ctx->protocol_plugin;
+        struct obfs_t *protocol_plugin = server_ctx->protocol_plugin;
         if (protocol_plugin->client_udp_pre_encrypt) {
-            buf->len = (size_t) protocol_plugin->client_udp_pre_encrypt(server_ctx->protocol, (char **)&buf->buffer, buf->len, &buf->capacity);
+            buf->len = (size_t) protocol_plugin->client_udp_pre_encrypt(protocol_plugin, (char **)&buf->buffer, buf->len, &buf->capacity);
         }
     }
     //SSR end
@@ -1341,9 +1340,8 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 #ifdef MODULE_LOCAL
     server_ctx->remote_addr     = *remote_addr;
     //SSR beg
-    server_ctx->protocol_plugin = new_obfs_manager(protocol);
+    server_ctx->protocol_plugin = new_obfs_instance(protocol);
     if (server_ctx->protocol_plugin) {
-        server_ctx->protocol = server_ctx->protocol_plugin->new_obfs();
         server_ctx->protocol_global = server_ctx->protocol_plugin->init_data();
     }
 
@@ -1355,7 +1353,7 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     server_info.key_len = (uint16_t) enc_get_key_len(cipher_env);
 
     if (server_ctx->protocol_plugin) {
-        server_ctx->protocol_plugin->set_server_info(server_ctx->protocol, &server_info);
+        server_ctx->protocol_plugin->set_server_info(server_ctx->protocol_plugin, &server_info);
     }
     //SSR end
     if (tunnel_addr) {
@@ -1375,9 +1373,7 @@ static void udp_local_listener_close_done_cb(uv_handle_t* handle) {
 #ifdef MODULE_LOCAL
     // SSR beg
     if (server_ctx->protocol_plugin) {
-        server_ctx->protocol_plugin->dispose(server_ctx->protocol);
-        server_ctx->protocol = NULL;
-        free_obfs_manager(server_ctx->protocol_plugin);
+        free_obfs_instance(server_ctx->protocol_plugin);
         server_ctx->protocol_plugin = NULL;
     }
     // SSR end

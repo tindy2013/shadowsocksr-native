@@ -49,11 +49,26 @@ void * tls12_ticket_auth_init_data(void) {
     return global;
 }
 
-struct obfs_t * tls12_ticket_auth_new_obfs(void) {
-    struct obfs_t * obfs = new_obfs();
+void tls12_ticket_auth_new_obfs(struct obfs_t * obfs) {
+    obfs->init_data = tls12_ticket_auth_init_data;
+    obfs->get_overhead = tls12_ticket_auth_get_overhead;
+    obfs->need_feedback = need_feedback_true;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = set_server_info;
+    obfs->dispose = tls12_ticket_auth_dispose;
+
+    obfs->client_encode = tls12_ticket_auth_client_encode;
+    obfs->client_decode = tls12_ticket_auth_client_decode;
+
+    obfs->server_pre_encrypt = tls12_ticket_auth_server_pre_encrypt;
+    obfs->server_encode = tls12_ticket_auth_server_encode;
+    obfs->server_decode = tls12_ticket_auth_server_decode;
+    obfs->server_post_decrypt = tls12_ticket_auth_server_post_decrypt;
+    obfs->server_udp_pre_encrypt = generic_server_udp_pre_encrypt;
+    obfs->server_udp_post_decrypt = generic_server_udp_post_decrypt;
+
     obfs->l_data = calloc(1, sizeof(struct tls12_ticket_auth_local_data));
     tls12_ticket_auth_local_data_init((struct tls12_ticket_auth_local_data*)obfs->l_data);
-    return obfs;
 }
 
 int tls12_ticket_auth_get_overhead(struct obfs_t *obfs) {
@@ -755,10 +770,19 @@ void * tls12_ticket_fastauth_init_data(void) {
     return tls12_ticket_auth_init_data();
 }
 
-struct obfs_t * tls12_ticket_fastauth_new_obfs(void) {
-    struct obfs_t *obfs = tls12_ticket_auth_new_obfs();
+void tls12_ticket_fastauth_new_obfs(struct obfs_t *obfs) {
+    tls12_ticket_auth_new_obfs(obfs);
     ((struct tls12_ticket_auth_local_data*)obfs->l_data)->fastauth = true;
-    return obfs;
+
+    obfs->init_data = tls12_ticket_fastauth_init_data;
+    obfs->get_overhead = tls12_ticket_fastauth_get_overhead;
+    obfs->need_feedback = need_feedback_true;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = set_server_info;
+    obfs->dispose = tls12_ticket_fastauth_dispose;
+
+    obfs->client_encode = tls12_ticket_fastauth_client_encode;
+    obfs->client_decode = tls12_ticket_fastauth_client_decode;
 }
 
 int tls12_ticket_fastauth_get_overhead(struct obfs_t *obfs) {

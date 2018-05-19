@@ -216,10 +216,9 @@ void * auth_chain_a_init_data(void) {
     return global;
 }
 
-struct obfs_t * auth_chain_a_new_obfs(void) {
-    struct obfs_t * obfs = new_obfs();
-
-    struct auth_chain_local_data *l_data = calloc(1, sizeof(struct auth_chain_local_data));
+void auth_chain_a_new_obfs(struct obfs_t *obfs) {
+    struct auth_chain_local_data *l_data = (struct auth_chain_local_data *)
+        calloc(1, sizeof(struct auth_chain_local_data));
 
     auth_chain_local_data_init(obfs, l_data);
     l_data->salt = "auth_chain_a";
@@ -227,7 +226,17 @@ struct obfs_t * auth_chain_a_new_obfs(void) {
 
     obfs->l_data = l_data;
 
-    return obfs;
+    obfs->init_data = auth_chain_a_init_data;
+    obfs->get_overhead = auth_chain_a_get_overhead;
+    obfs->need_feedback = need_feedback_true;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = auth_chain_a_set_server_info;
+    obfs->dispose = auth_chain_a_dispose;
+
+    obfs->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
+    obfs->client_post_decrypt = auth_chain_a_client_post_decrypt;
+    obfs->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
+    obfs->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 }
 
 int auth_chain_a_get_overhead(struct obfs_t *obfs) {
@@ -735,10 +744,9 @@ ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaind
 
 unsigned int auth_chain_b_get_rand_len(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, uint8_t last_hash[16]);
 
-struct obfs_t * auth_chain_b_new_obfs(void) {
-    struct obfs_t *obfs = new_obfs();
-
-    struct auth_chain_local_data *l_data = calloc(1, sizeof(struct auth_chain_local_data));
+void auth_chain_b_new_obfs(struct obfs_t *obfs) {
+    struct auth_chain_local_data *l_data = (struct auth_chain_local_data *)
+        calloc(1, sizeof(struct auth_chain_local_data));
 
     auth_chain_local_data_init(obfs, l_data);
     l_data->salt = "auth_chain_b";
@@ -747,7 +755,17 @@ struct obfs_t * auth_chain_b_new_obfs(void) {
 
     obfs->l_data = l_data;
 
-    return obfs;
+    obfs->init_data = auth_chain_b_init_data;
+    obfs->get_overhead = auth_chain_b_get_overhead;
+    obfs->need_feedback = need_feedback_true;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = auth_chain_b_set_server_info;
+    obfs->dispose = auth_chain_b_dispose;
+
+    obfs->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
+    obfs->client_post_decrypt = auth_chain_a_client_post_decrypt;
+    obfs->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
+    obfs->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 }
 
 void auth_chain_b_dispose(struct obfs_t *obfs) {
@@ -865,10 +883,9 @@ unsigned int auth_chain_b_get_rand_len(struct auth_chain_local_data *local, int 
 
 unsigned int auth_chain_c_get_rand_len(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, uint8_t last_hash[16]);
 
-struct obfs_t *auth_chain_c_new_obfs(void) {
-    struct obfs_t *obfs = new_obfs();
-
-    struct auth_chain_local_data *l_data = calloc(1, sizeof(struct auth_chain_local_data));
+void auth_chain_c_new_obfs(struct obfs_t *obfs) {
+    struct auth_chain_local_data *l_data = (struct auth_chain_local_data *)
+        calloc(1, sizeof(struct auth_chain_local_data));
 
     auth_chain_local_data_init(obfs, l_data);
     l_data->salt = "auth_chain_c";
@@ -877,7 +894,17 @@ struct obfs_t *auth_chain_c_new_obfs(void) {
 
     obfs->l_data = l_data;
 
-    return obfs;
+    obfs->init_data = auth_chain_c_init_data;
+    obfs->get_overhead = auth_chain_c_get_overhead;
+    obfs->need_feedback = need_feedback_true;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = auth_chain_c_set_server_info;
+    obfs->dispose = auth_chain_c_dispose;
+
+    obfs->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
+    obfs->client_post_decrypt = auth_chain_a_client_post_decrypt;
+    obfs->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
+    obfs->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 }
 
 void auth_chain_c_dispose(struct obfs_t *obfs) {
@@ -966,11 +993,22 @@ unsigned int auth_chain_c_get_rand_len(struct auth_chain_local_data *local, int 
 
 unsigned int auth_chain_d_get_rand_len(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, uint8_t last_hash[16]);
 
-struct obfs_t *auth_chain_d_new_obfs(void) {
-    struct obfs_t *obfs = auth_chain_c_new_obfs();
+void auth_chain_d_new_obfs(struct obfs_t *obfs) {
+    auth_chain_c_new_obfs(obfs);
     ((struct auth_chain_local_data *)obfs->l_data)->salt = "auth_chain_d";
     ((struct auth_chain_local_data *)obfs->l_data)->get_tcp_rand_len = auth_chain_d_get_rand_len;
-    return obfs;
+
+    obfs->init_data = auth_chain_d_init_data;
+    obfs->get_overhead = auth_chain_d_get_overhead;
+    obfs->need_feedback = need_feedback_true;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = auth_chain_d_set_server_info;
+    obfs->dispose = auth_chain_d_dispose;
+
+    obfs->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
+    obfs->client_post_decrypt = auth_chain_a_client_post_decrypt;
+    obfs->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
+    obfs->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 }
 
 void auth_chain_d_dispose(struct obfs_t *obfs) {
@@ -1065,11 +1103,22 @@ unsigned int auth_chain_d_get_rand_len(struct auth_chain_local_data *local, int 
 
 unsigned int auth_chain_e_get_rand_len(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, uint8_t last_hash[16]);
 
-struct obfs_t * auth_chain_e_new_obfs(void) {
-    struct obfs_t *obfs = auth_chain_d_new_obfs();
+void auth_chain_e_new_obfs(struct obfs_t *obfs) {
+    auth_chain_d_new_obfs(obfs);
     ((struct auth_chain_local_data *)obfs->l_data)->salt = "auth_chain_e";
     ((struct auth_chain_local_data *)obfs->l_data)->get_tcp_rand_len = auth_chain_e_get_rand_len;
-    return obfs;
+
+    obfs->init_data = auth_chain_e_init_data;
+    obfs->get_overhead = auth_chain_e_get_overhead;
+    obfs->need_feedback = need_feedback_true;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = auth_chain_e_set_server_info;
+    obfs->dispose = auth_chain_e_dispose;
+
+    obfs->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
+    obfs->client_post_decrypt = auth_chain_a_client_post_decrypt;
+    obfs->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
+    obfs->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 }
 
 void auth_chain_e_dispose(struct obfs_t *obfs) {
@@ -1119,11 +1168,22 @@ void auth_chain_e_set_server_info(struct obfs_t *obfs, struct server_info_t *ser
 
 unsigned int auth_chain_f_get_rand_len(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, uint8_t last_hash[16]);
 
-struct obfs_t * auth_chain_f_new_obfs(void) {
-    struct obfs_t *obfs = auth_chain_e_new_obfs();
+void auth_chain_f_new_obfs(struct obfs_t *obfs) {
+    auth_chain_e_new_obfs(obfs);
     ((struct auth_chain_local_data *)obfs->l_data)->salt = "auth_chain_f";
     ((struct auth_chain_local_data *)obfs->l_data)->get_tcp_rand_len = auth_chain_f_get_rand_len;
-    return obfs;
+
+    obfs->init_data = auth_chain_f_init_data;
+    obfs->get_overhead = auth_chain_f_get_overhead;
+    obfs->need_feedback = need_feedback_true;
+    obfs->get_server_info = get_server_info;
+    obfs->set_server_info = auth_chain_f_set_server_info;
+    obfs->dispose = auth_chain_f_dispose;
+
+    obfs->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
+    obfs->client_post_decrypt = auth_chain_a_client_post_decrypt;
+    obfs->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
+    obfs->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 }
 
 void auth_chain_f_dispose(struct obfs_t *obfs) {
