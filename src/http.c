@@ -79,7 +79,7 @@ parse_http_header(const char *data, size_t data_len, char **hostname)
         return -3;
 
     if (data_len == 0)
-        return -1;
+        return 0;
 
     result = get_header("Host:", data, data_len, hostname);
     if (result < 0)

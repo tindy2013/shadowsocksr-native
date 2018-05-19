@@ -90,6 +90,10 @@ parse_tls_header(const char *data, size_t data_len, char **hostname)
     if (hostname == NULL)
         return -3;
 
+    if (data_len == 0) {
+        return 0;
+    }
+
     /* Check that our TCP payload is at least large enough for a TLS header */
     if (data_len < TLS_HEADER_LEN)
         return -1;
