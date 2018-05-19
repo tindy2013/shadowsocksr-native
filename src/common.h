@@ -66,9 +66,6 @@ struct server_env_t {
     char *protocol_param;
     char *obfs_param;
 
-    struct obfs_t *protocol_plugin;
-    struct obfs_t *obfs_plugin;
-
     void *protocol_global;
     void *obfs_global;
 

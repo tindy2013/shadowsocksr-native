@@ -77,15 +77,15 @@
  * +----+----------+----------+
  **/
 struct method_select_request {
-    char ver;
-    char nmethods;
-    char methods[0];
+    uint8_t ver;
+    uint8_t nmethods;
+    uint8_t methods[0];
 };
 
 
 struct method_select_response {
-    char ver;
-    char method;
+    uint8_t ver;
+    uint8_t method;
 };
 
 
@@ -97,9 +97,9 @@ struct method_select_response {
  * +----+------+----------+------+----------+
  **/
 struct socks5_authenticate {
-    char ver;
-    char ulen;
-    char uname_n_others[0];
+    uint8_t ver;
+    uint8_t ulen;
+    uint8_t uname_n_others[0];
 };
 
 
@@ -111,11 +111,11 @@ struct socks5_authenticate {
  * +----+-----+-------+------+----------+----------+
  **/
 struct socks5_request {
-    char ver;
-    char cmd;
-    char rsv;
-    char addr_type;
-    char addr_n_port[0];
+    uint8_t ver;
+    uint8_t cmd;
+    uint8_t rsv;
+    uint8_t addr_type;
+    uint8_t addr_n_port[0];
 };
 
 
@@ -127,11 +127,11 @@ struct socks5_request {
  * +----+-----+-------+------+----------+----------+
  **/
 struct socks5_response {
-    char ver;
-    char rep;
-    char rsv;
-    char addr_type;
-    char addr_n_port[0];
+    uint8_t ver;
+    uint8_t rep;
+    uint8_t rsv;
+    uint8_t addr_type;
+    uint8_t addr_n_port[0];
 };
 
 #pragma pack(pop)

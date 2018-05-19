@@ -91,8 +91,8 @@ struct local_t {
     struct server_env_t *server_env;  // __weak_ptr
 
     // SSR
-    struct obfs_t *protocol; // __weak_ptr
-    struct obfs_t *obfs; // __weak_ptr
+    struct obfs_t *protocol; // __strong_ptr
+    struct obfs_t *obfs; // __strong_ptr
 
     int ref_count;
     bool dying;

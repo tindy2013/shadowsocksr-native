@@ -298,7 +298,7 @@ int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
 
     env = local->server_env;
     // SSR beg
-    protocol_plugin = env->protocol_plugin;
+    protocol_plugin = local->protocol;
 
     if (protocol_plugin && protocol_plugin->client_pre_encrypt) {
         buf->len = (size_t)protocol_plugin->client_pre_encrypt(
@@ -309,7 +309,7 @@ int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
         return -1;
     }
 
-    obfs_plugin = env->obfs_plugin;
+    obfs_plugin = local->obfs;
     if (obfs_plugin && obfs_plugin->client_encode) {
         buf->len = obfs_plugin->client_encode(
             local->obfs, (char **)&buf->buffer, buf->len, &buf->capacity);
@@ -329,7 +329,7 @@ int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t
     env = local->server_env;
 
     // SSR beg
-    obfs_plugin = env->obfs_plugin;
+    obfs_plugin = local->obfs;
     if (obfs_plugin && obfs_plugin->client_decode) {
         int needsendback = 0;
         ssize_t len = obfs_plugin->client_decode(local->obfs, (char **)&buf->buffer, buf->len, &buf->capacity, &needsendback);
@@ -350,7 +350,7 @@ int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t
             return -1;
         }
     }
-    protocol_plugin = env->protocol_plugin;
+    protocol_plugin = local->protocol;
     if (protocol_plugin && protocol_plugin->client_post_decrypt) {
         ssize_t len = (size_t)protocol_plugin->client_post_decrypt(
             local->protocol, (char **)&buf->buffer, (int)buf->len, &buf->capacity);
@@ -601,10 +601,6 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     sprintf(port, "%d", p);
                 }
             } else {
-                if (udp_assc) {
-                    // Wait until client closes the connection
-                    return;
-                }
                 buffer_free(abuf);
                 LOGE("unsupported addrtype: 0x%02X", (uint8_t)addr_type);
                 tunnel_close_and_free(remote, local);
@@ -830,19 +826,19 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 server_info.buffer_size = SSR_BUFF_SIZE;
                 server_info.cipher_env = server_env->cipher;
 
-                if (server_env->obfs_plugin) {
-                    local->obfs = server_env->obfs_plugin;
-                    server_env->obfs_plugin->set_server_info(local->obfs, &server_info);
+                local->obfs = new_obfs_instance(server_env->obfs_name);
+                if (local->obfs) {
+                    local->obfs->set_server_info(local->obfs, &server_info);
                 }
 
                 server_info.param = server_env->protocol_param;
                 server_info.g_data = server_env->protocol_global;
 
-                if (server_env->protocol_plugin) {
-                    local->protocol = server_env->protocol_plugin;
-                    server_info.overhead = server_env->protocol_plugin->get_overhead(local->protocol)
-                        + (server_env->obfs_plugin ? server_env->obfs_plugin->get_overhead(local->obfs) : 0);
-                    server_env->protocol_plugin->set_server_info(local->protocol, &server_info);
+                local->protocol = new_obfs_instance(server_env->protocol_name);
+                if (local->protocol) {
+                    server_info.overhead = local->protocol->get_overhead(local->protocol)
+                        + (local->obfs ? local->obfs->get_overhead(local->obfs) : 0);
+                    local->protocol->set_server_info(local->protocol, &server_info);
                 }
                 // SSR end
 
@@ -1197,12 +1193,6 @@ listener_release(struct listener_t *listener)
         ss_free(server_env->obfs_param);
         ss_free(server_env->protocol_global);
         ss_free(server_env->obfs_global);
-        if(server_env->protocol_plugin){
-            free_obfs_instance(server_env->protocol_plugin);
-        }
-        if(server_env->obfs_plugin){
-            free_obfs_instance(server_env->obfs_plugin);
-        }
         ss_free(server_env->id);
         ss_free(server_env->group);
 
@@ -1235,6 +1225,14 @@ local_destroy(struct local_t *local)
             enc_ctx_release_instance(server_env->cipher, local->d_ctx);
         }
     }
+
+    // SSR beg
+    free_obfs_instance(local->obfs);
+    local->obfs = NULL;
+
+    free_obfs_instance(local->protocol);
+    local->protocol = NULL;
+    // SSR end
 
     ss_free(local);
 }
@@ -1339,18 +1337,23 @@ accept_cb(uv_stream_t* server, int status)
 static void
 init_obfs(struct server_env_t *env, const char *protocol, const char *protocol_param, const char *obfs, const char *obfs_param)
 {
+    struct obfs_t *obfs_plugin;
+    struct obfs_t *protocol_plugin;
     env->protocol_name = ss_strdup(protocol);
     env->protocol_param = ss_strdup(protocol_param);
-    env->protocol_plugin = new_obfs_instance(protocol);
     env->obfs_name = ss_strdup(obfs);
     env->obfs_param = ss_strdup(obfs_param);
-    env->obfs_plugin = new_obfs_instance(obfs);
 
-    if (env->obfs_plugin) {
-        env->obfs_global = env->obfs_plugin->init_data();
+    obfs_plugin = new_obfs_instance(obfs);
+    if (obfs_plugin) {
+        env->obfs_global = obfs_plugin->init_data();
+        free_obfs_instance(obfs_plugin);
     }
-    if (env->protocol_plugin) {
-        env->protocol_global = env->protocol_plugin->init_data();
+
+    protocol_plugin = new_obfs_instance(protocol);
+    if (protocol_plugin) {
+        env->protocol_global = protocol_plugin->init_data();
+        free_obfs_instance(protocol_plugin);
     }
 }
 

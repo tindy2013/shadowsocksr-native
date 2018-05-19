@@ -199,6 +199,6 @@ free_obfs_instance(struct obfs_t *plugin)
 {
     if (plugin) {
         plugin->dispose(plugin);
-        free(plugin);
+        //free(plugin);
     }
 }
