@@ -34,8 +34,8 @@
 
 
 struct buffer_t * buffer_alloc(size_t capacity) {
-    struct buffer_t *ptr = calloc(1, sizeof(struct buffer_t));
-    ptr->buffer = calloc(capacity, sizeof(char));
+    struct buffer_t *ptr = (struct buffer_t *) calloc(1, sizeof(struct buffer_t));
+    ptr->buffer = (uint8_t *) calloc(capacity, sizeof(uint8_t));
     ptr->capacity = capacity;
     return ptr;
 }
