@@ -118,7 +118,7 @@ cork_stable_hash_buffer(cork_hash seed, const void *src, size_t len)
 
 #define cork_murmur_hash_x86_32(seed, src, len, dest) \
 do { \
-    const unsigned int  nblocks = len / 4; \
+    const size_t nblocks = len / 4; \
     const cork_aliased_uint32_t  *blocks = (const cork_aliased_uint32_t *) src; \
     const cork_aliased_uint32_t  *end = blocks + nblocks; \
     const cork_aliased_uint32_t  *curr; \
@@ -158,7 +158,7 @@ do { \
 
 #define cork_murmur_hash_x86_128(seed, src, len, dest) \
 do { \
-    const unsigned int  nblocks = len / 16; \
+    const size_t  nblocks = len / 16; \
     const cork_aliased_uint32_t  *blocks = (const cork_aliased_uint32_t *) src; \
     const cork_aliased_uint32_t  *end = blocks + (nblocks * 4); \
     const cork_aliased_uint32_t  *curr; \

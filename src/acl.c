@@ -324,7 +324,7 @@ static void
 parse_addr_cidr(const char *str, char *host, int *cidr)
 {
     int ret = -1, n = 0;
-    char *pch;
+    const char *pch;
 
     pch = strchr(str, '/');
     while (pch != NULL) {
@@ -408,7 +408,7 @@ init_acl(const char *path)
             int err;
 
             // Trim the newline
-            int len = strlen(buf);
+            size_t len = strlen(buf);
             if (len > 0 && buf[len - 1] == '\n') {
                 buf[len - 1] = '\0';
             }
@@ -523,7 +523,7 @@ acl_match_host(const char *host)
     int err = cork_ip_init(&addr, host);
 
     if (err) {
-        int host_len = strlen(host);
+        size_t host_len = strlen(host);
         if (lookup_rule(&black_list_rules, host, host_len) != NULL)
             ret = 1;
         else if (lookup_rule(&white_list_rules, host, host_len) != NULL)
@@ -594,7 +594,7 @@ outbound_block_match_host(const char *host)
     int err = cork_ip_init(&addr, host);
 
     if (err) {
-        int host_len = strlen(host);
+        size_t host_len = strlen(host);
         if (lookup_rule(&outbound_block_list_rules, host, host_len) != NULL)
             ret = 1;
         return ret;

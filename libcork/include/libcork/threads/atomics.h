@@ -57,7 +57,9 @@ static inline void * __sync_ptr_compare_and_swap(void * volatile * Destination, 
 }
 
 #if defined(_MSC_VER) && (_MSC_VER < 1800)
+#if !defined(InterlockedAdd)
 #define InterlockedAdd InterlockedExchangeAdd
+#endif // !defined(InterlockedAdd)
 #endif // defined(_MSC_VER) && (_MSC_VER < 1800)
 
 #define cork_int_atomic_add        InterlockedAdd
