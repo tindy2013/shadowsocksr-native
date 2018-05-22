@@ -137,12 +137,12 @@ struct socks5_response {
 #pragma pack(pop)
 
 struct socks5_request *
-build_socks5_request(const char *host, uint16_t port, char *buffer, size_t buffer_size, size_t *data_size);
+build_socks5_request(const char *host, uint16_t port, uint8_t *buffer, size_t buffer_size, size_t *data_size);
 
 struct method_select_response *
 build_socks5_method_select_response(int method, char *buffer, size_t buffer_size);
 
 struct socks5_response *
-build_socks5_response(int rep, int addr_type, struct sockaddr_in *addr, char *buffer, size_t buffer_size, size_t *data_size);
+build_socks5_response(int rep, int addr_type, struct sockaddr_in *addr, uint8_t *buffer, size_t buffer_size, size_t *data_size);
 
 #endif // _SOCKS5_H

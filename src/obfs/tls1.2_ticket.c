@@ -390,7 +390,7 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
         return -1;
     }
     {
-        char hash[SHA1_BYTES];
+        uint8_t hash[SHA1_BYTES];
         BUFFER_CONSTANT_INSTANCE(pClientID, global->local_client_id, 32);
         BUFFER_CONSTANT_INSTANCE(pMsg, encryptdata + 11, 22);
         tls12_sha1_hmac(obfs, pClientID, pMsg, hash);
@@ -511,7 +511,7 @@ struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, struct bu
 
         // data += hmac.new(self.server_info.key + self.client_id, data, hashlib.sha1).digest()[:10]
         {
-            char sha1[SHA1_BYTES];
+            uint8_t sha1[SHA1_BYTES];
             tls12_sha1_hmac(obfs, local->client_id, data, sha1);
             buffer_concatenate(data, sha1, OBFS_HMAC_SHA1_LEN);
         }
@@ -588,7 +588,7 @@ struct buffer_t * tls12_ticket_auth_server_decode(struct obfs_t *obfs, const str
     }
     if ((local->handshake_status & 1) == 1) {
         uint8_t *buf_ptr2 = NULL;
-        char hash[SHA1_BYTES];
+        uint8_t hash[SHA1_BYTES];
         struct buffer_t *verify = NULL;
         size_t verify_len = 0;
         struct buffer_t *swap = buffer_alloc(SSR_BUFF_SIZE);
@@ -657,7 +657,7 @@ struct buffer_t * tls12_ticket_auth_server_decode(struct obfs_t *obfs, const str
         struct buffer_t *ogn_buf = NULL;
         struct buffer_t *verifyid = NULL;
         struct buffer_t *sessionid = NULL;
-        char sha1[SHA1_BYTES] = { 0 };
+        uint8_t sha1[SHA1_BYTES] = { 0 };
         size_t header_len = 0;
         size_t msg_size = 0;
         size_t sessionid_len = 0;

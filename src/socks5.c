@@ -14,10 +14,10 @@
 #include "socks5.h"
 
 struct socks5_request *
-build_socks5_request(const char *host, uint16_t port, char *buffer, size_t buffer_size, size_t *data_size)
+build_socks5_request(const char *host, uint16_t port, uint8_t *buffer, size_t buffer_size, size_t *data_size)
 {
     struct socks5_request *request;
-    char *addr_n_port;
+    uint8_t *addr_n_port;
     size_t addr_len = strlen(host);
     size_t header_len = addr_len + 3 + sizeof(struct socks5_request);
 
@@ -32,7 +32,7 @@ build_socks5_request(const char *host, uint16_t port, char *buffer, size_t buffe
     request->addr_type = SOCKS5_ADDRTYPE__NAME;
 
     addr_n_port = request->addr_n_port;
-    *(addr_n_port + 0) = (char) addr_len;
+    *(addr_n_port + 0) = (uint8_t) addr_len;
     memcpy(addr_n_port + 1, host, (size_t) addr_len);
     *((uint16_t *)(addr_n_port + 1 + addr_len)) = htons((uint16_t)port);
 
@@ -60,11 +60,11 @@ build_socks5_method_select_response(int method, char *buffer, size_t buffer_size
 }
 
 struct socks5_response *
-build_socks5_response(int rep, int addr_type, struct sockaddr_in *addr, char *buffer, size_t buffer_size, size_t *data_size)
+build_socks5_response(int rep, int addr_type, struct sockaddr_in *addr, uint8_t *buffer, size_t buffer_size, size_t *data_size)
 {
     size_t min_size;
     struct socks5_response *response;
-    char *iter;
+    uint8_t *iter;
 
     assert(addr_type == SOCKS5_ADDRTYPE__IPV4); // TODO: other types.
 
@@ -76,9 +76,9 @@ build_socks5_response(int rep, int addr_type, struct sockaddr_in *addr, char *bu
     response = (struct socks5_response *)buffer;
 
     response->ver = SOCKS5_VERSION;
-    response->rep = (char) rep;
+    response->rep = (uint8_t) rep;
     response->rsv = 0;
-    response->addr_type = (char) addr_type;
+    response->addr_type = (uint8_t) addr_type;
 
     iter = response->addr_n_port;
     memcpy(iter, &addr->sin_addr, sizeof(addr->sin_addr));

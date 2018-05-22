@@ -407,7 +407,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
             size_t header_len = 0;
             struct socks5_request *hdr =
-                    build_socks5_request(host, (uint16_t)atoi(port), (char *)buffer->buffer, buffer->capacity, &header_len);
+                    build_socks5_request(host, (uint16_t)atoi(port), buffer->buffer, buffer->capacity, &header_len);
 
             memmove(buf->buffer + header_len, buf->buffer, buf->len);
             memmove(buf->buffer, hdr, header_len);
@@ -509,7 +509,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             char host[257], ip[INET6_ADDRSTRLEN], port[16];
             struct buffer_t *abuf;
             char addr_type;
-            char *addr_n_port;
+            uint8_t *addr_n_port;
             size_t abuf_len;
             int sni_detected;
 
@@ -526,7 +526,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 size_t size = 0;
                 struct socks5_response *response =
                         build_socks5_response(SOCKS5_REPLY_CMDUNSUPP, SOCKS5_ADDRTYPE__IPV4,
-                                              &sock_addr, (char *)buffer->buffer, buffer->capacity, &size);
+                                              &sock_addr, buffer->buffer, buffer->capacity, &size);
 
                 LOGE("unsupported cmd: 0x%02X", (uint8_t)request->cmd);
 
@@ -544,7 +544,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 size_t size = 0;
                 struct socks5_response *response =
                         build_socks5_response(SOCKS5_REPLY_SUCCESS, SOCKS5_ADDRTYPE__IPV4,
-                                              &sock_addr, (char *)buffer->buffer, buffer->capacity, &size);
+                                              &sock_addr, buffer->buffer, buffer->capacity, &size);
 
                 local_send_data(local, (char *)response, (unsigned int)size);
 

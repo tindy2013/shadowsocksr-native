@@ -9,6 +9,8 @@
 
 #include <unistd.h>
 
+struct obfs_t;
+
 void verify_simple_new_obfs(struct obfs_t * obfs);
 void verify_simple_dispose(struct obfs_t *obfs);
 

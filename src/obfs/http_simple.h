@@ -7,6 +7,11 @@
 #ifndef _OBFS_HTTP_SIMPLE_H
 #define _OBFS_HTTP_SIMPLE_H
 
+#include <stdint.h>
+#include <unistd.h>
+
+struct obfs_t;
+
 void http_simple_new_obfs(struct obfs_t *obfs);
 void http_simple_dispose(struct obfs_t *obfs);
 

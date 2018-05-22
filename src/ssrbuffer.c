@@ -119,7 +119,7 @@ size_t buffer_concatenate2(struct buffer_t *dst, const struct buffer_t *src) {
 }
 
 void buffer_shorten(struct buffer_t *ptr, size_t begin, size_t len) {
-    if (ptr && (0 <= begin && begin <= ptr->len) && (len <= (ptr->len - begin))) {
+    if (ptr && (begin <= ptr->len) && (len <= (ptr->len - begin))) {
         if (begin != 0) {
             memmove(ptr->buffer, ptr->buffer + begin, len);
         }
