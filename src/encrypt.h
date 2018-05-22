@@ -88,9 +88,9 @@ int enc_get_key_len(struct cipher_env_t* env);
 unsigned char *enc_md5(const unsigned char *d, size_t n, unsigned char *md);
 
 size_t ss_md5_hmac_with_key(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint8_t *auth_key, size_t key_len);
-int ss_md5_hash_func(char *auth, char *msg, int msg_len);
+size_t ss_md5_hash_func(uint8_t *auth, const uint8_t *msg, size_t msg_len);
 size_t ss_sha1_hmac_with_key(uint8_t auth[SHA1_BYTES], const uint8_t *msg, size_t msg_len, const uint8_t *auth_key, size_t key_len);
-int ss_sha1_hash_func(char *auth, char *msg, int msg_len);
+size_t ss_sha1_hash_func(uint8_t *auth, const uint8_t *msg, size_t msg_len);
 int ss_aes_128_cbc(char *encrypt, char *out_data, char *key);
 int ss_encrypt_buffer(struct cipher_env_t *env, struct enc_ctx *ctx, char *in, size_t in_size, char *out, size_t *out_size);
 int ss_decrypt_buffer(struct cipher_env_t *env, struct enc_ctx *ctx, char *in, size_t in_size, char *out, size_t *out_size);

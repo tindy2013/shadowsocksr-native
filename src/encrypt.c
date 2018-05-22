@@ -670,8 +670,8 @@ ss_md5_hmac_with_key(uint8_t *auth, const uint8_t *msg, size_t msg_len, const ui
     return 0;
 }
 
-int
-ss_md5_hash_func(char *auth, char *msg, int msg_len)
+size_t
+ss_md5_hash_func(uint8_t *auth, const uint8_t *msg, size_t msg_len)
 {
     uint8_t hash[MD5_BYTES];
 #if defined(USE_CRYPTO_OPENSSL)
@@ -698,8 +698,8 @@ ss_sha1_hmac_with_key(uint8_t auth[SHA1_BYTES], const uint8_t *msg, size_t msg_l
     return 0;
 }
 
-int
-ss_sha1_hash_func(char *auth, char *msg, int msg_len)
+size_t
+ss_sha1_hash_func(uint8_t *auth, const uint8_t *msg, size_t msg_len)
 {
     uint8_t hash[SHA1_BYTES];
 #if defined(USE_CRYPTO_OPENSSL)

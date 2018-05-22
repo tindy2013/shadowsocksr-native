@@ -11,7 +11,7 @@
 
 static size_t auth_simple_pack_unit_size = 2000;
 typedef size_t (*hmac_with_key_func)(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint8_t *auth_key, size_t key_len);
-typedef int (*hash_func)(char *auth, char *msg, int msg_len);
+typedef size_t (*hash_func)(uint8_t *auth, const uint8_t *msg, size_t msg_len);
 
 typedef struct _auth_simple_global_data {
     uint8_t local_client_id[8];
@@ -200,16 +200,16 @@ auth_simple_dispose(struct obfs_t *obfs)
     dispose_obfs(obfs);
 }
 
-int
-auth_simple_pack_data(char *data, int datalength, char *outdata)
+size_t
+auth_simple_pack_data(uint8_t *data, size_t datalength, uint8_t *outdata)
 {
     unsigned char rand_len = (xorshift128plus() & 0xF) + 1;
-    int out_size = rand_len + datalength + 6;
-    outdata[0] = (char)(out_size >> 8);
-    outdata[1] = (char)(out_size);
-    outdata[2] = (char)(rand_len);
+    size_t out_size = (size_t)rand_len + datalength + 6;
+    outdata[0] = (uint8_t)(out_size >> 8);
+    outdata[1] = (uint8_t)(out_size);
+    outdata[2] = (uint8_t)(rand_len);
     memmove(outdata + rand_len + 2, data, datalength);
-    fillcrc32((unsigned char *)outdata, (unsigned int)out_size);
+    fillcrc32((unsigned char *)outdata, out_size);
     return out_size;
 }
 
