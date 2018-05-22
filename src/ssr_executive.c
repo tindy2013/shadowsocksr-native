@@ -178,7 +178,7 @@ void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void 
     }
     iterator = cstl_set_new_iterator(set);
     while( (element = iterator->get_next(iterator)) ) {
-        void **obj = iterator->get_value(element);
+        void **obj = (void **) iterator->get_value(element);
         if (obj) {
             fn(*obj, p);
             free(obj);

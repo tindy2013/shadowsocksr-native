@@ -7,7 +7,8 @@
 #include "obfsutil.h"
 #include "crc32.h"
 #include "base64.h"
-#include "../encrypt.h"
+#include "encrypt.h"
+#include "ssrbuffer.h"
 #include "obfs.h"
 #include "auth_chain.h"
 
@@ -670,6 +671,12 @@ ssize_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplainda
     std_base64_encode(hash, 16, (unsigned char *)(password + strlen(password)));
 
     {
+#if 1
+        BUFFER_CONSTANT_INSTANCE(in_obj, plaindata, datalength);
+        struct buffer_t *ret = cipher_simple_update_data(password, "rc4", true, in_obj);
+        memcpy(out_buffer, ret->buffer, ret->len);
+        buffer_free(ret);
+#else
         struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");
         struct enc_ctx *ctx = enc_ctx_new_instance(cipher, true);
         size_t out_len;
@@ -677,6 +684,7 @@ ssize_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplainda
                 plaindata, (size_t)datalength, out_buffer, &out_len);
         enc_ctx_release_instance(cipher, ctx);
         cipher_env_release(cipher);
+#endif
     }
     for (i = 0; i < 4; ++i) {
         uid[i] = ((uint8_t)local->uid[i]) ^ hash[i];
@@ -727,6 +735,12 @@ ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaind
     std_base64_encode(hash, 16, (unsigned char *)(password + strlen(password)));
 
     {
+#if 1
+        BUFFER_CONSTANT_INSTANCE(in_obj, plaindata, outlength);
+        struct buffer_t *ret = cipher_simple_update_data(password, "rc4", false, in_obj);
+        memcpy(plaindata, ret->buffer, ret->len);
+        buffer_free(ret);
+#else
         struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");
         struct enc_ctx *ctx = enc_ctx_new_instance(cipher, false);
         size_t out_len;
@@ -734,6 +748,7 @@ ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaind
                 plaindata, (size_t)outlength, plaindata, &out_len);
         enc_ctx_release_instance(cipher, ctx);
         cipher_env_release(cipher);
+#endif
     }
 
     return (ssize_t)outlength;

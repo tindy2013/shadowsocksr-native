@@ -95,4 +95,6 @@ int ss_aes_128_cbc(char *encrypt, char *out_data, char *key);
 int ss_encrypt_buffer(struct cipher_env_t *env, struct enc_ctx *ctx, char *in, size_t in_size, char *out, size_t *out_size);
 int ss_decrypt_buffer(struct cipher_env_t *env, struct enc_ctx *ctx, char *in, size_t in_size, char *out, size_t *out_size);
 
+struct buffer_t * cipher_simple_update_data(const char *key, const char *method, bool encrypt, const struct buffer_t *data);
+
 #endif // _ENCRYPT_H

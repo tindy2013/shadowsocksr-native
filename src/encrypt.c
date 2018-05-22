@@ -1218,6 +1218,9 @@ enum ss_cipher_type cipher_env_enc_method(const struct cipher_env_t *env) {
 void
 cipher_env_release(struct cipher_env_t *env)
 {
+    if (env == NULL) {
+        return;
+    }
     if (env->enc_method == ss_cipher_table) {
         ss_free(env->enc_table);
         ss_free(env->dec_table);
@@ -1225,4 +1228,23 @@ cipher_env_release(struct cipher_env_t *env)
         cache_delete(env->iv_cache, 0);
     }
     free(env);
+}
+
+struct buffer_t * cipher_simple_update_data(const char *key, const char *method, bool encrypt, const struct buffer_t *data) {
+    struct cipher_env_t *cipher = cipher_env_new_instance(key, method);
+    struct enc_ctx *ctx = enc_ctx_new_instance(cipher, encrypt);
+    struct buffer_t *out_buffer = buffer_alloc(data->len + 32);
+    size_t out_len = 0;
+    if (encrypt) {
+        ss_encrypt_buffer(cipher, ctx, (char *)data->buffer, data->len,
+            (char *) out_buffer->buffer, &out_len);
+    } else {
+        ss_decrypt_buffer(cipher, ctx, (char *)data->buffer, data->len,
+            (char *) out_buffer->buffer, &out_len);
+    }
+    out_buffer->len = out_len;
+    enc_ctx_release_instance(cipher, ctx);
+    cipher_env_release(cipher);
+
+    return out_buffer;
 }

@@ -135,6 +135,7 @@ void buffer_free(struct buffer_t *ptr) {
     ptr->capacity = 0;
     if (ptr->buffer != NULL) {
         free(ptr->buffer);
+        ptr->buffer = NULL;
     }
     free(ptr);
 }
