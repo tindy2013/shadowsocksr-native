@@ -9,7 +9,7 @@
 #include "obfs.h"
 #include "ssrbuffer.h"
 
-static int auth_simple_pack_unit_size = 2000;
+static size_t auth_simple_pack_unit_size = 2000;
 typedef size_t (*hmac_with_key_func)(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint8_t *auth_key, size_t key_len);
 typedef int (*hash_func)(char *auth, char *msg, int msg_len);
 
@@ -791,36 +791,36 @@ auth_sha1_v4_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int dat
     return (ssize_t)len;
 }
 
-unsigned int
-get_rand_len(int datalength, int fulldatalength, auth_simple_local_data *local, struct server_info_t *server)
+size_t
+get_rand_len(size_t datalength, size_t fulldatalength, auth_simple_local_data *local, struct server_info_t *server)
 {
-    if (datalength > 1300 || local->last_data_len > 1300 || fulldatalength >= (int)server->buffer_size) {
+    if (datalength > 1300 || (size_t) local->last_data_len > 1300 || fulldatalength >= (size_t)server->buffer_size) {
         return 0;
     }
     if (datalength > 1100) {
-        return xorshift128plus() & 0x7F;
+        return (size_t) (xorshift128plus() & 0x7F);
     }
     if (datalength > 900) {
-        return xorshift128plus() & 0xFF;
+        return (size_t) (xorshift128plus() & 0xFF);
     }
     if (datalength > 400) {
-        return xorshift128plus() & 0x1FF;
+        return (size_t) (xorshift128plus() & 0x1FF);
     }
-    return xorshift128plus() & 0x3FF;
+    return (size_t) (xorshift128plus() & 0x3FF);
 }
 
-int
-auth_aes128_sha1_pack_data(char *data, int datalength, int fulldatalength, char *outdata, struct obfs_t *obfs)
+size_t
+auth_aes128_sha1_pack_data(uint8_t *data, size_t datalength, size_t fulldatalength, uint8_t *outdata, struct obfs_t *obfs)
 {
     auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
     struct server_info_t *server = &obfs->server;
     uint8_t key_len;
     uint8_t *key;
-    unsigned int rand_len = get_rand_len(datalength, fulldatalength, local, server) + 1;
-    int out_size = (int)rand_len + datalength + 8;
+    size_t rand_len = get_rand_len(datalength, fulldatalength, local, server) + 1;
+    size_t out_size = (size_t)rand_len + datalength + 8;
     memcpy(outdata + rand_len + 4, data, datalength);
-    outdata[0] = (char)out_size;
-    outdata[1] = (char)(out_size >> 8);
+    outdata[0] = (uint8_t)out_size;
+    outdata[1] = (uint8_t)(out_size >> 8);
     key_len = (uint8_t)(local->user_key_len + 4);
     key = (uint8_t*)malloc(key_len);
     memcpy(key, local->user_key, local->user_key_len);
@@ -977,11 +977,11 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
 int
 auth_aes128_sha1_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity)
 {
-    char *plaindata = *pplaindata;
+    uint8_t *plaindata = (uint8_t *)(*pplaindata);
     auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
-    char * out_buffer = (char*)calloc((size_t)(datalength * 2 + (SSR_BUFF_SIZE * 2)), sizeof(char));
-    char * buffer = out_buffer;
-    char * data = plaindata;
+    uint8_t * out_buffer = (uint8_t *)calloc((size_t)(datalength * 2 + (SSR_BUFF_SIZE * 2)), sizeof(uint8_t));
+    uint8_t * buffer = out_buffer;
+    uint8_t * data = plaindata;
     int len = datalength;
     int pack_len;
     if (len > 0 && local->has_sent_header == 0) {
