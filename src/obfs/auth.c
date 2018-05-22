@@ -10,7 +10,7 @@
 #include "ssrbuffer.h"
 
 static size_t auth_simple_pack_unit_size = 2000;
-typedef size_t (*hmac_with_key_func)(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint8_t *auth_key, size_t key_len);
+typedef size_t (*hmac_with_key_func)(uint8_t auth[SHA1_BYTES], const uint8_t *msg, size_t msg_len, const uint8_t *auth_key, size_t key_len);
 typedef size_t (*hash_func)(uint8_t *auth, const uint8_t *msg, size_t msg_len);
 
 typedef struct _auth_simple_global_data {
@@ -24,15 +24,15 @@ typedef struct _auth_simple_local_data {
     uint32_t recv_id;
     uint32_t pack_id;
     char * salt;
-    uint8_t * user_key;
+    struct buffer_t *user_key;
     char uid[4];
-    int user_key_len;
     hmac_with_key_func hmac;
     hash_func hash;
     int hash_len;
     int last_data_len;
     size_t unit_len;
     bool has_recv_header;
+    size_t extra_wait_size;
 } auth_simple_local_data;
 
 void
@@ -43,8 +43,7 @@ auth_simple_local_data_init(auth_simple_local_data* local)
     local->recv_id = 1;
     local->pack_id = 1;
     local->salt = "";
-    local->user_key = 0;
-    local->user_key_len = 0;
+    local->user_key = buffer_alloc(SSR_BUFF_SIZE);
     local->hmac = 0;
     local->hash = 0;
     local->hash_len = 0;
@@ -191,10 +190,7 @@ auth_simple_dispose(struct obfs_t *obfs)
         buffer_free(local->recv_buffer);
         local->recv_buffer = NULL;
     }
-    if (local->user_key != NULL) {
-        free(local->user_key);
-        local->user_key = NULL;
-    }
+    buffer_free(local->user_key);
     free(local);
     obfs->l_data = NULL;
     dispose_obfs(obfs);
@@ -821,9 +817,9 @@ auth_aes128_sha1_pack_data(uint8_t *data, size_t datalength, size_t fulldataleng
     memcpy(outdata + rand_len + 4, data, datalength);
     outdata[0] = (uint8_t)out_size;
     outdata[1] = (uint8_t)(out_size >> 8);
-    key_len = (uint8_t)(local->user_key_len + 4);
+    key_len = (uint8_t)(local->user_key->len + 4);
     key = (uint8_t*)malloc(key_len);
-    memcpy(key, local->user_key, local->user_key_len);
+    memcpy(key, local->user_key->buffer, local->user_key->len);
     memintcopy_lt(key + key_len - 4, local->pack_id);
 
     {
@@ -903,12 +899,12 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
         int base64_len;
         char encrypt_key_base64[256] = {0};
         unsigned char *encrypt_key;
-        if (local->user_key == NULL) {
+        if (local->user_key->len == 0) {
             if(server->param != NULL && server->param[0] != 0) {
                 char *param = server->param;
                 char *delim = strchr(param, ':');
                 if(delim != NULL) {
-                    char hash[21] = {0};
+                    uint8_t hash[21] = {0};
                     long uid_long;
                     char key_str[128];
                     char uid_str[16] = { 0 };
@@ -917,28 +913,23 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
                     uid_long = strtol(uid_str, NULL, 10);
                     memintcopy_lt(local->uid, (uint32_t)uid_long);
 
-                    local->hash(hash, key_str, (int)strlen(key_str));
+                    local->hash(hash, (uint8_t *)key_str, (int)strlen(key_str));
 
-                    local->user_key_len = local->hash_len;
-                    local->user_key = (uint8_t*)malloc((size_t)local->user_key_len);
-                    memcpy(local->user_key, hash, local->hash_len);
+                    buffer_store(local->user_key, hash, local->hash_len);
                 }
             }
-            if (local->user_key == NULL) {
+            if (local->user_key->len == 0) {
                 rand_bytes((uint8_t *)local->uid, 4);
-
-                local->user_key_len = (int)server->key_len;
-                local->user_key = (uint8_t*)malloc((size_t)local->user_key_len);
-                memcpy(local->user_key, server->key, local->user_key_len);
+                buffer_store(local->user_key, server->key, server->key_len);
             }
         }
 
-        encrypt_key = (unsigned char *) malloc((size_t)local->user_key_len * sizeof(unsigned char));
-        memcpy(encrypt_key, local->user_key, local->user_key_len);
-        std_base64_encode(encrypt_key, local->user_key_len, (unsigned char *)encrypt_key_base64);
+        encrypt_key = (unsigned char *) malloc((size_t)local->user_key->len * sizeof(unsigned char));
+        memcpy(encrypt_key, local->user_key->buffer, local->user_key->len);
+        std_base64_encode(encrypt_key, local->user_key->len, (unsigned char *)encrypt_key_base64);
         free(encrypt_key);
 
-        base64_len = (local->user_key_len + 2) / 3 * 4;
+        base64_len = (local->user_key->len + 2) / 3 * 4;
         memcpy(encrypt_key_base64 + base64_len, salt, strlen(salt));
 
         enc_key_len = base64_len + (int)strlen(salt);
@@ -957,7 +948,7 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
     {
         uint8_t hash[20];
         rand_bytes((uint8_t*)outdata, 1);
-        local->hmac(hash, (char *)outdata, 1, key, key_len);
+        local->hmac(hash, (uint8_t *)outdata, 1, key, key_len);
         memcpy(outdata + 1, hash, 6);
     }
 
@@ -966,7 +957,7 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
 
     {
         uint8_t hash[20];
-        local->hmac(hash, outdata, out_size - 4, local->user_key, local->user_key_len);
+        local->hmac(hash, outdata, out_size - 4, local->user_key->buffer, local->user_key->len);
         memmove(outdata + out_size - 4, hash, 4);
     }
     free(key);
@@ -1035,9 +1026,9 @@ auth_aes128_sha1_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int
     memmove(recv_buffer + local->recv_buffer->len, plaindata, datalength);
     local->recv_buffer->len += datalength;
 
-    key_len = local->user_key_len + 4;
+    key_len = local->user_key->len + 4;
     key = (uint8_t*)malloc((size_t)key_len);
-    memcpy(key, local->user_key, local->user_key_len);
+    memcpy(key, local->user_key->buffer, local->user_key->len);
 
     out_buffer = (char*)malloc((size_t)local->recv_buffer->len);
     buffer = out_buffer;
@@ -1111,16 +1102,16 @@ auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
     size_t outlength;
     char *plaindata = *pplaindata;
     auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
-    char * out_buffer = (char*)malloc((datalength + 8));
+    uint8_t * out_buffer = (uint8_t *)malloc((datalength + 8));
 
-    if (local->user_key == NULL) {
+    if (local->user_key->len == 0) {
         if(obfs->server.param != NULL && obfs->server.param[0] != 0) {
             char *param = obfs->server.param;
             char *delim = strchr(param, ':');
             if(delim != NULL) {
                 char key_str[128];
                 long uid_long;
-                char hash[21] = {0};
+                uint8_t hash[21] = {0};
                 char uid_str[16] = { 0 };
 
                 strncpy(uid_str, param, delim - param);
@@ -1128,19 +1119,13 @@ auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
                 uid_long = strtol(uid_str, NULL, 10);
                 memintcopy_lt(local->uid, (uint32_t)uid_long);
 
-                local->hash(hash, key_str, (int)strlen(key_str));
-
-                local->user_key_len = local->hash_len;
-                local->user_key = (uint8_t*)malloc((size_t)local->user_key_len);
-                memcpy(local->user_key, hash, local->hash_len);
+                local->hash(hash, (uint8_t *)key_str, (int)strlen(key_str));
+                buffer_store(local->user_key, hash, local->hash_len);
             }
         }
-        if (local->user_key == NULL) {
+        if (local->user_key->len == 0) {
             rand_bytes((uint8_t *)local->uid, 4);
-
-            local->user_key_len = (int)obfs->server.key_len;
-            local->user_key = (uint8_t*)malloc((size_t)local->user_key_len);
-            memcpy(local->user_key, obfs->server.key, local->user_key_len);
+            buffer_store(local->user_key, obfs->server.key, obfs->server.key_len);
         }
     }
 
@@ -1150,7 +1135,7 @@ auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, 
 
     {
         uint8_t hash[20];
-        local->hmac(hash, out_buffer, (int)(outlength - 4), local->user_key, local->user_key_len);
+        local->hmac(hash, out_buffer, (int)(outlength - 4), local->user_key->buffer, local->user_key->len);
         memmove(out_buffer + outlength - 4, hash, 4);
     }
 
