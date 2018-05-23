@@ -33,6 +33,9 @@ typedef struct _auth_simple_local_data {
     size_t unit_len;
     bool has_recv_header;
     size_t extra_wait_size;
+    ssize_t max_time_dif;
+    uint32_t client_id;
+    uint32_t connection_id;
 } auth_simple_local_data;
 
 void
@@ -50,6 +53,12 @@ auth_simple_local_data_init(auth_simple_local_data* local)
     local->salt = "";
     local->unit_len = 2000; // 8100
     local->has_recv_header = false;
+    {
+        uint16_t extra_wait_size;
+        rand_bytes((uint8_t *)&extra_wait_size, sizeof(extra_wait_size));
+        local->extra_wait_size = (size_t) (extra_wait_size % 1024);
+    }
+    local->max_time_dif = 60 * 60 * 24;
 }
 
 void *
@@ -186,10 +195,7 @@ void
 auth_simple_dispose(struct obfs_t *obfs)
 {
     auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
-    if (local->recv_buffer != NULL) {
-        buffer_free(local->recv_buffer);
-        local->recv_buffer = NULL;
-    }
+    buffer_free(local->recv_buffer);
     buffer_free(local->user_key);
     free(local);
     obfs->l_data = NULL;
@@ -934,7 +940,7 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
 
         enc_key_len = base64_len + (int)strlen(salt);
         bytes_to_key_with_size(encrypt_key_base64, (size_t)enc_key_len, (uint8_t*)enc_key, 16);
-        ss_aes_128_cbc(encrypt, encrypt_data, enc_key);
+        ss_aes_128_cbc_encrypt(16, encrypt, encrypt_data, enc_key);
         memcpy(encrypt + 4, encrypt_data, 16);
         memcpy(encrypt, local->uid, 4);
     }
@@ -1209,15 +1215,23 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
     struct buffer_t *out_buf = NULL;
     struct buffer_t *mac_key = NULL;
     uint8_t sha1data[SHA1_BYTES] = { 0 };
+    size_t length;
+    bool sendback = false;
     auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
     buffer_concatenate2(local->recv_buffer, buf);
     out_buf = buffer_alloc(SSR_BUFF_SIZE);
-    if (need_feedback) { *need_feedback = true; }
 
     mac_key = buffer_create_from(obfs->server.recv_iv, obfs->server.recv_iv_len);
     buffer_concatenate(mac_key, obfs->server.key, obfs->server.key_len);
 
     if (local->has_recv_header == false) {
+        uint32_t utc_time;
+        uint32_t client_id;
+        uint32_t connection_id;
+        uint16_t rnd_len;
+        uint32_t time_diff;
+
+        struct buffer_t *head;
         size_t len = local->recv_buffer->len;
         if ((len >= 7) || (len==2 || len==3)) {
             size_t recv_len = min(len, 7);
@@ -1230,9 +1244,115 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
             if (need_feedback) { *need_feedback = false; }
             return buffer_alloc(1);
         }
+        local->hmac(sha1data, local->recv_buffer->buffer+7, 20, mac_key->buffer, mac_key->len);
+        if (memcmp(sha1data, local->recv_buffer->buffer+27, 4) != 0) {
+            // '%s data incorrect auth HMAC-SHA1 from %s:%d, data %s'
+            if (local->recv_buffer->len < (31 + local->extra_wait_size)) {
+                if (need_feedback) { *need_feedback = false; }
+                return buffer_alloc(1);
+            }
+            return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
+        }
 
+        // TODO https://github.com/ShadowsocksR-Live/shadowsocksr/blob/manyuser/shadowsocks/obfsplugin/auth.py#L670
+        buffer_store(local->user_key, obfs->server.key, obfs->server.key_len);
+
+        {
+            uint8_t in_data[32] = { 0 };
+            struct buffer_t *user_key = local->user_key;
+            size_t b64len = (size_t) std_base64_encode_len((int) user_key->len);
+            struct buffer_t *key = buffer_alloc(b64len + 1);
+            key->len = (size_t) std_base64_encode(user_key->buffer, (int)user_key->len, key->buffer);
+            buffer_concatenate(key, (uint8_t *)local->salt, strlen(local->salt));
+
+            // head = encryptor.decrypt(b'\x00' * 16 + self.recv_buf[11:27] + b'\x00') # need an extra byte or recv empty
+            memcpy(in_data + 16, local->recv_buffer->buffer+11, 16);
+            head = buffer_alloc(SSR_BUFF_SIZE);
+            head->len = 32;
+            ss_aes_128_cbc_decrypt(32, in_data, head->buffer, key->buffer);
+            buffer_free(key);
+        }
+
+        length = (size_t) ntohs( *((uint16_t *)(head->buffer + 12)) );
+        if (local->recv_buffer->len < length) {
+            if (need_feedback) { *need_feedback = false; }
+            return buffer_alloc(1);
+        }
+
+        utc_time = (uint32_t) ntohl(*((uint32_t *)(head->buffer + 0)));
+        client_id = (uint32_t) ntohl(*((uint32_t *)(head->buffer + 4)));
+        connection_id = (uint32_t) ntohl(*((uint32_t *)(head->buffer + 8)));
+        rnd_len = (uint16_t) ntohs(*((uint16_t *)(head->buffer + 14)));
+
+        local->hmac(sha1data, local->recv_buffer->buffer, length-4, local->user_key->buffer, local->user_key->len);
+        if (memcmp(sha1data, local->recv_buffer->buffer+length-4, 4) != 0) {
+            // '%s: checksum error, data %s'
+            return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
+        }
+        time_diff = utc_time - (uint32_t)time(NULL);
+        if (((ssize_t)time_diff < - local->max_time_dif) || ((ssize_t)time_diff > local->max_time_dif)) {
+            // '%s: wrong timestamp, time_dif %d, data %s'
+            return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
+        }
+        // if self.server_info.data.insert(self.user_id, client_id, connection_id):
+        {
+            size_t len;
+            local->has_recv_header = true;
+            len = (length - 4) - (31 + rnd_len);
+            buffer_store(out_buf, local->recv_buffer->buffer + (31 + rnd_len), len);
+            local->client_id = client_id;
+            local->connection_id = connection_id;
+        }
+        buffer_shorten(local->recv_buffer, length, local->recv_buffer->len - length);
+        local->has_recv_header = true;
+        sendback = true;
+
+        buffer_free(head);
     }
 
+    while (local->recv_buffer->len > 4) {
+        size_t pos;
+        uint32_t recv_id = htonl(local->recv_id);
+        buffer_replace(mac_key, local->user_key);
+        buffer_concatenate(mac_key, (uint8_t *)&recv_id, sizeof(recv_id));
+        local->hmac(sha1data, local->recv_buffer->buffer, 2, mac_key->buffer, mac_key->len);
+        if (memcmp(sha1data, local->recv_buffer->buffer+2, 2) != 0) {
+            // '%s: wrong crc'
+            return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
+        }
+        length = (size_t) ntohs(*((uint16_t *)local->recv_buffer->buffer));
+        if (length >= 8192 || length < 7) {
+            // '%s: over size'
+            buffer_reset(local->recv_buffer);
+            return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
+        }
+        if (length > local->recv_buffer->len) {
+            break;
+        }
+        local->hmac(sha1data, local->recv_buffer->buffer, length-4, mac_key->buffer, mac_key->len);
+        if (memcmp(sha1data, local->recv_buffer->buffer + length-4, 4) != 0) {
+            // '%s: checksum error, data %s'
+            buffer_reset(local->recv_buffer);
+            return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
+        }
+        local->recv_id += 1;
+        pos = (size_t) local->recv_buffer->buffer[4];
+        if (pos < 255) {
+            pos += 4;
+        } else {
+            pos = ntohs(*(uint16_t *)(local->recv_buffer->buffer + 5)) + 4;
+        }
+        buffer_concatenate(out_buf, local->recv_buffer->buffer + pos, (length - 4) - pos);
+        buffer_shorten(local->recv_buffer, length, local->recv_buffer->len - length);
+        if (pos == (length - 4)) {
+            sendback = true;
+        }
+    }
+    if (out_buf->len) {
+        // TODO : self.server_info.data.update(self.user_id, self.client_id, self.connection_id)
+    }
+
+    if (need_feedback) { *need_feedback = sendback; }
     return out_buf;
 }
 
