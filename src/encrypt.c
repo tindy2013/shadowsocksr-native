@@ -712,24 +712,35 @@ ss_sha1_hash_func(uint8_t *auth, const uint8_t *msg, size_t msg_len)
     return 0;
 }
 
-int
-ss_aes_128_cbc(char *encrypt, char *out_data, char *key)
+size_t ss_aes_128_cbc_encrypt(size_t length, const uint8_t *plain_text, uint8_t *out_data, const uint8_t *key)
 {
     unsigned char iv[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 #if defined(USE_CRYPTO_OPENSSL)
     AES_KEY aes;
     AES_set_encrypt_key((unsigned char*)key, 128, &aes);
-    AES_cbc_encrypt((const unsigned char *)encrypt, (unsigned char *)out_data, 16, &aes, iv, AES_ENCRYPT);
+    AES_cbc_encrypt((const unsigned char *)plain_text, (unsigned char *)out_data, length, &aes, iv, AES_ENCRYPT);
 #elif defined(USE_CRYPTO_MBEDTLS)
     mbedtls_aes_context aes;
-
-    unsigned char output[16];
-
     mbedtls_aes_setkey_enc(&aes, (unsigned char *)key, 128);
-    mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, 16, iv, (unsigned char *)encrypt, output);
+    mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, length, iv, (unsigned char *)plain_text, out_data);
+#endif
+    return 0;
+}
 
-    memcpy(out_data, output, 16);
+size_t ss_aes_128_cbc_decrypt(size_t length, const uint8_t *cipher_text, uint8_t *out_data, const uint8_t *key)
+{
+    unsigned char iv[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+#if defined(USE_CRYPTO_OPENSSL)
+    assert(0);
+    AES_KEY aes;
+    AES_set_encrypt_key((unsigned char*)key, 128, &aes);
+    AES_cbc_encrypt((const unsigned char *)cipher_text, (unsigned char *)out_data, length, &aes, iv, AES_DECRYPT);
+#elif defined(USE_CRYPTO_MBEDTLS)
+    mbedtls_aes_context aes;
+    mbedtls_aes_setkey_dec(&aes, key, 128);
+    mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, length, iv, cipher_text, out_data);
 #endif
     return 0;
 }

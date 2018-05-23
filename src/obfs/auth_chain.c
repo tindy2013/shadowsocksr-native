@@ -468,7 +468,7 @@ int auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, int datalength,
 
         enc_key_len = base64_len + salt_len;
         bytes_to_key_with_size(encrypt_key_base64, (size_t)enc_key_len, (uint8_t*)enc_key, 16);
-        ss_aes_128_cbc(encrypt, encrypt_data, enc_key);
+        ss_aes_128_cbc_encrypt(16, encrypt, encrypt_data, enc_key);
         memcpy(encrypt, uid, 4);
         memcpy(encrypt + 4, encrypt_data, 16);
     }
