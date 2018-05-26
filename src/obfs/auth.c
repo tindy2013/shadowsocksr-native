@@ -8,6 +8,11 @@
 #include "encrypt.h"
 #include "obfs.h"
 #include "ssrbuffer.h"
+#if defined(WIN32) || defined(_WIN32)
+#include <winsock2.h>
+#else
+#include <netinet/in.h>
+#endif
 
 static size_t auth_simple_pack_unit_size = 2000;
 typedef size_t (*hmac_with_key_func)(uint8_t auth[SHA1_BYTES], const uint8_t *msg, size_t msg_len, const uint8_t *auth_key, size_t key_len);
