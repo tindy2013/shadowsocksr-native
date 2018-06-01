@@ -366,8 +366,11 @@ int auth_chain_a_pack_data(struct obfs_t *obfs, char *data, int datalength, char
     memcpy(key, local->user_key, local->user_key_len);
     memintcopy_lt(key + key_len - 4, local->pack_id);
     ++local->pack_id;
-
-    ss_md5_hmac_with_key(local->last_client_hash, outdata, out_size, key, key_len);
+    {
+        BUFFER_CONSTANT_INSTANCE(_msg, outdata, out_size);
+        BUFFER_CONSTANT_INSTANCE(_key, key, key_len);
+        ss_md5_hmac_with_key(local->last_client_hash, _msg, _key);
+    }
     memcpy(outdata + out_size, local->last_client_hash, 2);
     free(key);
     return out_size + 2;
@@ -410,8 +413,10 @@ int auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, int datalength,
 
     // first 12 bytes
     {
+        BUFFER_CONSTANT_INSTANCE(_msg, outdata, 4);
+        BUFFER_CONSTANT_INSTANCE(_key, key, key_len);
         rand_bytes((uint8_t*)outdata, 4);
-        ss_md5_hmac_with_key(local->last_client_hash, outdata, 4, key, key_len);
+        ss_md5_hmac_with_key(local->last_client_hash, _msg, _key);
         memcpy(outdata + 4, local->last_client_hash, 8);
     }
 
@@ -474,7 +479,9 @@ int auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, int datalength,
     }
     // final HMAC
     {
-        ss_md5_hmac_with_key(local->last_server_hash, encrypt, 20, local->user_key, local->user_key_len);
+        BUFFER_CONSTANT_INSTANCE(_msg, encrypt, 20);
+        BUFFER_CONSTANT_INSTANCE(_key, local->user_key, local->user_key_len);
+        ss_md5_hmac_with_key(local->last_server_hash, _msg, _key);
         memcpy(outdata + 12, encrypt, 20);
         memcpy(outdata + 12 + 20, local->last_server_hash, 4);
     }
@@ -580,7 +587,11 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
         if ((len += 4) > local->recv_buffer_size) {
             break;
         }
-        ss_md5_hmac_with_key(hash, recv_buffer, len - 2, key, key_len);
+        {
+            BUFFER_CONSTANT_INSTANCE(_msg, recv_buffer, len - 2);
+            BUFFER_CONSTANT_INSTANCE(_key, key, key_len);
+            ss_md5_hmac_with_key(hash, _msg, _key);
+        }
         if (memcmp(hash, recv_buffer + len - 2, 2)) {
             local->recv_buffer_size = 0;
             error = 1;
@@ -660,8 +671,11 @@ ssize_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplainda
             memcpy(local->user_key, obfs->server.key, local->user_key_len);
         }
     }
-
-    ss_md5_hmac_with_key(hash, auth_data, 3, server->key, server->key_len);
+    {
+        BUFFER_CONSTANT_INSTANCE(_msg, auth_data, 3);
+        BUFFER_CONSTANT_INSTANCE(_key, server->key, server->key_len);
+        ss_md5_hmac_with_key(hash, _msg, _key);
+    }
     rand_len = (int) udp_get_rand_len(&local->random_client, hash);
     rnd_data = (uint8_t *) malloc((size_t)rand_len * sizeof(uint8_t));
     rand_bytes(rnd_data, (int)rand_len);
@@ -692,8 +706,11 @@ ssize_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplainda
     memmove(out_buffer + datalength, rnd_data, rand_len);
     memmove(out_buffer + outlength - 8, auth_data, 3);
     memmove(out_buffer + outlength - 5, uid, 4);
-
-    ss_md5_hmac_with_key(hash, out_buffer, (int)(outlength - 1), local->user_key, local->user_key_len);
+    {
+        BUFFER_CONSTANT_INSTANCE(_msg, out_buffer, (int)(outlength - 1));
+        BUFFER_CONSTANT_INSTANCE(_key, local->user_key, local->user_key_len);
+        ss_md5_hmac_with_key(hash, _msg, _key);
+    }
     memmove(out_buffer + outlength - 1, hash, 1);
 
     if (*capacity < outlength) {
@@ -721,13 +738,19 @@ ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaind
         return 0;
     }
 
-    ss_md5_hmac_with_key(hash, plaindata, (int)(datalength - 1), local->user_key, local->user_key_len);
-
+    {
+        BUFFER_CONSTANT_INSTANCE(_msg, plaindata, (int)(datalength - 1));
+        BUFFER_CONSTANT_INSTANCE(_key, local->user_key, local->user_key_len);
+        ss_md5_hmac_with_key(hash, _msg, _key);
+    }
     if (*hash != ((uint8_t*)plaindata)[datalength - 1]) {
         return 0;
     }
-    ss_md5_hmac_with_key(hash, plaindata + datalength - 8, 7, server->key, server->key_len);
-
+    {
+        BUFFER_CONSTANT_INSTANCE(_msg, plaindata + datalength - 8, 7);
+        BUFFER_CONSTANT_INSTANCE(_key, server->key, server->key_len);
+        ss_md5_hmac_with_key(hash, _msg, _key);
+    }
     rand_len = (int)udp_get_rand_len(&local->random_server, hash);
     outlength = datalength - rand_len - 8;
 

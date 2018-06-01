@@ -2,7 +2,8 @@
 #include <time.h>
 
 #include "obfsutil.h"
-#include "../encrypt.h"
+#include "encrypt.h"
+#include "ssrbuffer.h"
 
 int get_head_size(const uint8_t *plaindata, int size, int def_size) {
     int head_type;
@@ -48,7 +49,11 @@ size_t ss_md5_hmac(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint
     uint8_t *auth_key = (uint8_t *) calloc(len, sizeof(auth_key[0]));
     memcpy(auth_key, iv, enc_iv_len);
     memcpy(auth_key + enc_iv_len, enc_key, enc_key_len);
-    result = ss_md5_hmac_with_key(auth, msg, msg_len, auth_key, enc_iv_len + enc_key_len);
+    {
+        BUFFER_CONSTANT_INSTANCE(_msg, msg, msg_len);
+        BUFFER_CONSTANT_INSTANCE(_key, auth_key, enc_iv_len + enc_key_len);
+        result = ss_md5_hmac_with_key(auth, _msg, _key);
+    }
     free(auth_key);
     return result;
 }
@@ -60,7 +65,11 @@ size_t ss_sha1_hmac(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uin
     uint8_t *auth_key = (uint8_t *) calloc(len, sizeof(auth_key[0]));
     memcpy(auth_key, iv, enc_iv_len);
     memcpy(auth_key + enc_iv_len, enc_key, enc_key_len);
-    result = ss_sha1_hmac_with_key(auth, msg, msg_len, auth_key, enc_iv_len + enc_key_len);
+    {
+        BUFFER_CONSTANT_INSTANCE(_msg, msg, msg_len);
+        BUFFER_CONSTANT_INSTANCE(_key, auth_key, enc_iv_len + enc_key_len);
+        result = ss_sha1_hmac_with_key(auth, _msg, _key);
+    }
     free(auth_key);
     return result;
 }

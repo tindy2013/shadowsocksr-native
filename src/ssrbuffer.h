@@ -32,7 +32,7 @@ struct buffer_t {
 };
 
 #define BUFFER_CONSTANT_INSTANCE(ptrName, data, data_len) \
-    struct buffer_t obj##ptrName = {(data_len), 0, (uint8_t *)(data)}; \
+    struct buffer_t obj##ptrName = {(size_t)(data_len), 0, (uint8_t *)(data)}; \
     struct buffer_t *(ptrName) = & obj##ptrName
 
 struct buffer_t * buffer_alloc(size_t capacity);
