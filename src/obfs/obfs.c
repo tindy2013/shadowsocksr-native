@@ -42,10 +42,10 @@ set_server_info(struct obfs_t *obfs, struct server_info_t *server)
     memmove(&obfs->server, server, sizeof(struct server_info_t));
 }
 
-void
-get_server_info(struct obfs_t *obfs, struct server_info_t *server)
+struct server_info_t *
+get_server_info(struct obfs_t *obfs)
 {
-    memmove(server, &obfs->server, sizeof(struct server_info_t));
+    return &obfs->server;
 }
 
 struct buffer_t * generic_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {

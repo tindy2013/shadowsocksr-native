@@ -391,7 +391,7 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
     ASSERT(parser->cmd == s5_cmd_tcp_connect);
 
     ctx->init_pkg = initial_package_create(parser);
-    ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg);
+    ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg, 1452);
 
     {
         union sockaddr_universal remote_addr = { 0 };

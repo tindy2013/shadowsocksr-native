@@ -45,7 +45,7 @@ struct obfs_t {
     void * (*init_data)(void);
     int  (*get_overhead)(struct obfs_t *obfs);
     bool (*need_feedback)(struct obfs_t *obfs);
-    void (*get_server_info)(struct obfs_t *obfs, struct server_info_t *server);
+    struct server_info_t * (*get_server_info)(struct obfs_t *obfs);
     void (*set_server_info)(struct obfs_t *obfs, struct server_info_t *server);
     void (*dispose)(struct obfs_t *obfs);
 
@@ -92,7 +92,7 @@ struct obfs_t * new_obfs_instance(const char *plugin_name);
 void free_obfs_instance(struct obfs_t *plugin);
 
 void set_server_info(struct obfs_t *obfs, struct server_info_t *server);
-void get_server_info(struct obfs_t *obfs, struct server_info_t *server);
+struct server_info_t * get_server_info(struct obfs_t *obfs);
 void dispose_obfs(struct obfs_t *obfs);
 
 struct buffer_t * generic_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf);

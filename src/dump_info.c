@@ -8,7 +8,7 @@
 char *progname = __FILE__;  /* Reset in main(). */
 
 void set_app_name(const char *name) {
-    if (progname != __FILE__) {
+    if (strcmp(progname, __FILE__) != 0) {
         free(progname);
     }
     progname = strdup(name);
