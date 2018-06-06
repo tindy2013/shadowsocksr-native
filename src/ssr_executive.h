@@ -81,6 +81,10 @@ void string_safe_assign(char **target, const char *value);
 #define DEFAULT_IDLE_TIMEOUT  (60 * SECONDS_PER_MINUTE)
 #define DEFAULT_METHOD        "rc4-md5"
 
+#if !defined(TCP_BUF_SIZE_MAX)
+#define TCP_BUF_SIZE_MAX 32 * 1024
+#endif
+
 struct server_config * config_create(void);
 void config_release(struct server_config *cf);
 void config_change_for_server(struct server_config *config);

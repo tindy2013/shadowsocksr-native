@@ -394,6 +394,15 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
     ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg, 1452);
 
     {
+        struct obfs_t *protocol = ctx->cipher->protocol;
+        struct obfs_t *obfs = ctx->cipher->obfs;
+        struct server_info_t *info;
+        info = protocol ? protocol->get_server_info(protocol) : (obfs ? obfs->get_server_info(obfs) : NULL);
+        if (info) {
+            info->buffer_size = SSR_BUFF_SIZE;
+        }
+    }
+    {
         union sockaddr_universal remote_addr = { 0 };
         if (convert_universal_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
             socket_getaddrinfo(outgoing, config->remote_host);

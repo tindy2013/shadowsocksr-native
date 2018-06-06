@@ -249,7 +249,7 @@ void init_obfs(struct server_env_t *env, const char *protocol, const char *obfs)
     }
 }
 
-struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const struct buffer_t *init_pkg) {
+struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const struct buffer_t *init_pkg, size_t tcp_mss) {
     struct server_info_t server_info = { {0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     struct server_config *config = env->config;
@@ -274,31 +274,45 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
     server_info.iv_len = (uint16_t) enc_get_iv_len(env->cipher);
     server_info.key = enc_get_key(env->cipher);
     server_info.key_len = (uint16_t) enc_get_key_len(env->cipher);
-    server_info.tcp_mss = 1452;
+    server_info.tcp_mss = (uint16_t) tcp_mss;
     server_info.buffer_size = SSR_BUFF_SIZE;
     server_info.cipher_env = env->cipher;
+    {
+        server_info.param = config->obfs_param;
+        server_info.g_data = env->obfs_global;
 
-    server_info.param = config->obfs_param;
-    server_info.g_data = env->obfs_global;
+        tc->obfs = new_obfs_instance(config->obfs);
+        if (tc->obfs) {
+            tc->obfs->set_server_info(tc->obfs, &server_info);
+        }
+    }
+    {
+        server_info.param = config->protocol_param;
+        server_info.g_data = env->protocol_global;
 
-    tc->obfs = new_obfs_instance(config->obfs);
-    if (tc->obfs) {
-        tc->obfs->set_server_info(tc->obfs, &server_info);
+        tc->protocol = new_obfs_instance(config->protocol);
+        if (tc->protocol) {
+            tc->protocol->set_server_info(tc->protocol, &server_info);
+        }
     }
 
-    server_info.param = config->protocol_param;
-    server_info.g_data = env->protocol_global;
+    {
+        struct obfs_t *protocol = tc->protocol;
+        struct obfs_t *obfs = tc->obfs;
+        int total_overhead = 
+            (protocol ? protocol->get_overhead(protocol) : 0) +
+            (obfs ? obfs->get_overhead(obfs) : 0);
 
-    tc->protocol = new_obfs_instance(config->protocol);
-    if (tc->protocol) {
-        int p_len, o_len;
-
-        // overhead must count on this
-        p_len = tc->protocol->get_overhead(tc->protocol);
-        o_len = (tc->obfs ? tc->obfs->get_overhead(tc->obfs) : 0);
-        server_info.overhead = (uint16_t)(p_len + o_len);
-
-        tc->protocol->set_server_info(tc->protocol, &server_info);
+        if (protocol) {
+            struct server_info_t *info = protocol->get_server_info(protocol);
+            info->overhead = total_overhead;
+            info->buffer_size = TCP_BUF_SIZE_MAX - total_overhead;
+        }
+        if (obfs) {
+            struct server_info_t *info = obfs->get_server_info(obfs);
+            info->overhead = total_overhead;
+            info->buffer_size = TCP_BUF_SIZE_MAX - total_overhead;
+        }
     }
     // SSR end
 

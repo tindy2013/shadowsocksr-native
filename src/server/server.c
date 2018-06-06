@@ -46,6 +46,9 @@ struct server_ctx {
     struct tunnel_cipher_ctx *cipher;
     struct buffer_t *init_pkg;
     enum session_state state;
+    size_t _tcp_mss;
+    size_t _overhead;
+    size_t _recv_buffer_size;
 };
 
 struct address_timestamp {
@@ -434,6 +437,10 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
     do {
         struct buffer_t *feedback = NULL;
         const uint8_t *buf = (const uint8_t *)incoming->buf->base;
+        size_t tcp_mss = _update_tcp_mss(incoming);
+        struct obfs_t *protocol = NULL;
+        struct obfs_t *obfs = NULL;
+        struct server_info_t *info;
 
         ASSERT(socket == incoming);
 
@@ -450,7 +457,17 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         buffer_concatenate(ctx->init_pkg, buf, (size_t)incoming->result);
 
         ASSERT(ctx->cipher == NULL);
-        ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg); // FIXME: error init_pkg
+        ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg, tcp_mss); // FIXME: error init_pkg
+
+        protocol = ctx->cipher->protocol;
+        obfs = ctx->cipher->obfs;
+
+        ctx->_tcp_mss = tcp_mss;
+        info = protocol ? protocol->get_server_info(protocol) : (obfs ? obfs->get_server_info(obfs) : NULL);
+        if (info) {
+            ctx->_overhead = info->overhead;
+            ctx->_recv_buffer_size = info->buffer_size;
+        }
 
         if (ssr_ok != tunnel_decrypt(ctx->cipher, ctx->init_pkg, &feedback)) {
             // TODO: report_addr(server->fd, MALICIOUS);
