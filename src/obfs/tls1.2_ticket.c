@@ -71,7 +71,7 @@ void tls12_ticket_auth_new_obfs(struct obfs_t * obfs) {
     tls12_ticket_auth_local_data_init((struct tls12_ticket_auth_local_data*)obfs->l_data);
 }
 
-int tls12_ticket_auth_get_overhead(struct obfs_t *obfs) {
+size_t tls12_ticket_auth_get_overhead(struct obfs_t *obfs) {
     return 5;
 }
 
@@ -788,7 +788,7 @@ void tls12_ticket_fastauth_new_obfs(struct obfs_t *obfs) {
     obfs->client_decode = tls12_ticket_fastauth_client_decode;
 }
 
-int tls12_ticket_fastauth_get_overhead(struct obfs_t *obfs) {
+size_t tls12_ticket_fastauth_get_overhead(struct obfs_t *obfs) {
     return tls12_ticket_auth_get_overhead(obfs);
 }
 

@@ -178,7 +178,7 @@ void auth_aes128_sha1_new_obfs(struct obfs_t *obfs) {
     ((auth_simple_local_data*)obfs->l_data)->salt = "auth_aes128_sha1";
 }
 
-int
+size_t
 auth_aes128_sha1_get_overhead(struct obfs_t *obfs)
 {
     return 9;

@@ -41,7 +41,7 @@ ssize_t auth_aes128_sha1_client_post_decrypt(struct obfs_t *obfs, char **pplaind
 ssize_t auth_aes128_sha1_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity);
 ssize_t auth_aes128_sha1_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity);
 
-int auth_aes128_sha1_get_overhead(struct obfs_t *obfs);
+size_t auth_aes128_sha1_get_overhead(struct obfs_t *obfs);
 
 struct buffer_t * auth_aes128_sha1_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf);
 struct buffer_t * auth_aes128_sha1_server_encode(struct obfs_t *obfs, struct buffer_t *buf);

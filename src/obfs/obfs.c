@@ -22,7 +22,7 @@ init_data(void)
     return malloc(1);
 }
 
-int
+size_t
 get_overhead(struct obfs_t *obfs)
 {
     return 0;

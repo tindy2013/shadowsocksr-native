@@ -43,7 +43,7 @@ struct obfs_t {
     void *l_data;
 
     void * (*init_data)(void);
-    int  (*get_overhead)(struct obfs_t *obfs);
+    size_t (*get_overhead)(struct obfs_t *obfs);
     bool (*need_feedback)(struct obfs_t *obfs);
     struct server_info_t * (*get_server_info)(struct obfs_t *obfs);
     void (*set_server_info)(struct obfs_t *obfs, struct server_info_t *server);
@@ -84,7 +84,7 @@ struct obfs_t {
 };
 
 void * init_data(void);
-int get_overhead(struct obfs_t *obfs);
+size_t get_overhead(struct obfs_t *obfs);
 bool need_feedback_false(struct obfs_t *obfs);
 bool need_feedback_true(struct obfs_t *obfs);
 

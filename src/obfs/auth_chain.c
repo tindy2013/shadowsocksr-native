@@ -240,7 +240,7 @@ void auth_chain_a_new_obfs(struct obfs_t *obfs) {
     obfs->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 }
 
-int auth_chain_a_get_overhead(struct obfs_t *obfs) {
+size_t auth_chain_a_get_overhead(struct obfs_t *obfs) {
     return 4;
 }
 
@@ -826,7 +826,7 @@ void auth_chain_b_dispose(struct obfs_t *obfs) {
     auth_chain_a_dispose(obfs);
 }
 
-int auth_chain_b_get_overhead(struct obfs_t *obfs) {
+size_t auth_chain_b_get_overhead(struct obfs_t *obfs) {
     return auth_chain_a_get_overhead(obfs);
 }
 
@@ -960,7 +960,7 @@ void auth_chain_c_dispose(struct obfs_t *obfs) {
     auth_chain_a_dispose(obfs);
 }
 
-int auth_chain_c_get_overhead(struct obfs_t *obfs) {
+size_t auth_chain_c_get_overhead(struct obfs_t *obfs) {
     return auth_chain_a_get_overhead(obfs);
 }
 
@@ -1053,7 +1053,7 @@ void auth_chain_d_dispose(struct obfs_t *obfs) {
     auth_chain_c_dispose(obfs);
 }
 
-int auth_chain_d_get_overhead(struct obfs_t *obfs) {
+size_t auth_chain_d_get_overhead(struct obfs_t *obfs) {
     return auth_chain_c_get_overhead(obfs);
 }
 
@@ -1163,7 +1163,7 @@ void auth_chain_e_dispose(struct obfs_t *obfs) {
     auth_chain_d_dispose(obfs);
 }
 
-int auth_chain_e_get_overhead(struct obfs_t *obfs) {
+size_t auth_chain_e_get_overhead(struct obfs_t *obfs) {
     return auth_chain_d_get_overhead(obfs);
 }
 
@@ -1228,7 +1228,7 @@ void auth_chain_f_dispose(struct obfs_t *obfs) {
     auth_chain_e_dispose(obfs);
 }
 
-int auth_chain_f_get_overhead(struct obfs_t *obfs) {
+size_t auth_chain_f_get_overhead(struct obfs_t *obfs) {
     return auth_chain_e_get_overhead(obfs);
 }
 

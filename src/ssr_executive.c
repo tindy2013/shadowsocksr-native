@@ -299,19 +299,19 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, const 
     {
         struct obfs_t *protocol = tc->protocol;
         struct obfs_t *obfs = tc->obfs;
-        int total_overhead = 
+        size_t total_overhead = 
             (protocol ? protocol->get_overhead(protocol) : 0) +
             (obfs ? obfs->get_overhead(obfs) : 0);
 
         if (protocol) {
             struct server_info_t *info = protocol->get_server_info(protocol);
-            info->overhead = total_overhead;
-            info->buffer_size = TCP_BUF_SIZE_MAX - total_overhead;
+            info->overhead = (uint16_t)total_overhead;
+            info->buffer_size = (uint32_t)(TCP_BUF_SIZE_MAX - total_overhead);
         }
         if (obfs) {
             struct server_info_t *info = obfs->get_server_info(obfs);
-            info->overhead = total_overhead;
-            info->buffer_size = TCP_BUF_SIZE_MAX - total_overhead;
+            info->overhead = (uint16_t)total_overhead;
+            info->buffer_size = (uint32_t)(TCP_BUF_SIZE_MAX - total_overhead);
         }
     }
     // SSR end
