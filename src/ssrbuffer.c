@@ -77,7 +77,7 @@ struct buffer_t * buffer_clone(const struct buffer_t *ptr) {
     }
     result = buffer_alloc(ptr->capacity);
     result->len = ptr->len;
-    memcpy(result->buffer, ptr->buffer, ptr->len);
+    memmove(result->buffer, ptr->buffer, ptr->len);
     return result;
 }
 
@@ -96,7 +96,7 @@ size_t buffer_realloc(struct buffer_t *ptr, size_t capacity) {
 
 size_t buffer_store(struct buffer_t *ptr, const uint8_t *data, size_t size) {
     size_t result = buffer_realloc(ptr, size);
-    memcpy(ptr->buffer, data, size);
+    memmove(ptr->buffer, data, size);
     ptr->len = size;
     return min(size, result);
 }
