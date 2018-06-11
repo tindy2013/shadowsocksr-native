@@ -84,7 +84,6 @@ static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
 static void do_connect_host_start(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static bool socket_cycle(struct socket_ctx *a, struct socket_ctx *b);
 
 static int resolved_ips_compare_key(void *left, void *right);
 static void resolved_ips_destroy_object(void *obj);
@@ -469,7 +468,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
             ctx->_recv_buffer_size = info->buffer_size;
         }
 
-        if (ssr_ok != tunnel_decrypt(ctx->cipher, ctx->init_pkg, &feedback)) {
+        if (ssr_ok != tunnel_cipher_client_decrypt(ctx->cipher, ctx->init_pkg, &feedback)) {
             // TODO: report_addr(server->fd, MALICIOUS);
             tunnel_shutdown(tunnel);
             break;
@@ -707,10 +706,10 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
     buf = buffer_create_from((uint8_t *)socket->buf->base, (size_t)socket->result);
 
     if (socket == tunnel->outgoing) {
-        error = tunnel_encrypt(cipher_ctx, buf);
+        error = tunnel_cipher_client_encrypt(cipher_ctx, buf);
     } else if (socket == tunnel->incoming) {
         struct buffer_t *feedback = NULL;
-        error = tunnel_decrypt(cipher_ctx, buf, &feedback);
+        error = tunnel_cipher_client_decrypt(cipher_ctx, buf, &feedback);
         if (feedback) {
             ASSERT(0);
             /*

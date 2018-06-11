@@ -338,7 +338,7 @@ void tunnel_cipher_release(struct tunnel_cipher_ctx *tc) {
     free(tc);
 }
 
-bool tunnel_cipher_send_feedback(struct tunnel_cipher_ctx *tc) {
+bool tunnel_cipher_client_need_feedback(struct tunnel_cipher_ctx *tc) {
     bool protocol = false;
     bool obfs = false;
     struct server_env_t *env = tc->env;
@@ -354,7 +354,7 @@ bool tunnel_cipher_send_feedback(struct tunnel_cipher_ctx *tc) {
 }
 
 // insert shadowsocks header
-enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) {
+enum ssr_error tunnel_cipher_client_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf) {
     int err;
     struct obfs_t *obfs_plugin;
     struct server_env_t *env = tc->env;
@@ -379,7 +379,7 @@ enum ssr_error tunnel_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf
     return ssr_ok;
 }
 
-enum ssr_error tunnel_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback)
+enum ssr_error tunnel_cipher_client_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback)
 {
     struct obfs_t *protocol_plugin;
     struct server_env_t *env = tc->env;

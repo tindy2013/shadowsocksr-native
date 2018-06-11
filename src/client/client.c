@@ -495,7 +495,7 @@ static void do_connect_ssr_server_done(struct tunnel_ctx *tunnel) {
 
     if (outgoing->result == 0) {
         struct buffer_t *tmp = buffer_clone(ctx->init_pkg);
-        if (ssr_ok != tunnel_encrypt(ctx->cipher, tmp)) {
+        if (ssr_ok != tunnel_cipher_client_encrypt(ctx->cipher, tmp)) {
             buffer_free(tmp);
             tunnel_shutdown(tunnel);
             return;
@@ -533,7 +533,7 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    if (tunnel_cipher_send_feedback(ctx->cipher)) {
+    if (tunnel_cipher_client_need_feedback(ctx->cipher)) {
         socket_read(outgoing);
         ctx->state = session_ssr_waiting_feedback;
     } else {
@@ -562,7 +562,7 @@ static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel) {
     }
 
     buf = buffer_create_from((uint8_t *)outgoing->buf->base, (size_t)outgoing->result);
-    error = tunnel_decrypt(cipher_ctx, buf, &feedback);
+    error = tunnel_cipher_client_decrypt(cipher_ctx, buf, &feedback);
     ASSERT(error == ssr_ok);
     ASSERT(feedback);
     ASSERT(buf->len == 0);
@@ -633,10 +633,10 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
     buf = buffer_create_from((uint8_t *)socket->buf->base, (size_t)socket->result);
 
     if (socket == tunnel->incoming) {
-        error = tunnel_encrypt(cipher_ctx, buf);
+        error = tunnel_cipher_client_encrypt(cipher_ctx, buf);
     } else if (socket == tunnel->outgoing) {
         struct buffer_t *feedback = NULL;
-        error = tunnel_decrypt(cipher_ctx, buf, &feedback);
+        error = tunnel_cipher_client_decrypt(cipher_ctx, buf, &feedback);
         if (feedback) {
             ASSERT(false);
             buffer_free(feedback);
