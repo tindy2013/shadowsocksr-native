@@ -52,7 +52,7 @@ struct buffer_t * generic_server_pre_encrypt(struct obfs_t *obfs, struct buffer_
     return buffer_clone(buf);
 }
 
-struct buffer_t * generic_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
+struct buffer_t * generic_server_encode(struct obfs_t *obfs, const struct buffer_t *buf) {
     return buffer_clone(buf);
 }
 

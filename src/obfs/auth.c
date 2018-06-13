@@ -1222,7 +1222,7 @@ struct buffer_t * auth_aes128_sha1_server_pre_encrypt(struct obfs_t *obfs, struc
     return ret;
 }
 
-struct buffer_t * auth_aes128_sha1_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
+struct buffer_t * auth_aes128_sha1_server_encode(struct obfs_t *obfs, const struct buffer_t *buf) {
     // TODO : need implementation future.
     return generic_server_encode(obfs, buf);
 }

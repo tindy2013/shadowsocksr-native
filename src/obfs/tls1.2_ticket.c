@@ -411,7 +411,7 @@ struct buffer_t * tls12_ticket_auth_server_pre_encrypt(struct obfs_t *obfs, stru
     return generic_server_pre_encrypt(obfs, buf);
 }
 
-struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, struct buffer_t *buf) {
+struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, const struct buffer_t *buf) {
     struct tls12_ticket_auth_local_data *local = (struct tls12_ticket_auth_local_data*)obfs->l_data;
     struct tls12_ticket_auth_global_data *global = (struct tls12_ticket_auth_global_data*)obfs->server.g_data;
     uint8_t rand_buf[SSR_BUFF_SIZE] = { 0 };
@@ -424,26 +424,28 @@ struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, struct bu
     }
     if ((local->handshake_status & 8) == 8 ) {
         struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
-        while (buf->len > SSR_BUFF_SIZE) {
+        struct buffer_t *input = buffer_clone(buf);
+        while (input->len > SSR_BUFF_SIZE) {
             rand_bytes(rand_buf, 2);
-            size = min((size_t)ntohs(*((uint16_t *)rand_buf)) % 4096 + 100, buf->len);
+            size = min((size_t)ntohs(*((uint16_t *)rand_buf)) % 4096 + 100, input->len);
             size2 = htons((uint16_t)size);
 
             buffer_concatenate(ret, (uint8_t *)"\x17", 1);
             buffer_concatenate2(ret, tls_version);
             buffer_concatenate(ret, (uint8_t *)&size2, sizeof(size2));
-            buffer_concatenate(ret, buf->buffer, size);
+            buffer_concatenate(ret, input->buffer, size);
 
-            buffer_shorten(buf, size, buf->len - size);
+            buffer_shorten(input, size, input->len - size);
         }
-        if (buf->len > 0) {
-            size2 = htons((uint16_t)buf->len);
+        if (input->len > 0) {
+            size2 = htons((uint16_t)input->len);
 
             buffer_concatenate(ret, (uint8_t *)"\x17", 1);
             buffer_concatenate2(ret, tls_version);
             buffer_concatenate(ret, (uint8_t *)&size2, sizeof(size2));
-            buffer_concatenate(ret, buf->buffer, buf->len);
+            buffer_concatenate(ret, input->buffer, input->len);
         }
+        buffer_free(input);
 
         return ret;
     }

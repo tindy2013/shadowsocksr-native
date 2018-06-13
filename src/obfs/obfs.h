@@ -76,7 +76,7 @@ struct obfs_t {
             size_t* capacity);
 
     struct buffer_t * (*server_pre_encrypt)(struct obfs_t *obfs, struct buffer_t *buf);
-    struct buffer_t * (*server_encode)(struct obfs_t *obfs, struct buffer_t *buf);
+    struct buffer_t * (*server_encode)(struct obfs_t *obfs, const struct buffer_t *buf);
     struct buffer_t * (*server_decode)(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback);
     struct buffer_t * (*server_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback);
     bool (*server_udp_pre_encrypt)(struct obfs_t *obfs, struct buffer_t *buf);
@@ -96,7 +96,7 @@ struct server_info_t * get_server_info(struct obfs_t *obfs);
 void dispose_obfs(struct obfs_t *obfs);
 
 struct buffer_t * generic_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf);
-struct buffer_t * generic_server_encode(struct obfs_t *obfs, struct buffer_t *buf);
+struct buffer_t * generic_server_encode(struct obfs_t *obfs, const struct buffer_t *buf);
 struct buffer_t * generic_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback);
 struct buffer_t * generic_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback);
 bool generic_server_udp_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf);
