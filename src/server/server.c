@@ -49,6 +49,7 @@ struct server_ctx {
     size_t _tcp_mss;
     size_t _overhead;
     size_t _recv_buffer_size;
+    size_t _recv_d_max_size;
 };
 
 struct address_timestamp {
@@ -71,7 +72,7 @@ static void tunnel_outgoing_connected_done(struct tunnel_ctx *tunnel, struct soc
 static void tunnel_read_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size);
+static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, struct socket_ctx *socket, size_t suggested_size);
 static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel);
 static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)(size_t size), size_t *size);
 
@@ -386,8 +387,9 @@ static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *sock
     do_next(tunnel, socket);
 }
 
-static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, size_t suggested_size) {
+static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, struct socket_ctx *socket, size_t suggested_size) {
     (void)tunnel;
+    (void)socket;
     (void)suggested_size;
     return SSR_BUFF_SIZE;
 }
@@ -467,6 +469,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
             ctx->_overhead = info->overhead;
             ctx->_recv_buffer_size = info->buffer_size;
         }
+        ctx->_recv_d_max_size = TCP_BUF_SIZE_MAX;
 
         if (ssr_ok != tunnel_cipher_client_decrypt(ctx->cipher, ctx->init_pkg, &feedback)) {
             // TODO: report_addr(server->fd, MALICIOUS);

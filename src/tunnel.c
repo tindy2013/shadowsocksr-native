@@ -363,18 +363,18 @@ void socket_read_stop(struct socket_ctx *c) {
 }
 
 static void socket_alloc_cb(uv_handle_t *handle, size_t size, uv_buf_t *buf) {
-    struct socket_ctx *c;
+    struct socket_ctx *ctx;
     struct tunnel_ctx *tunnel;
 
-    c = CONTAINER_OF(handle, struct socket_ctx, handle);
-    tunnel = c->tunnel;
+    ctx = CONTAINER_OF(handle, struct socket_ctx, handle);
+    tunnel = ctx->tunnel;
 
     if (tunnel_is_in_streaming_wrapper(tunnel) == false) {
-        ASSERT(c->rdstate == socket_busy);
+        ASSERT(ctx->rdstate == socket_busy);
     }
 
     if (tunnel->tunnel_get_alloc_size) {
-        size = tunnel->tunnel_get_alloc_size(tunnel, size);
+        size = tunnel->tunnel_get_alloc_size(tunnel, ctx, size);
     }
 
     *buf = uv_buf_init((char *)calloc(size, sizeof(char)), (unsigned int)size);
