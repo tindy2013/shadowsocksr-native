@@ -1197,10 +1197,11 @@ auth_aes128_sha1_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     return (ssize_t)(datalength - 4);
 }
 
-struct buffer_t * auth_aes128_sha1_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
+struct buffer_t * auth_aes128_sha1_server_pre_encrypt(struct obfs_t *obfs, const struct buffer_t *buf) {
     struct buffer_t *ret = NULL;
     auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
-    size_t ogn_data_len = buf->len;
+    struct buffer_t *buf2 = buffer_clone(buf);
+    size_t ogn_data_len = buf2->len;
 
     uint8_t * out_buffer = (uint8_t *)calloc((size_t)(ogn_data_len * 2 + (SSR_BUFF_SIZE * 2)), sizeof(uint8_t));
     uint8_t * buffer = out_buffer;
@@ -1208,17 +1209,18 @@ struct buffer_t * auth_aes128_sha1_server_pre_encrypt(struct obfs_t *obfs, struc
     size_t pack_len;
     size_t unit_len = local->unit_len;
 
-    while (buf->len > unit_len) {
-        pack_len = auth_aes128_sha1_pack_data(buf->buffer, unit_len, ogn_data_len, buffer, obfs);
+    while (buf2->len > unit_len) {
+        pack_len = auth_aes128_sha1_pack_data(buf2->buffer, unit_len, ogn_data_len, buffer, obfs);
         buffer += pack_len;
-        buffer_shorten(buf, unit_len, buf->len - unit_len);
+        buffer_shorten(buf2, unit_len, buf2->len - unit_len);
     }
-    if (buf->len > 0) {
-        pack_len = auth_aes128_sha1_pack_data(buf->buffer, buf->len, ogn_data_len, buffer, obfs);
+    if (buf2->len > 0) {
+        pack_len = auth_aes128_sha1_pack_data(buf2->buffer, buf2->len, ogn_data_len, buffer, obfs);
         buffer += pack_len;
     }
     ret = buffer_create_from(out_buffer, buffer-out_buffer);
     free(out_buffer);
+    buffer_free(buf2);
     return ret;
 }
 

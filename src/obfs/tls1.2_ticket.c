@@ -407,7 +407,7 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
     }
 }
 
-struct buffer_t * tls12_ticket_auth_server_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf) {
+struct buffer_t * tls12_ticket_auth_server_pre_encrypt(struct obfs_t *obfs, const struct buffer_t *buf) {
     return generic_server_pre_encrypt(obfs, buf);
 }
 
