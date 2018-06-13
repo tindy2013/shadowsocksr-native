@@ -422,6 +422,80 @@ enum ssr_error tunnel_cipher_client_decrypt(struct tunnel_cipher_ctx *tc, struct
     return ssr_ok;
 }
 
+struct buffer_t * tunnel_cipher_server_encrypt(struct tunnel_cipher_ctx *tc, const struct buffer_t *buf) {
+    int err;
+    struct server_env_t *env = tc->env;
+    struct obfs_t *obfs = tc->obfs;
+    struct obfs_t *protocol = tc->protocol;
+    struct buffer_t *ret = NULL;
+    if (protocol && protocol->server_pre_encrypt) {
+        ret = protocol->server_pre_encrypt(protocol, buf);
+    } else {
+        ret = buffer_clone(buf);
+    }
+    err = ss_encrypt(env->cipher, ret, tc->e_ctx, SSR_BUFF_SIZE);
+    if (err != 0) {
+        ASSERT(false);
+        buffer_free(ret); ret = NULL;
+        return ret;
+    }
+    if (obfs && obfs->server_encode) {
+        struct buffer_t *tmp = obfs->server_encode(obfs, ret);
+        buffer_free(ret); ret = tmp;
+    }
+    return ret;
+}
+
+struct buffer_t * tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc, const struct buffer_t *buf)
+{
+    bool need_decrypt = false;
+    int err;
+    struct server_env_t *env = tc->env;
+    struct obfs_t *obfs = tc->obfs;
+    struct obfs_t *protocol = tc->protocol;
+    struct buffer_t *ret = NULL;
+    BUFFER_CONSTANT_INSTANCE(empty, "", 0);
+
+    ASSERT(buf->len <= SSR_BUFF_SIZE);
+
+    if (obfs && obfs->server_decode) {
+        bool need_feedback = false;
+        ret = obfs->server_decode(obfs, buf, &need_decrypt, &need_feedback);
+        if (ret == NULL) {
+            return NULL;
+        }
+        if (need_feedback) {
+            buffer_free(ret);
+            return obfs->server_encode(obfs, empty);
+        }
+    } else {
+        ret = buffer_clone(buf);
+    }
+    if (need_decrypt) {
+        if (protocol && protocol->server.recv_iv == NULL) {
+            size_t iv_len = (size_t) protocol->server.iv_len;
+            protocol->server.recv_iv = (uint8_t *) calloc(iv_len, sizeof(uint8_t));
+            memmove(protocol->server.recv_iv, ret->buffer, iv_len);
+            protocol->server.recv_iv_len = iv_len; // TODO : FIXME
+        }
+
+        err = ss_decrypt(env->cipher, ret, tc->d_ctx, SSR_BUFF_SIZE);
+        if (err != 0) {
+            return NULL;
+        }
+    }
+    if (protocol && protocol->server_post_decrypt) {
+        bool feedback = false;
+        struct buffer_t *tmp = protocol->server_post_decrypt(protocol, ret, &feedback);
+        buffer_free(ret); ret = tmp;
+        if (feedback) {
+            buffer_free(ret);
+            return tunnel_cipher_server_encrypt(tc, empty);
+        }
+    }
+    return ret;
+}
+
 bool pre_parse_header(struct buffer_t *data) {
     uint8_t datatype = 0;
     size_t rand_data_size = 0;
