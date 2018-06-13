@@ -78,6 +78,7 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
 
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel);
 static bool is_header_complete(const struct buffer_t *buf);
+static size_t _get_read_size(struct tunnel_ctx *tunnel, struct socket_ctx *socket, size_t suggested_size);
 static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -430,6 +431,32 @@ static bool is_legal_header(const struct buffer_t *buf) {
 static bool is_header_complete(const struct buffer_t *buf) {
     struct socks5_address addr;
     return socks5_address_parse(buf->buffer, buf->len, &addr);
+}
+
+static size_t _get_read_size(struct tunnel_ctx *tunnel, struct socket_ctx *socket, size_t suggested_size) {
+    // https://github.com/ShadowsocksR-Live/shadowsocksr/blob/manyuser/shadowsocks/tcprelay.py#L812
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+    size_t buffer_size;
+    size_t frame_size;
+    int fd = 0;
+    char tmp[256];
+    if (ctx->_overhead) {
+        return suggested_size;
+    }
+    fd = uv_stream_fd(&socket->handle.tcp);
+    buffer_size = (size_t) recv(fd, tmp, (int)suggested_size, MSG_PEEK);
+    frame_size = ctx->_tcp_mss - ctx->_overhead;
+
+    buffer_size = min(buffer_size, ctx->_recv_d_max_size);
+    ctx->_recv_d_max_size = min(ctx->_recv_d_max_size + frame_size, TCP_BUF_SIZE_MAX);
+
+    if (buffer_size == suggested_size) {
+        return buffer_size;
+    }
+    if (buffer_size > frame_size) {
+        buffer_size = (buffer_size / frame_size) * frame_size;
+    }
+    return buffer_size;
 }
 
 static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
