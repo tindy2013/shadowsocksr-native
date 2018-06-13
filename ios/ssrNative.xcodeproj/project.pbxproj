@@ -31,11 +31,9 @@
 		3A300B3B206FF54000ABE7C2 /* cstl_lib.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B27206FF54000ABE7C2 /* cstl_lib.c */; };
 		3A300B3C206FF54000ABE7C2 /* base64.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B28206FF54000ABE7C2 /* base64.h */; };
 		3A300B45206FF58300ABE7C2 /* s5.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B3E206FF58200ABE7C2 /* s5.h */; };
-		3A300B46206FF58300ABE7C2 /* tunnel.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B3F206FF58200ABE7C2 /* tunnel.c */; };
 		3A300B47206FF58300ABE7C2 /* defs.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B40206FF58200ABE7C2 /* defs.h */; };
 		3A300B48206FF58300ABE7C2 /* client.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B41206FF58200ABE7C2 /* client.c */; };
 		3A300B49206FF58300ABE7C2 /* s5.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B42206FF58200ABE7C2 /* s5.c */; };
-		3A300B4A206FF58300ABE7C2 /* tunnel.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B43206FF58200ABE7C2 /* tunnel.h */; };
 		3A300B4B206FF58300ABE7C2 /* listener.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B44206FF58300ABE7C2 /* listener.c */; };
 		3A300B55206FF66500ABE7C2 /* dump_info.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B4E206FF66400ABE7C2 /* dump_info.c */; };
 		3A300B56206FF66500ABE7C2 /* encrypt.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B4F206FF66500ABE7C2 /* encrypt.c */; };
@@ -104,8 +102,6 @@
 		3A95CBD92070C92D00E507E3 /* listener.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B44206FF58300ABE7C2 /* listener.c */; };
 		3A95CBDA2070C92D00E507E3 /* s5.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B42206FF58200ABE7C2 /* s5.c */; };
 		3A95CBDB2070C92D00E507E3 /* s5.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B3E206FF58200ABE7C2 /* s5.h */; };
-		3A95CBDC2070C92D00E507E3 /* tunnel.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A300B3F206FF58200ABE7C2 /* tunnel.c */; };
-		3A95CBDD2070C92D00E507E3 /* tunnel.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A300B43206FF58200ABE7C2 /* tunnel.h */; };
 		3A95CBE42070CA2B00E507E3 /* libsodium.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A95CB952070C6DC00E507E3 /* libsodium.framework */; };
 		3A95CBE52070CA2B00E507E3 /* libuv.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A95CB982070C6DC00E507E3 /* libuv.framework */; };
 		3A95CBE62070CA2B00E507E3 /* mbedtls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A95CB9B2070C6DC00E507E3 /* mbedtls.framework */; };
@@ -113,6 +109,10 @@
 		3A95CC0A2070D26100E507E3 /* udprelay.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A95CC072070D26000E507E3 /* udprelay.c */; };
 		3A95CC0B2070D26100E507E3 /* udprelay.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A95CC082070D26000E507E3 /* udprelay.h */; };
 		3A95CC0C2070D26100E507E3 /* udprelay.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A95CC082070D26000E507E3 /* udprelay.h */; };
+		3A9CCE3620CE318200D9E0DC /* tunnel.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A9CCE3420CE318200D9E0DC /* tunnel.h */; };
+		3A9CCE3720CE318200D9E0DC /* tunnel.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A9CCE3420CE318200D9E0DC /* tunnel.h */; };
+		3A9CCE3820CE318200D9E0DC /* tunnel.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A9CCE3520CE318200D9E0DC /* tunnel.c */; };
+		3A9CCE3920CE318200D9E0DC /* tunnel.c in Sources */ = {isa = PBXBuildFile; fileRef = 3A9CCE3520CE318200D9E0DC /* tunnel.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -227,11 +227,9 @@
 		3A300B27206FF54000ABE7C2 /* cstl_lib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cstl_lib.c; path = ../src/obfs/cstl_lib.c; sourceTree = "<group>"; };
 		3A300B28206FF54000ABE7C2 /* base64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = base64.h; path = ../src/obfs/base64.h; sourceTree = "<group>"; };
 		3A300B3E206FF58200ABE7C2 /* s5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = s5.h; path = ../src/client/s5.h; sourceTree = "<group>"; };
-		3A300B3F206FF58200ABE7C2 /* tunnel.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tunnel.c; path = ../src/client/tunnel.c; sourceTree = "<group>"; };
 		3A300B40206FF58200ABE7C2 /* defs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = defs.h; path = ../src/client/defs.h; sourceTree = "<group>"; };
 		3A300B41206FF58200ABE7C2 /* client.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = client.c; path = ../src/client/client.c; sourceTree = "<group>"; };
 		3A300B42206FF58200ABE7C2 /* s5.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = s5.c; path = ../src/client/s5.c; sourceTree = "<group>"; };
-		3A300B43206FF58200ABE7C2 /* tunnel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tunnel.h; path = ../src/client/tunnel.h; sourceTree = "<group>"; };
 		3A300B44206FF58300ABE7C2 /* listener.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = listener.c; path = ../src/client/listener.c; sourceTree = "<group>"; };
 		3A300B4E206FF66400ABE7C2 /* dump_info.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = dump_info.c; path = ../src/dump_info.c; sourceTree = "<group>"; };
 		3A300B4F206FF66500ABE7C2 /* encrypt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = encrypt.c; path = ../src/encrypt.c; sourceTree = "<group>"; };
@@ -259,6 +257,8 @@
 		3A95CBA42070C7DA00E507E3 /* ssrNative.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ssrNative.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A95CC072070D26000E507E3 /* udprelay.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = udprelay.c; path = ../src/udprelay.c; sourceTree = "<group>"; };
 		3A95CC082070D26000E507E3 /* udprelay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = udprelay.h; path = ../src/udprelay.h; sourceTree = "<group>"; };
+		3A9CCE3420CE318200D9E0DC /* tunnel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tunnel.h; path = ../src/tunnel.h; sourceTree = "<group>"; };
+		3A9CCE3520CE318200D9E0DC /* tunnel.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tunnel.c; path = ../src/tunnel.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -355,8 +355,6 @@
 				3A300B44206FF58300ABE7C2 /* listener.c */,
 				3A300B42206FF58200ABE7C2 /* s5.c */,
 				3A300B3E206FF58200ABE7C2 /* s5.h */,
-				3A300B3F206FF58200ABE7C2 /* tunnel.c */,
-				3A300B43206FF58200ABE7C2 /* tunnel.h */,
 			);
 			name = client;
 			sourceTree = "<group>";
@@ -364,6 +362,8 @@
 		3A300B4C206FF5EA00ABE7C2 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				3A9CCE3520CE318200D9E0DC /* tunnel.c */,
+				3A9CCE3420CE318200D9E0DC /* tunnel.h */,
 				3A95CC072070D26000E507E3 /* udprelay.c */,
 				3A95CC082070D26000E507E3 /* udprelay.h */,
 				3A300B73206FFA0900ABE7C2 /* ssrutils.c */,
@@ -438,7 +438,6 @@
 				3A300B2D206FF54000ABE7C2 /* cstl_lib.h in Headers */,
 				3A300B67206FF69D00ABE7C2 /* sockaddr_universal.h in Headers */,
 				3A300B2C206FF54000ABE7C2 /* auth.h in Headers */,
-				3A300B4A206FF58300ABE7C2 /* tunnel.h in Headers */,
 				3A300B35206FF54000ABE7C2 /* http_simple.h in Headers */,
 				3A57A60C206F9D44002F1F2D /* ssrNative.h in Headers */,
 				3A300B57206FF66500ABE7C2 /* common.h in Headers */,
@@ -452,6 +451,7 @@
 				3A95CC0B2070D26100E507E3 /* udprelay.h in Headers */,
 				3A300B69206FF69D00ABE7C2 /* ssr_cipher_names.h in Headers */,
 				3A300B45206FF58300ABE7C2 /* s5.h in Headers */,
+				3A9CCE3620CE318200D9E0DC /* tunnel.h in Headers */,
 				3A300B6D206FF77E00ABE7C2 /* ssrbuffer.h in Headers */,
 				3A300B6A206FF69D00ABE7C2 /* ssr_executive.h in Headers */,
 				3A300B3C206FF54000ABE7C2 /* base64.h in Headers */,
@@ -484,7 +484,7 @@
 				3A95CBB52070C8FD00E507E3 /* cache.h in Headers */,
 				3A95CC0C2070D26100E507E3 /* udprelay.h in Headers */,
 				3A95CBCE2070C92200E507E3 /* http_simple.h in Headers */,
-				3A95CBDD2070C92D00E507E3 /* tunnel.h in Headers */,
+				3A9CCE3720CE318200D9E0DC /* tunnel.h in Headers */,
 				3A95CBB42070C8FD00E507E3 /* ssrutils.h in Headers */,
 				3A95CBC82070C92200E507E3 /* base64.h in Headers */,
 				3A95CBD62070C92200E507E3 /* verify.h in Headers */,
@@ -661,12 +661,12 @@
 				3A300B33206FF54000ABE7C2 /* verify.c in Sources */,
 				3A300B75206FFA0A00ABE7C2 /* ssrutils.c in Sources */,
 				3A300B2E206FF54000ABE7C2 /* obfsutil.c in Sources */,
+				3A9CCE3820CE318200D9E0DC /* tunnel.c in Sources */,
 				3A300B72206FF9A400ABE7C2 /* cache.c in Sources */,
 				3A300B6E206FF77E00ABE7C2 /* ssrbuffer.c in Sources */,
 				3A95CC092070D26100E507E3 /* udprelay.c in Sources */,
 				3A300B68206FF69D00ABE7C2 /* ssr_cipher_names.c in Sources */,
 				3A300B32206FF54000ABE7C2 /* crc32.c in Sources */,
-				3A300B46206FF58300ABE7C2 /* tunnel.c in Sources */,
 				3A300B2B206FF54000ABE7C2 /* http_simple.c in Sources */,
 				3A300B34206FF54000ABE7C2 /* base64.c in Sources */,
 				3A300B4B206FF58300ABE7C2 /* listener.c in Sources */,
@@ -692,6 +692,7 @@
 				3A95CBCF2070C92200E507E3 /* obfs.c in Sources */,
 				3A95CBC52070C92200E507E3 /* auth.c in Sources */,
 				3A95CBCD2070C92200E507E3 /* http_simple.c in Sources */,
+				3A9CCE3920CE318200D9E0DC /* tunnel.c in Sources */,
 				3A95CBBE2070C90C00E507E3 /* ssr_cipher_names.c in Sources */,
 				3A95CBD12070C92200E507E3 /* obfsutil.c in Sources */,
 				3A95CC0A2070D26100E507E3 /* udprelay.c in Sources */,
@@ -708,7 +709,6 @@
 				3A95CBC72070C92200E507E3 /* base64.c in Sources */,
 				3A95CBBA2070C90C00E507E3 /* ssrutils.c in Sources */,
 				3A95CBCB2070C92200E507E3 /* cstl_lib.c in Sources */,
-				3A95CBDC2070C92D00E507E3 /* tunnel.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
