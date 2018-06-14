@@ -82,7 +82,7 @@ const uint8_t * enc_ctx_get_iv(const struct enc_ctx *ctx);
 
 struct enc_ctx * enc_ctx_new_instance(struct cipher_env_t *env, bool encrypt);
 void enc_ctx_release_instance(struct cipher_env_t* env, struct enc_ctx *ctx);
-int enc_get_iv_len(struct cipher_env_t* env);
+size_t enc_get_iv_len(struct cipher_env_t* env);
 uint8_t* enc_get_key(struct cipher_env_t* env);
 int enc_get_key_len(struct cipher_env_t* env);
 unsigned char *enc_md5(const unsigned char *d, size_t n, unsigned char *md);

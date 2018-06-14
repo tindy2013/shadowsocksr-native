@@ -448,7 +448,7 @@ struct buffer_t * tunnel_cipher_server_encrypt(struct tunnel_cipher_ctx *tc, con
 
 struct buffer_t * tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc, const struct buffer_t *buf)
 {
-    bool need_decrypt = false;
+    bool need_decrypt = true;
     int err;
     struct server_env_t *env = tc->env;
     struct obfs_t *obfs = tc->obfs;
@@ -472,11 +472,10 @@ struct buffer_t * tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc, con
         ret = buffer_clone(buf);
     }
     if (need_decrypt) {
-        if (protocol && protocol->server.recv_iv == NULL) {
+        if (protocol && protocol->server.recv_iv[0] == 0) {
             size_t iv_len = (size_t) protocol->server.iv_len;
-            protocol->server.recv_iv = (uint8_t *) calloc(iv_len, sizeof(uint8_t));
             memmove(protocol->server.recv_iv, ret->buffer, iv_len);
-            protocol->server.recv_iv_len = iv_len; // TODO : FIXME
+            protocol->server.recv_iv_len = iv_len;
         }
 
         err = ss_decrypt(env->cipher, ret, tc->d_ctx, SSR_BUFF_SIZE);

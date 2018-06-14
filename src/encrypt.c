@@ -283,10 +283,10 @@ merge_sort(uint8_t array[], int length, uint32_t salt, uint64_t key)
     merge(left, llength, right, middle, salt, key);
 }
 
-int
+size_t
 enc_get_iv_len(struct cipher_env_t *env)
 {
-    return env->enc_iv_len;
+    return (size_t) env->enc_iv_len;
 }
 
 uint8_t *

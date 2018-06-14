@@ -27,7 +27,7 @@ struct server_info_t {
     void *g_data;
     const uint8_t *iv;
     uint16_t iv_len;
-    uint8_t *recv_iv;
+    uint8_t recv_iv[256];
     uint16_t recv_iv_len;
     uint8_t *key;
     uint16_t key_len;
