@@ -446,7 +446,11 @@ struct buffer_t * tunnel_cipher_server_encrypt(struct tunnel_cipher_ctx *tc, con
     return ret;
 }
 
-struct buffer_t * tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc, const struct buffer_t *buf)
+struct buffer_t * 
+tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc, 
+                             const struct buffer_t *buf, 
+                             struct buffer_t **receipt, 
+                             struct buffer_t **confirm)
 {
     bool need_decrypt = true;
     int err;
@@ -458,6 +462,9 @@ struct buffer_t * tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc, con
 
     ASSERT(buf->len <= SSR_BUFF_SIZE);
 
+    if (receipt) { *receipt = NULL; }
+    if (confirm) { *confirm = NULL; }
+
     if (obfs && obfs->server_decode) {
         bool need_feedback = false;
         ret = obfs->server_decode(obfs, buf, &need_decrypt, &need_feedback);
@@ -465,8 +472,11 @@ struct buffer_t * tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc, con
             return NULL;
         }
         if (need_feedback) {
-            buffer_free(ret);
-            return obfs->server_encode(obfs, empty);
+            if (receipt) {
+                *receipt = obfs->server_encode(obfs, empty);
+            }
+            buffer_reset(ret);
+            return ret;
         }
     } else {
         ret = buffer_clone(buf);
@@ -488,8 +498,10 @@ struct buffer_t * tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc, con
         struct buffer_t *tmp = protocol->server_post_decrypt(protocol, ret, &feedback);
         buffer_free(ret); ret = tmp;
         if (feedback) {
-            buffer_free(ret);
-            return tunnel_cipher_server_encrypt(tc, empty);
+            ASSERT(ret->len == 0);
+            if (confirm) {
+                *confirm  = tunnel_cipher_server_encrypt(tc, empty);
+            }
         }
     }
     return ret;
