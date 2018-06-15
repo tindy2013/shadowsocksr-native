@@ -498,7 +498,6 @@ tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc,
         struct buffer_t *tmp = protocol->server_post_decrypt(protocol, ret, &feedback);
         buffer_free(ret); ret = tmp;
         if (feedback) {
-            ASSERT(ret->len == 0);
             if (confirm) {
                 *confirm  = tunnel_cipher_server_encrypt(tc, empty);
             }

@@ -115,6 +115,9 @@ bool tunnel_cipher_client_need_feedback(struct tunnel_cipher_ctx *tc);
 enum ssr_error tunnel_cipher_client_encrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf);
 enum ssr_error tunnel_cipher_client_decrypt(struct tunnel_cipher_ctx *tc, struct buffer_t *buf, struct buffer_t **feedback);
 
+struct buffer_t * tunnel_cipher_server_encrypt(struct tunnel_cipher_ctx *tc, const struct buffer_t *buf);
+struct buffer_t * tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc, const struct buffer_t *buf, struct buffer_t **receipt, struct buffer_t **confirm);
+
 bool pre_parse_header(struct buffer_t *data);
 
 #endif // defined(__SSR_EXECUTIVE__)
