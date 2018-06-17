@@ -7,6 +7,7 @@
 #include "common.h"
 #include "dump_info.h"
 #include "netutils.h"
+#include "obfsutil.h"
 #include "ssrbuffer.h"
 #include "ssr_executive.h"
 #include "config_json.h"
@@ -485,7 +486,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         buffer_concatenate(ctx->init_pkg, buf, (size_t)incoming->result);
 
         ASSERT(ctx->cipher == NULL);
-        ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg, tcp_mss); // FIXME: error init_pkg
+        ctx->cipher = tunnel_cipher_create(ctx->env, tcp_mss);
 
         protocol = ctx->cipher->protocol;
         obfs = ctx->cipher->obfs;
@@ -493,6 +494,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         ctx->_tcp_mss = tcp_mss;
         info = protocol ? protocol->get_server_info(protocol) : (obfs ? obfs->get_server_info(obfs) : NULL);
         if (info) {
+            info->head_len = (int) get_s5_head_size(ctx->init_pkg->buffer, ctx->init_pkg->len, 30);
             ctx->_overhead = info->overhead;
             ctx->_recv_buffer_size = info->buffer_size;
         }

@@ -7,6 +7,7 @@
 #include "ssr_executive.h"
 #include "encrypt.h"
 #include "tunnel.h"
+#include "obfsutil.h"
 
 /* A connection is modeled as an abstraction on top of two simple state
  * machines, one for reading and one for writing.  Either state machine
@@ -391,7 +392,7 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
     ASSERT(parser->cmd == s5_cmd_tcp_connect);
 
     ctx->init_pkg = initial_package_create(parser);
-    ctx->cipher = tunnel_cipher_create(ctx->env, ctx->init_pkg, 1452);
+    ctx->cipher = tunnel_cipher_create(ctx->env, 1452);
 
     {
         struct obfs_t *protocol = ctx->cipher->protocol;
@@ -400,6 +401,7 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
         info = protocol ? protocol->get_server_info(protocol) : (obfs ? obfs->get_server_info(obfs) : NULL);
         if (info) {
             info->buffer_size = SSR_BUFF_SIZE;
+            info->head_len = (int) get_s5_head_size(ctx->init_pkg->buffer, ctx->init_pkg->len, 30);
         }
     }
     {
