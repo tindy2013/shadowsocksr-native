@@ -5,7 +5,7 @@
 #include "encrypt.h"
 #include "ssrbuffer.h"
 
-size_t get_head_size(const uint8_t *plaindata, size_t size, size_t def_size) {
+size_t get_s5_head_size(const uint8_t *plaindata, size_t size, size_t def_size) {
     if (plaindata == NULL || size < 2) {
         return def_size;
     }

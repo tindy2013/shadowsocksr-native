@@ -255,7 +255,7 @@ auth_simple_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datal
     int len = datalength;
     int pack_len;
     if (len > 0 && local->has_sent_header == 0) {
-        int head_size = get_head_size((const uint8_t *)plaindata, datalength, 30);
+        int head_size = get_s5_head_size((const uint8_t *)plaindata, datalength, 30);
         if (head_size > datalength) {
             head_size = datalength;
         }
@@ -387,7 +387,7 @@ auth_sha1_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalen
     int len = datalength;
     int pack_len;
     if (len > 0 && local->has_sent_header == 0) {
-        int head_size = get_head_size((const uint8_t *)plaindata, datalength, 30);
+        int head_size = get_s5_head_size((const uint8_t *)plaindata, datalength, 30);
         if (head_size > datalength) {
             head_size = datalength;
         }
@@ -534,7 +534,7 @@ auth_sha1_v2_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int data
     int len = datalength;
     int pack_len;
     if (len > 0 && local->has_sent_header == 0) {
-        int head_size = get_head_size((const uint8_t *)plaindata, datalength, 30);
+        int head_size = get_s5_head_size((const uint8_t *)plaindata, datalength, 30);
         if (head_size > datalength) {
             head_size = datalength;
         }
@@ -700,7 +700,7 @@ auth_sha1_v4_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int data
     int len = datalength;
     int pack_len;
     if (len > 0 && local->has_sent_header == 0) {
-        int head_size = get_head_size((const uint8_t *)plaindata, datalength, 30);
+        int head_size = get_s5_head_size((const uint8_t *)plaindata, datalength, 30);
         if (head_size > datalength) {
             head_size = datalength;
         }
