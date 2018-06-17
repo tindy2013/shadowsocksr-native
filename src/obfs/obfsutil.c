@@ -5,18 +5,16 @@
 #include "encrypt.h"
 #include "ssrbuffer.h"
 
-int get_head_size(const uint8_t *plaindata, int size, int def_size) {
-    int head_type;
-    if (plaindata == NULL || size < 2)
+size_t get_head_size(const uint8_t *plaindata, size_t size, size_t def_size) {
+    if (plaindata == NULL || size < 2) {
         return def_size;
-    head_type = plaindata[0] & 0x7;
-    if (head_type == 1)
-        return 7;
-    if (head_type == 4)
-        return 19;
-    if (head_type == 3)
-        return 4 + plaindata[1];
-    return def_size;
+    }
+    switch (plaindata[0] & 0x7) {
+    case 1: return 7;
+    case 4: return 19;
+    case 3: return (4 + plaindata[1]);
+    default: return def_size;
+    }
 }
 
 static int shift128plus_init_flag = 0;
