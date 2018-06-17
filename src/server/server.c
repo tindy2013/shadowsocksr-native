@@ -341,8 +341,12 @@ static void tunnel_dying(struct tunnel_ctx *tunnel) {
 static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     bool done = false;
     struct server_ctx *ctx = (struct server_ctx *)tunnel->data;
+    struct socket_ctx *incoming = tunnel->incoming;
     switch (ctx->state) {
     case session_initial:
+        ASSERT(incoming->rdstate == socket_done);
+        ASSERT(incoming->wrstate == socket_stop);
+        incoming->rdstate = socket_stop;
         do_init_package(tunnel, socket);
         break;
     case session_resolve_host:
@@ -465,25 +469,13 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
     struct socket_ctx *incoming = tunnel->incoming;
     do {
         struct buffer_t *feedback = NULL;
-        const uint8_t *buf = (const uint8_t *)incoming->buf->base;
+        BUFFER_CONSTANT_INSTANCE(buf, incoming->buf->base, incoming->result);
         size_t tcp_mss = _update_tcp_mss(incoming);
         struct obfs_t *protocol = NULL;
         struct obfs_t *obfs = NULL;
         struct server_info_t *info;
 
         ASSERT(socket == incoming);
-
-        ASSERT(incoming->rdstate == socket_done);
-        ASSERT(incoming->wrstate == socket_stop);
-        incoming->rdstate = socket_stop;
-
-        if (is_completed_package(ctx->env, buf, (size_t)incoming->result) == false) {
-            buffer_store(ctx->init_pkg, buf, (size_t)incoming->result);
-            socket_read(incoming);
-            ctx->state = session_initial;  /* Need more data. */
-            break;
-        }
-        buffer_concatenate(ctx->init_pkg, buf, (size_t)incoming->result);
 
         ASSERT(ctx->cipher == NULL);
         ctx->cipher = tunnel_cipher_create(ctx->env, tcp_mss);
@@ -492,6 +484,15 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         obfs = ctx->cipher->obfs;
 
         ctx->_tcp_mss = tcp_mss;
+
+        if (is_completed_package(ctx->env, buf->buffer, buf->len) == false) {
+            buffer_replace(ctx->init_pkg, buf);
+            socket_read(incoming);
+            ctx->state = session_initial;  /* Need more data. */
+            break;
+        }
+        buffer_concatenate2(ctx->init_pkg, buf);
+
         info = protocol ? protocol->get_server_info(protocol) : (obfs ? obfs->get_server_info(obfs) : NULL);
         if (info) {
             info->head_len = (int) get_s5_head_size(ctx->init_pkg->buffer, ctx->init_pkg->len, 30);
