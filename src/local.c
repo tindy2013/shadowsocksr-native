@@ -817,7 +817,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 server_info.port = server_env->port;
                 server_info.param = server_env->obfs_param;
                 server_info.g_data = server_env->obfs_global;
-                server_info.head_len = get_head_size(abuf->buffer, 320, 30);
+                server_info.head_len = get_s5_head_size(abuf->buffer, 320, 30);
                 server_info.iv = enc_ctx_get_iv(local->e_ctx);
                 server_info.iv_len = enc_get_iv_len(server_env->cipher);
                 server_info.key = enc_get_key(server_env->cipher);
