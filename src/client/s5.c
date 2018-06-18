@@ -258,7 +258,7 @@ int s5_select_auth(s5_ctx *cx, s5_auth_method method) {
 }
 
 const char *s5_strerror(s5_err err) {
-#define S5_ERR_GEN(_, name, errmsg) case s5_ ## name: return errmsg;
+#define S5_ERR_GEN(_, name, errmsg) case name: return errmsg;
     switch (err) {
         S5_ERR_MAP(S5_ERR_GEN)
     default:;  /* Silence s5_max_errors -Wswitch warning. */
