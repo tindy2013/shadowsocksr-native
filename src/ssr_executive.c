@@ -481,6 +481,13 @@ tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc,
         ret = buffer_clone(buf);
     }
     if (need_decrypt) {
+        /*
+        // TODO: check IV
+        if (is_completed_package(env, ret->buffer, ret->len) == false) {
+            buffer_free(ret);
+            return NULL;
+        }
+        */
         if (protocol && protocol->server.recv_iv[0] == 0) {
             size_t iv_len = (size_t) protocol->server.iv_len;
             memmove(protocol->server.recv_iv, ret->buffer, iv_len);
