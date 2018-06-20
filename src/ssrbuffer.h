@@ -37,7 +37,7 @@ struct buffer_t {
 
 struct buffer_t * buffer_alloc(size_t capacity);
 struct buffer_t * buffer_create_from(const uint8_t *data, size_t len);
-int buffer_compare(const struct buffer_t *ptr1, const struct buffer_t *ptr2);
+int buffer_compare(const struct buffer_t *ptr1, const struct buffer_t *ptr2, size_t size);
 void buffer_reset(struct buffer_t *ptr);
 struct buffer_t * buffer_clone(const struct buffer_t *ptr);
 size_t buffer_realloc(struct buffer_t *ptr, size_t capacity);

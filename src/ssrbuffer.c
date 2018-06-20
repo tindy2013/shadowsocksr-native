@@ -46,7 +46,7 @@ struct buffer_t * buffer_create_from(const uint8_t *data, size_t len) {
     return result;
 }
 
-int buffer_compare(const struct buffer_t *ptr1, const struct buffer_t *ptr2) {
+int buffer_compare(const struct buffer_t *ptr1, const struct buffer_t *ptr2, size_t size) {
     if (ptr1==NULL && ptr2==NULL) {
         return 0;
     }
@@ -57,9 +57,11 @@ int buffer_compare(const struct buffer_t *ptr1, const struct buffer_t *ptr2) {
         return 1;
     }
     {
-        size_t size = min(ptr1->len, ptr2->len);
-        int ret = memcmp(ptr1->buffer, ptr2->buffer, size);
-        return (ret != 0) ? ret : ((ptr1->len == ptr2->len) ? 0 : ((size == ptr1->len) ? 1 : -1));
+        size_t size1 = (size==SIZE_MAX) ? ptr1->len : min(size, ptr1->len);
+        size_t size2 = (size==SIZE_MAX) ? ptr2->len : min(size, ptr2->len);
+        size_t size0 = min(size1, size2);
+        int ret = memcmp(ptr1->buffer, ptr2->buffer, size0);
+        return (ret != 0) ? ret : ((size1 == size2) ? 0 : ((size0 == size1) ? 1 : -1));
     }
 }
 
@@ -88,7 +90,8 @@ size_t buffer_realloc(struct buffer_t *ptr, size_t capacity) {
     }
     real_capacity = max(capacity, ptr->capacity);
     if (ptr->capacity < real_capacity) {
-        ptr->buffer = (uint8_t *) realloc(ptr->buffer, real_capacity);
+        ptr->buffer = (uint8_t *) realloc(ptr->buffer, real_capacity + 1);
+        ptr->buffer[real_capacity] = 0;
         ptr->capacity = real_capacity;
     }
     return real_capacity;
@@ -123,6 +126,7 @@ void buffer_shorten(struct buffer_t *ptr, size_t begin, size_t len) {
         if (begin != 0) {
             memmove(ptr->buffer, ptr->buffer + begin, len);
         }
+        ptr->buffer[len] = 0;
         ptr->len = len;
     }
 }
