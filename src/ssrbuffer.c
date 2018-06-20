@@ -35,7 +35,7 @@
 
 struct buffer_t * buffer_alloc(size_t capacity) {
     struct buffer_t *ptr = (struct buffer_t *) calloc(1, sizeof(struct buffer_t));
-    ptr->buffer = (uint8_t *) calloc(capacity, sizeof(uint8_t));
+    ptr->buffer = (uint8_t *) calloc(capacity + 1, sizeof(uint8_t));
     ptr->capacity = capacity;
     return ptr;
 }
@@ -75,7 +75,7 @@ struct buffer_t * buffer_clone(const struct buffer_t *ptr) {
     if (ptr == NULL) {
         return result;
     }
-    result = buffer_alloc(ptr->capacity);
+    result = buffer_alloc( max(ptr->capacity, ptr->len) );
     result->len = ptr->len;
     memmove(result->buffer, ptr->buffer, ptr->len);
     return result;
