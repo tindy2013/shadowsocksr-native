@@ -88,7 +88,7 @@
 extern "C" {
 #endif
 
-int std_base64_encode_len(int len);
+int std_base64_encode_len(volatile int len);
 int std_base64_encode(const unsigned char *plain_src, int len_plain_src, unsigned char *coded_dst);
 
 int std_base64_decode_len(const unsigned char *coded_src);

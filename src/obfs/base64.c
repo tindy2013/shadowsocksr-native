@@ -167,7 +167,7 @@ int std_base64_decode(const unsigned char *bufcoded, unsigned char *bufplain)
 static const unsigned char basis_64[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-int std_base64_encode_len(int len)
+int std_base64_encode_len(volatile int len)
 {
     return (((len + 2) / 3) * 4) + 1;
 }
@@ -197,7 +197,7 @@ int std_base64_encode(const unsigned char *string, int len, unsigned char *encod
         *p++ = '=';
     }
 
-    *p++ = '\0';
+    *p = '\0'; // *p++ = '\0';
     return (int)(p - encoded);
 }
 
