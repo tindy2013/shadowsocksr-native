@@ -1237,7 +1237,7 @@ struct buffer_t * auth_aes128_sha1_server_decode(struct obfs_t *obfs, const stru
 struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback) {
     struct buffer_t *out_buf = NULL;
     struct buffer_t *mac_key = NULL;
-    uint8_t sha1data[SHA1_BYTES] = { 0 };
+    uint8_t sha1data[SHA1_BYTES + 1] = { 0 };
     size_t length;
     bool sendback = false;
     auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
