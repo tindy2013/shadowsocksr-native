@@ -712,7 +712,7 @@ ss_sha1_hash_func(uint8_t *auth, const uint8_t *msg, size_t msg_len)
     return 0;
 }
 
-size_t ss_aes_128_cbc_encrypt(size_t length, const uint8_t *plain_text, uint8_t *out_data, const uint8_t *key)
+size_t ss_aes_128_cbc_encrypt(size_t length, const uint8_t *plain_text, uint8_t *out_data, const uint8_t key[16])
 {
     unsigned char iv[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -728,7 +728,7 @@ size_t ss_aes_128_cbc_encrypt(size_t length, const uint8_t *plain_text, uint8_t 
     return 0;
 }
 
-size_t ss_aes_128_cbc_decrypt(size_t length, const uint8_t *cipher_text, uint8_t *out_data, const uint8_t *key)
+size_t ss_aes_128_cbc_decrypt(size_t length, const uint8_t *cipher_text, uint8_t *out_data, const uint8_t key[16])
 {
     unsigned char iv[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
