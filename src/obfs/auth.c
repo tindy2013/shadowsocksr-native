@@ -909,11 +909,9 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
     encrypt[15] = (char)(rand_len >> 8);
 
     {
-        int enc_key_len;
-        char enc_key[16];
-        int base64_len;
+        size_t enc_key_len;
+        uint8_t enc_key[16] = { 0 };
         char encrypt_key_base64[256] = {0};
-        unsigned char *encrypt_key;
         if (local->user_key->len == 0) {
             if(server->param != NULL && server->param[0] != 0) {
                 char *param = server->param;
@@ -939,16 +937,12 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
             }
         }
 
-        encrypt_key = (unsigned char *) malloc((size_t)local->user_key->len * sizeof(unsigned char));
-        memcpy(encrypt_key, local->user_key->buffer, local->user_key->len);
-        std_base64_encode(encrypt_key, local->user_key->len, (unsigned char *)encrypt_key_base64);
-        free(encrypt_key);
+        std_base64_encode(local->user_key->buffer, local->user_key->len, (unsigned char *)encrypt_key_base64);
+        strcat(encrypt_key_base64, salt);
 
-        base64_len = (local->user_key->len + 2) / 3 * 4;
-        memcpy(encrypt_key_base64 + base64_len, salt, strlen(salt));
+        enc_key_len = strlen(encrypt_key_base64);
+        bytes_to_key_with_size(encrypt_key_base64, enc_key_len, enc_key, sizeof(enc_key));
 
-        enc_key_len = base64_len + (int)strlen(salt);
-        bytes_to_key_with_size(encrypt_key_base64, (size_t)enc_key_len, (uint8_t*)enc_key, 16);
         ss_aes_128_cbc_encrypt(16, encrypt, encrypt_data, enc_key);
         memcpy(encrypt + 4, encrypt_data, 16);
         memcpy(encrypt, local->uid, 4);
