@@ -65,7 +65,7 @@ struct enc_ctx;
 size_t ss_max_iv_length(void);
 size_t ss_max_key_length(void);
 
-void bytes_to_key_with_size(const char *pass, size_t len, uint8_t *md, size_t md_size);
+void bytes_to_key_with_size(const uint8_t *pass, size_t len, uint8_t *md, size_t md_size);
 
 int rand_bytes(uint8_t *output, int len);
 

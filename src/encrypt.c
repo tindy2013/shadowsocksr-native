@@ -360,7 +360,7 @@ cipher_key_size(const struct cipher_wrapper *cipher)
 }
 
 void
-bytes_to_key_with_size(const char *pass, size_t len, uint8_t *md, size_t md_size)
+bytes_to_key_with_size(const uint8_t *pass, size_t len, uint8_t *md, size_t md_size)
 {
     int i;
     uint8_t result[128];
