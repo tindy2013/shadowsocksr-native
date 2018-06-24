@@ -878,7 +878,7 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
     int out_size = data_offset + datalength + 4;
     const char* salt = local->salt;
 
-    char encrypt[24];
+    uint8_t encrypt[24 + 1] = { 0 };
     uint8_t encrypt_data[16] = { 0 };
 
     uint8_t *key = (uint8_t*)malloc(server->iv_len + server->key_len);
@@ -903,10 +903,15 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
     memintcopy_lt(encrypt, (uint32_t)t);
     memcpy(encrypt + 4, global->local_client_id, 4);
     memintcopy_lt(encrypt + 8, global->connection_id);
+#if 1
     encrypt[12] = (char)out_size;
     encrypt[13] = (char)(out_size >> 8);
     encrypt[14] = (char)rand_len;
     encrypt[15] = (char)(rand_len >> 8);
+#else
+    *((uint16_t *)(encrypt + 12)) = htons((uint16_t)out_size); // TODO 
+    *((uint16_t *)(encrypt + 14)) = htons((uint16_t)rand_len); // TODO 
+#endif
 
     {
         size_t enc_key_len;
@@ -1289,24 +1294,23 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
 
             bytes_to_key_with_size(key->buffer, key->len, enc_key, sizeof(enc_key));
 
-            // head = encryptor.decrypt(b'\x00' * 16 + self.recv_buf[11:27] + b'\x00') # need an extra byte or recv empty
-            memcpy(in_data + 16, local->recv_buffer->buffer+11, 16);
-            head = buffer_alloc(SSR_BUFF_SIZE);
-            head->len = 32;
-            ss_aes_128_cbc_decrypt(32, in_data, head->buffer, enc_key);
+            head = buffer_alloc(16);
+            head->len = 16;
+            ss_aes_128_cbc_decrypt(16, local->recv_buffer->buffer+11, head->buffer, enc_key);
+
             buffer_free(key);
         }
 
-        length = (size_t) ntohs( *((uint16_t *)(head->buffer + 12)) );
+        length = (size_t) ( *((uint16_t *)(head->buffer + 12)) ); // TODO: ntohs
         if (local->recv_buffer->len < length) {
             if (need_feedback) { *need_feedback = false; }
             return buffer_alloc(1);
         }
 
-        utc_time = (uint32_t) ntohl(*((uint32_t *)(head->buffer + 0)));
-        client_id = (uint32_t) ntohl(*((uint32_t *)(head->buffer + 4)));
-        connection_id = (uint32_t) ntohl(*((uint32_t *)(head->buffer + 8)));
-        rnd_len = (uint16_t) ntohs(*((uint16_t *)(head->buffer + 14)));
+        utc_time = (uint32_t) (*((uint32_t *)(head->buffer + 0))); // TODO: ntohl
+        client_id = (uint32_t) (*((uint32_t *)(head->buffer + 4))); // TODO: ntohl
+        connection_id = (uint32_t) (*((uint32_t *)(head->buffer + 8))); // TODO: ntohl
+        rnd_len = (uint16_t) (*((uint16_t *)(head->buffer + 14))); // TODO: ntohs
         {
             BUFFER_CONSTANT_INSTANCE(_msg, local->recv_buffer->buffer, length-4);
             local->hmac(sha1data, _msg, local->user_key);
