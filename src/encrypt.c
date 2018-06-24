@@ -164,18 +164,14 @@ ss_mbedtls_cipher_name_by_type(enum ss_cipher_type index)
 //#define SHOW_DUMP
 #endif
 
-#ifdef SHOW_DUMP
-static void
-dump(char *tag, char *text, int len)
-{
+void dump(const char *tag, const uint8_t *text, size_t len) {
     int i;
     printf("%s: ", tag);
-    for (i = 0; i < len; i++)
-        printf("0x%02x ", (uint8_t)text[i]);
+    for (i = 0; i < len; i++) {
+        printf("0x%02x ", text[i]);
+    }
     printf("\n");
 }
-
-#endif
 
 size_t ss_max_iv_length(void) {
     return MAX_IV_LENGTH;

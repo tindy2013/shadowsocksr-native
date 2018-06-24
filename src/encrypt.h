@@ -62,6 +62,8 @@ struct buffer_t;
 struct cipher_env_t;
 struct enc_ctx;
 
+void dump(const char *tag, const uint8_t *text, size_t len);
+
 size_t ss_max_iv_length(void);
 size_t ss_max_key_length(void);
 
