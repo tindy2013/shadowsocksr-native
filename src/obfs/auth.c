@@ -879,7 +879,7 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
     const char* salt = local->salt;
 
     char encrypt[24];
-    char encrypt_data[16];
+    uint8_t encrypt_data[16] = { 0 };
 
     uint8_t *key = (uint8_t*)malloc(server->iv_len + server->key_len);
     uint8_t key_len = (uint8_t)(server->iv_len + server->key_len);
@@ -941,7 +941,7 @@ auth_aes128_sha1_pack_auth_data(auth_simple_global_data *global, struct server_i
         strcat(encrypt_key_base64, salt);
 
         enc_key_len = strlen(encrypt_key_base64);
-        bytes_to_key_with_size(encrypt_key_base64, enc_key_len, enc_key, sizeof(enc_key));
+        bytes_to_key_with_size((uint8_t *)encrypt_key_base64, enc_key_len, enc_key, sizeof(enc_key));
 
         ss_aes_128_cbc_encrypt(16, encrypt, encrypt_data, enc_key);
         memcpy(encrypt + 4, encrypt_data, 16);
@@ -1279,18 +1279,21 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
         buffer_store(local->user_key, obfs->server.key, obfs->server.key_len);
 
         {
-            uint8_t in_data[32] = { 0 };
+            uint8_t enc_key[16] = { 0 };
+            uint8_t in_data[32 + 1] = { 0 };
             struct buffer_t *user_key = local->user_key;
             size_t b64len = (size_t) std_base64_encode_len((int) user_key->len);
             struct buffer_t *key = buffer_alloc(b64len + 1);
             key->len = (size_t) std_base64_encode(user_key->buffer, (int)user_key->len, key->buffer);
             buffer_concatenate(key, (uint8_t *)local->salt, strlen(local->salt));
 
+            bytes_to_key_with_size(key->buffer, key->len, enc_key, sizeof(enc_key));
+
             // head = encryptor.decrypt(b'\x00' * 16 + self.recv_buf[11:27] + b'\x00') # need an extra byte or recv empty
             memcpy(in_data + 16, local->recv_buffer->buffer+11, 16);
             head = buffer_alloc(SSR_BUFF_SIZE);
             head->len = 32;
-            ss_aes_128_cbc_decrypt(32, in_data, head->buffer, key->buffer);
+            ss_aes_128_cbc_decrypt(32, in_data, head->buffer, enc_key);
             buffer_free(key);
         }
 
