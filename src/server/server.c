@@ -38,6 +38,7 @@ enum session_state {
     session_initial = 0,  /* Initial stage                    */
     session_receipt_done,
     session_client_feedback,
+    session_confirm_done,
     session_resolve_host = 4,  /* Resolve the hostname             */
     session_connect_host,
     session_launch_streaming,
@@ -83,6 +84,7 @@ static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel);
 static bool is_header_complete(const struct buffer_t *buf);
 static size_t _get_read_size(struct tunnel_ctx *tunnel, struct socket_ctx *socket, size_t suggested_size);
 static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_prepare_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_client_feedback(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -365,6 +367,12 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         incoming->rdstate = socket_stop;
         do_client_feedback(tunnel, socket);
         break;
+    case session_confirm_done:
+        ASSERT(incoming->rdstate == socket_stop);
+        ASSERT(incoming->wrstate == socket_done);
+        incoming->wrstate = socket_stop;
+        do_prepare_parse(tunnel, socket);
+        break;
     case session_resolve_host:
         do_resolve_host_done(tunnel, socket);
         break;
@@ -489,23 +497,21 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
     do {
-        struct buffer_t *feedback = NULL;
         BUFFER_CONSTANT_INSTANCE(buf, incoming->buf->base, incoming->result);
         size_t tcp_mss = _update_tcp_mss(incoming);
-        struct obfs_t *protocol = NULL;
-        struct obfs_t *obfs = NULL;
-        struct server_info_t *info;
         struct buffer_t *receipt = NULL;
         struct buffer_t *confirm = NULL;
         struct buffer_t *result = NULL;
 
         ASSERT(socket == incoming);
 
+        if (incoming->result < 0) {
+            tunnel_shutdown(tunnel);
+            break;
+        }
+
         ASSERT(ctx->cipher == NULL);
         ctx->cipher = tunnel_cipher_create(ctx->env, tcp_mss);
-
-        protocol = ctx->cipher->protocol;
-        obfs = ctx->cipher->obfs;
 
         ctx->_tcp_mss = tcp_mss;
 
@@ -516,44 +522,48 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
 
             socket_write(incoming, receipt->buffer, receipt->len);
             ctx->state = session_receipt_done;
+
+            buffer_free(receipt);
             return;
         }
 
         ASSERT(result && result->len!=0);
+        buffer_concatenate2(ctx->init_pkg, result);
 
-        if (is_completed_package(ctx->env, buf->buffer, buf->len) == false) {
-            buffer_replace(ctx->init_pkg, buf);
-            socket_read(incoming);
-            ctx->state = session_initial;  /* Need more data. */
-            break;
-        }
-        buffer_concatenate2(ctx->init_pkg, buf);
+        do_prepare_parse(tunnel, socket);
+    } while (0);
+}
+
+static void do_prepare_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+    struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
+    struct buffer_t *init_pkg = ctx->init_pkg;
+    do {
+        struct server_info_t *info;
+        struct obfs_t *protocol = NULL;
+        struct obfs_t *obfs = NULL;
+
+        protocol = ctx->cipher->protocol;
+        obfs = ctx->cipher->obfs;
 
         info = protocol ? protocol->get_server_info(protocol) : (obfs ? obfs->get_server_info(obfs) : NULL);
         if (info) {
-            info->head_len = (int) get_s5_head_size(ctx->init_pkg->buffer, ctx->init_pkg->len, 30);
+            info->head_len = (int) get_s5_head_size(init_pkg->buffer, init_pkg->len, 30);
             ctx->_overhead = info->overhead;
             ctx->_recv_buffer_size = info->buffer_size;
         }
         ctx->_recv_d_max_size = TCP_BUF_SIZE_MAX;
 
-        if (ssr_ok != tunnel_cipher_client_decrypt(ctx->cipher, ctx->init_pkg, &feedback)) {
-            // TODO: report_addr(server->fd, MALICIOUS);
-            tunnel_shutdown(tunnel);
-            break;
-        }
-
-        if (is_legal_header(ctx->init_pkg) == false) {
+        if (is_legal_header(init_pkg) == false) {
             // report_addr(server->fd, MALFORMED);
             tunnel_shutdown(tunnel);
             break;
         }
 
-        if (is_header_complete(ctx->init_pkg)) {
-            do_parse(tunnel, socket);
-        } else {
-            do_handshake(tunnel, socket);
+        if (is_header_complete(init_pkg) == false) {
+            tunnel_shutdown(tunnel);
         }
+
+        do_parse(tunnel, socket);
     } while (0);
 }
 
@@ -564,21 +574,36 @@ static void do_client_feedback(struct tunnel_ctx *tunnel, struct socket_ctx *soc
     struct buffer_t *result = NULL;
     struct buffer_t *receipt = NULL;
     struct buffer_t *confirm = NULL;
+    do {
+        ASSERT(incoming == socket);
 
-    result = tunnel_cipher_server_decrypt(ctx->cipher, buf, &receipt, &confirm);
-    ASSERT(receipt == NULL);
-    if (confirm) {
-        // TODO 
-        return;
-    }
-    if (result==NULL || result->len==0) {
-        buffer_free(result);
-        tunnel_shutdown(tunnel);
-        return;
-    }
-    // TODO 
-    (void)result;
-    return;
+        if (incoming->result < 0) {
+            pr_err("write error: %s", uv_strerror((int)incoming->result));
+            tunnel_shutdown(tunnel);
+            break;
+        }
+
+        result = tunnel_cipher_server_decrypt(ctx->cipher, buf, &receipt, &confirm);
+        ASSERT(receipt == NULL);
+        if (result==NULL || result->len==0) {
+            tunnel_shutdown(tunnel);
+            break;
+        }
+
+        buffer_concatenate2(ctx->init_pkg, result);
+
+        if (confirm) {
+            socket_write(incoming, confirm->buffer, confirm->len);
+            ctx->state = session_confirm_done;
+            break;
+        }
+
+        do_prepare_parse(tunnel, socket);
+        break;
+    } while(0);
+    buffer_free(result);
+    buffer_free(receipt);
+    buffer_free(confirm);
 }
 
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
@@ -796,33 +821,30 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
     }
     *size = 0;
 
-    buf = buffer_create_from((uint8_t *)socket->buf->base, (size_t)socket->result);
-
-    if (socket == tunnel->outgoing) {
-        error = tunnel_cipher_client_encrypt(cipher_ctx, buf);
-    } else if (socket == tunnel->incoming) {
-        struct buffer_t *feedback = NULL;
-        error = tunnel_cipher_client_decrypt(cipher_ctx, buf, &feedback);
-        if (feedback) {
+    {
+        BUFFER_CONSTANT_INSTANCE(src, socket->buf->base, socket->result);
+        if (socket == tunnel->outgoing) {
+            buf = tunnel_cipher_server_encrypt(cipher_ctx, src);
+        } else if (socket == tunnel->incoming) {
+            struct buffer_t *receipt = NULL;
+            struct buffer_t *confirm = NULL;
+            buf = tunnel_cipher_server_decrypt(cipher_ctx, src, &receipt, &confirm);
+            ASSERT(receipt == NULL);
+            ASSERT(confirm == NULL);
+        } else {
             ASSERT(0);
-            /*
-            ASSERT(buf->len == 0);
-            socket_write(outgoing, feedback->buffer, feedback->len);
-            */
-            buffer_free(feedback);
         }
-    } else {
-        ASSERT(0);
     }
 
-    if (error == ssr_ok) {
+    if (buf) {
         size_t len = buf->len;
         *size = len;
         result = (uint8_t *)allocator(len + 1);
         memcpy(result, buf->buffer, len);
+
+        buffer_free(buf);
     }
 
-    buffer_free(buf);
     return result;
 }
 
