@@ -1342,7 +1342,7 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
 
     while (local->recv_buffer->len > 4) {
         size_t pos;
-        uint32_t recv_id = htonl(local->recv_id);
+        uint32_t recv_id = (local->recv_id); // TODO: htonl
         buffer_replace(mac_key, local->user_key);
         buffer_concatenate(mac_key, (uint8_t *)&recv_id, sizeof(recv_id));
         {
@@ -1353,7 +1353,7 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
             // '%s: wrong crc'
             return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
         }
-        length = (size_t) ntohs(*((uint16_t *)local->recv_buffer->buffer));
+        length = (size_t) (*((uint16_t *)local->recv_buffer->buffer)); // TODO: ntohs
         if (length >= 8192 || length < 7) {
             // '%s: over size'
             buffer_reset(local->recv_buffer);
@@ -1376,7 +1376,7 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
         if (pos < 255) {
             pos += 4;
         } else {
-            pos = ntohs(*(uint16_t *)(local->recv_buffer->buffer + 5)) + 4;
+            pos = (*(uint16_t *)(local->recv_buffer->buffer + 5)) + 4; // TODO: ntohs
         }
         buffer_concatenate(out_buf, local->recv_buffer->buffer + pos, (length - 4) - pos);
         buffer_shorten(local->recv_buffer, length, local->recv_buffer->len - length);
