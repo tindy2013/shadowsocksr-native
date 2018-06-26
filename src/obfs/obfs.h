@@ -49,9 +49,9 @@ struct obfs_t {
     void (*set_server_info)(struct obfs_t *obfs, struct server_info_t *server);
     void (*dispose)(struct obfs_t *obfs);
 
-    int (*client_pre_encrypt)(struct obfs_t *obfs,
+    size_t (*client_pre_encrypt)(struct obfs_t *obfs,
             char **pplaindata,
-            int datalength,
+            size_t datalength,
             size_t* capacity);
     size_t (*client_encode)(struct obfs_t *obfs,
             char **pencryptdata,

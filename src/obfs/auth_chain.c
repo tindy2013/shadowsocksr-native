@@ -326,22 +326,22 @@ unsigned int get_rand_start_pos(int rand_len, struct shift128plus_ctx *random) {
     return 0;
 }
 
-unsigned int get_client_rand_len(struct auth_chain_local_data *local, int datalength) {
-    return local->get_tcp_rand_len(local, datalength, &local->random_client, local->last_client_hash);
+unsigned int get_client_rand_len(struct auth_chain_local_data *local, size_t datalength) {
+    return local->get_tcp_rand_len(local, (int)datalength, &local->random_client, local->last_client_hash);
 }
 
 unsigned int get_server_rand_len(struct auth_chain_local_data *local, int datalength) {
     return local->get_tcp_rand_len(local, datalength, &local->random_server, local->last_server_hash);
 }
 
-int auth_chain_a_pack_data(struct obfs_t *obfs, char *data, int datalength, char *outdata) {
+size_t auth_chain_a_pack_data(struct obfs_t *obfs, char *data, size_t datalength, char *outdata) {
     uint8_t key_len;
     uint8_t *key;
     struct auth_chain_local_data *local = (struct auth_chain_local_data *) obfs->l_data;
     struct server_info_t *server = &obfs->server;
 
     unsigned int rand_len = get_client_rand_len(local, datalength);
-    int out_size = (int)rand_len + datalength + 2;
+    size_t out_size = (size_t)rand_len + datalength + 2;
     outdata[0] = (char)((uint8_t)datalength ^ local->last_client_hash[14]);
     outdata[1] = (char)((uint8_t)(datalength >> 8) ^ local->last_client_hash[15]);
 
@@ -376,14 +376,14 @@ int auth_chain_a_pack_data(struct obfs_t *obfs, char *data, int datalength, char
     return out_size + 2;
 }
 
-int auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, int datalength, char *outdata) {
+size_t auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, size_t datalength, char *outdata) {
     struct server_info_t *server = &obfs->server;
     struct auth_chain_global_data *global = (struct auth_chain_global_data *)obfs->server.g_data;
     struct auth_chain_local_data *local = (struct auth_chain_local_data *) obfs->l_data;
 
     const int authhead_len = 4 + 8 + 4 + 16 + 4;
     const char* salt = local->salt;
-    int out_size = authhead_len;
+    size_t out_size = authhead_len;
     char encrypt[20];
     uint8_t key_len;
     uint8_t *key;
@@ -498,18 +498,18 @@ int auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, int datalength,
     return out_size;
 }
 
-int auth_chain_a_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity) {
+size_t auth_chain_a_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity) {
     char *plaindata = *pplaindata;
     struct server_info_t *server = (struct server_info_t *)&obfs->server;
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
     char * out_buffer = (char*)malloc((size_t)(datalength * 2 + (SSR_BUFF_SIZE * 2)));
     char * buffer = out_buffer;
     char * data = plaindata;
-    int len = datalength;
-    int pack_len;
-    int unit_size;
+    size_t len = datalength;
+    size_t pack_len;
+    size_t unit_size;
     if (len > 0 && local->has_sent_header == 0) {
-        int head_size = 1200;
+        size_t head_size = 1200;
         if (head_size > datalength) {
             head_size = datalength;
         }
@@ -530,13 +530,13 @@ int auth_chain_a_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int 
         pack_len = auth_chain_a_pack_data(obfs, data, len, buffer);
         buffer += pack_len;
     }
-    len = (int)(buffer - out_buffer);
-    if ((int)*capacity < len) {
+    len = (size_t)(buffer - out_buffer);
+    if ((size_t)*capacity < len) {
         *pplaindata = (char*)realloc(*pplaindata, *capacity = (size_t)(len * 2));
         // TODO check realloc failed
         plaindata = *pplaindata;
     }
-    local->last_data_len = datalength;
+    local->last_data_len = (int) datalength;
     memmove(plaindata, out_buffer, len);
     free(out_buffer);
     return len;

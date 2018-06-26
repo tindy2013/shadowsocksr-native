@@ -55,13 +55,13 @@ int verify_simple_pack_data(char *data, int datalength, char *outdata) {
     return out_size;
 }
 
-int verify_simple_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, int datalength, size_t *capacity) {
+size_t verify_simple_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t *capacity) {
     char *plaindata = *pplaindata;
     //verify_simple_local_data *local = (verify_simple_local_data*)obfs->l_data;
     char * out_buffer = (char*)malloc((size_t)(datalength * 2 + 32));
     char * buffer = out_buffer;
     char * data = plaindata;
-    int len = datalength;
+    int len = (int) datalength;
     int pack_len;
     while ( len > verify_simple_pack_unit_size ) {
         pack_len = verify_simple_pack_data(data, verify_simple_pack_unit_size, buffer);
