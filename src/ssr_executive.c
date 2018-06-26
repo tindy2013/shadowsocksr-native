@@ -459,8 +459,6 @@ tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc,
     struct buffer_t *ret = NULL;
     BUFFER_CONSTANT_INSTANCE(empty, "", 0);
 
-    ASSERT(buf->len <= SSR_BUFF_SIZE);
-
     if (receipt) { *receipt = NULL; }
     if (confirm) { *confirm = NULL; }
 
@@ -494,7 +492,7 @@ tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc,
             protocol->server.recv_iv_len = iv_len;
         }
 
-        err = ss_decrypt(env->cipher, ret, tc->d_ctx, SSR_BUFF_SIZE);
+        err = ss_decrypt(env->cipher, ret, tc->d_ctx, max(SSR_BUFF_SIZE, ret->capacity));
         if (err != 0) {
             return NULL;
         }
