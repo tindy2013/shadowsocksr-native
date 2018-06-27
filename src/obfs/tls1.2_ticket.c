@@ -34,7 +34,7 @@ struct tls12_ticket_auth_local_data {
 
 static void tls12_ticket_auth_local_data_init(struct tls12_ticket_auth_local_data* local) {
     local->handshake_status = 0;
-    local->send_buffer = malloc(0);
+    local->send_buffer = (uint8_t *) malloc(1);
     local->send_buffer_size = 0;
     local->recv_buffer = buffer_alloc(SSR_BUFF_SIZE);
     local->client_id = buffer_alloc(SSR_BUFF_SIZE);
@@ -50,6 +50,7 @@ void * tls12_ticket_auth_init_data(void) {
 }
 
 void tls12_ticket_auth_new_obfs(struct obfs_t * obfs) {
+    struct tls12_ticket_auth_local_data *l_data = NULL;
     obfs->init_data = tls12_ticket_auth_init_data;
     obfs->get_overhead = tls12_ticket_auth_get_overhead;
     obfs->need_feedback = need_feedback_true;
@@ -67,8 +68,9 @@ void tls12_ticket_auth_new_obfs(struct obfs_t * obfs) {
     obfs->server_udp_pre_encrypt = generic_server_udp_pre_encrypt;
     obfs->server_udp_post_decrypt = generic_server_udp_post_decrypt;
 
-    obfs->l_data = calloc(1, sizeof(struct tls12_ticket_auth_local_data));
-    tls12_ticket_auth_local_data_init((struct tls12_ticket_auth_local_data*)obfs->l_data);
+    l_data = calloc(1, sizeof(struct tls12_ticket_auth_local_data));
+    tls12_ticket_auth_local_data_init(l_data);
+    obfs->l_data = l_data;
 }
 
 size_t tls12_ticket_auth_get_overhead(struct obfs_t *obfs) {
@@ -82,6 +84,7 @@ void tls12_ticket_auth_dispose(struct obfs_t *obfs) {
         local->send_buffer = NULL;
     }
     buffer_free(local->recv_buffer);
+    buffer_free(local->client_id);
     free(local);
     dispose_obfs(obfs);
 }
@@ -648,7 +651,7 @@ struct buffer_t * tls12_ticket_auth_server_decode(struct obfs_t *obfs, const str
             if (need_feedback) { *need_feedback = false; }
             buffer_free(verify);
             buffer_free(swap);
-            return buffer_alloc(SSR_BUFF_SIZE);
+            return buffer_alloc(1);
         }
         {
             BUFFER_CONSTANT_INSTANCE(pMsg, verify->buffer, verify_len);

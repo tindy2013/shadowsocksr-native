@@ -32,6 +32,16 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
+void check_memory_content(struct buffer_t *buf) {
+#if __MEM_CHECK__
+    static const char data[] = "\xE7\x3C\x73\xA6\x66\x43\x28\x67\xAF\xD3\x5C\xE2\x70\x80\x0D\xD7";
+    if (buf && buf->len >= strlen(data)) {
+        if (memcmp(buf->buffer, data, strlen(data)) == 0) {
+            // _CrtDbgBreak();
+        }
+    }
+#endif // __MEM_CHECK__
+}
 
 struct buffer_t * buffer_alloc(size_t capacity) {
     struct buffer_t *ptr = (struct buffer_t *) calloc(1, sizeof(struct buffer_t));
@@ -80,6 +90,7 @@ struct buffer_t * buffer_clone(const struct buffer_t *ptr) {
     result = buffer_alloc( max(ptr->capacity, ptr->len) );
     result->len = ptr->len;
     memmove(result->buffer, ptr->buffer, ptr->len);
+    check_memory_content(result);
     return result;
 }
 
@@ -101,6 +112,7 @@ size_t buffer_store(struct buffer_t *ptr, const uint8_t *data, size_t size) {
     size_t result = buffer_realloc(ptr, size);
     memmove(ptr->buffer, data, size);
     ptr->len = size;
+    check_memory_content(ptr);
     return min(size, result);
 }
 
@@ -113,6 +125,7 @@ size_t buffer_concatenate(struct buffer_t *ptr, const uint8_t *data, size_t size
     size_t result = buffer_realloc(ptr, ptr->len + size);
     memmove(ptr->buffer + ptr->len, data, size);
     ptr->len += size;
+    check_memory_content(ptr);
     return min(ptr->len, result);
 }
 
@@ -129,6 +142,7 @@ void buffer_shorten(struct buffer_t *ptr, size_t begin, size_t len) {
         ptr->buffer[len] = 0;
         ptr->len = len;
     }
+    check_memory_content(ptr);
 }
 
 void buffer_free(struct buffer_t *ptr) {

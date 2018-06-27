@@ -1391,6 +1391,8 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
         // TODO : self.server_info.data.update(self.user_id, self.client_id, self.connection_id)
     }
 
+    buffer_free(mac_key);
+
     if (need_feedback) { *need_feedback = sendback; }
     return out_buf;
 }

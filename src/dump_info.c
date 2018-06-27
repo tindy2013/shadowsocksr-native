@@ -5,13 +5,10 @@
 
 #include "dump_info.h"
 
-char *progname = __FILE__;  /* Reset in main(). */
+char progname[512 + 1] = __FILE__;  /* Reset in main(). */
 
 void set_app_name(const char *name) {
-    if (strcmp(progname, __FILE__) != 0) {
-        free(progname);
-    }
-    progname = strdup(name);
+    strcpy(progname, name);
 }
 
 const char *get_app_name(void) {

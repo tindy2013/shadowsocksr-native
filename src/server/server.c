@@ -104,6 +104,12 @@ int main(int argc, char * const argv[]) {
     int err = -1;
     struct cmd_line_info *cmds = NULL;
 
+#if __MEM_CHECK__
+    _CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
+    _CrtSetBreakAlloc(63);
+    _CrtSetBreakAlloc(64);
+#endif // __MEM_CHECK__
+
     do {
         set_app_name(argv[0]);
 
@@ -158,7 +164,9 @@ int main(int argc, char * const argv[]) {
     if (err != 0) {
         usage();
     }
-
+#if __MEM_CHECK__
+    _CrtDumpMemoryLeaks();
+#endif // __MEM_CHECK__
     return 0;
 }
 
@@ -528,7 +536,8 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         }
 
         ASSERT(result && result->len!=0);
-        buffer_concatenate2(ctx->init_pkg, result);
+        buffer_replace(ctx->init_pkg, result);
+        buffer_free(result);
 
         do_prepare_parse(tunnel, socket);
     } while (0);
@@ -561,6 +570,7 @@ static void do_prepare_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 
         if (is_header_complete(init_pkg) == false) {
             tunnel_shutdown(tunnel);
+            break;
         }
 
         do_parse(tunnel, socket);

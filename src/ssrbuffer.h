@@ -25,6 +25,12 @@
 
 #include <stdint.h>
 
+#if __MEM_CHECK__
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif // __MEM_CHECK__
+
 struct buffer_t {
     size_t len;
     size_t capacity;
