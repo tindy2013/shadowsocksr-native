@@ -68,7 +68,7 @@ void tls12_ticket_auth_new_obfs(struct obfs_t * obfs) {
     obfs->server_udp_pre_encrypt = generic_server_udp_pre_encrypt;
     obfs->server_udp_post_decrypt = generic_server_udp_post_decrypt;
 
-    l_data = calloc(1, sizeof(struct tls12_ticket_auth_local_data));
+    l_data = (struct tls12_ticket_auth_local_data *) calloc(1, sizeof(struct tls12_ticket_auth_local_data));
     tls12_ticket_auth_local_data_init(l_data);
     obfs->l_data = l_data;
 }
@@ -109,12 +109,16 @@ static void tls12_sha1_hmac(struct obfs_t *obfs,
 static int tls12_ticket_pack_auth_data(struct obfs_t *obfs, const uint8_t client_id[32], uint8_t outdata[32]) {
     uint8_t hash[SHA1_BYTES];
     int out_size = 32;
+#if 0
     time_t t = time(NULL);
     outdata[0] = (uint8_t)(t >> 24);
     outdata[1] = (uint8_t)(t >> 16);
     outdata[2] = (uint8_t)(t >> 8);
     outdata[3] = (uint8_t)t;
-    rand_bytes((uint8_t*)outdata + 4, 18);
+#else
+    *((uint32_t *)(outdata + 0)) = htonl((uint32_t)time(NULL));
+#endif
+    rand_bytes((uint8_t*)outdata + sizeof(uint32_t), 18);
 
     {
         BUFFER_CONSTANT_INSTANCE(pClientID, client_id, 32);
