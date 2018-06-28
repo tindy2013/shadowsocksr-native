@@ -38,7 +38,7 @@ typedef struct _auth_simple_local_data {
     size_t unit_len;
     bool has_recv_header;
     size_t extra_wait_size;
-    ssize_t max_time_dif;
+    int max_time_dif;
     uint32_t client_id;
     uint32_t connection_id;
 } auth_simple_local_data;
@@ -1254,7 +1254,7 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
         uint32_t client_id;
         uint32_t connection_id;
         uint16_t rnd_len;
-        uint32_t time_diff;
+        int time_diff;
 
         struct buffer_t *head;
         size_t len = local->recv_buffer->len;
@@ -1322,8 +1322,8 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
             // '%s: checksum error, data %s'
             return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
         }
-        time_diff = utc_time - (uint32_t)time(NULL);
-        if (((ssize_t)time_diff < - local->max_time_dif) || ((ssize_t)time_diff > local->max_time_dif)) {
+        time_diff = abs((int)time(NULL) - (int)utc_time);
+        if (time_diff > local->max_time_dif) {
             // '%s: wrong timestamp, time_dif %d, data %s'
             return auth_aes128_not_match_return(obfs, local->recv_buffer, need_feedback);
         }
