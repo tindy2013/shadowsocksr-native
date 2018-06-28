@@ -586,7 +586,7 @@ struct buffer_t * tls12_ticket_auth_server_decode(struct obfs_t *obfs, const str
             uint8_t *beginning = local->recv_buffer->buffer;
             size_t size = 0;
             size_t thunk_size = 0;
-            if (beginning[0] != 0x17 || beginning[1] != 0x03 || beginning[2] != 0x03) {
+            if (memcmp(beginning, "\x17\x03\x03", 3) != 0) {
                 buffer_free(result); result = NULL;
                 return result;
             }
