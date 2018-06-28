@@ -478,7 +478,7 @@ tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc,
     } else {
         ret = buffer_clone(buf);
     }
-    if (need_decrypt) {
+    if (need_decrypt && ret && ret->len) {
         /*
         // TODO: check IV
         if (is_completed_package(env, ret->buffer, ret->len) == false) {
