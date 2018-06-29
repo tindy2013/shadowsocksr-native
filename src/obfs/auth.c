@@ -1307,6 +1307,7 @@ struct buffer_t * auth_aes128_sha1_server_post_decrypt(struct obfs_t *obfs, stru
         length = (size_t) ( *((uint16_t *)(head->buffer + 12)) ); // TODO: ntohs
         if (local->recv_buffer->len < length) {
             if (need_feedback) { *need_feedback = false; }
+            // TODO: Waiting for the next packet
             return buffer_alloc(1);
         }
 

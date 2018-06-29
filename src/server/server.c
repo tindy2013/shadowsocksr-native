@@ -531,7 +531,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
             break;
         }
 
-        ASSERT(result && result->len!=0);
+        ASSERT(result /* && result->len!=0 */);
         buffer_replace(ctx->init_pkg, result);
 
         if (confirm) {
