@@ -76,7 +76,7 @@ static void do_resolve_ssr_server_host(struct tunnel_ctx *tunnel);
 static void do_connect_ssr_server(struct tunnel_ctx *tunnel);
 static void do_connect_ssr_server_done(struct tunnel_ctx *tunnel);
 static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
-static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel);
+static bool do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel);
 static void do_socks5_reply_success(struct tunnel_ctx *tunnel);
 static void do_launch_streaming(struct tunnel_ctx *tunnel);
 static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)(size_t size), size_t *size);
@@ -219,7 +219,9 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     case session_ssr_waiting_feedback:
         ASSERT(outgoing->rdstate == socket_done);
         outgoing->rdstate = socket_stop;
-        do_ssr_receipt_for_feedback(tunnel);
+        if (do_ssr_receipt_for_feedback(tunnel) == false) {
+            do_socks5_reply_success(tunnel);
+        }
         break;
     case session_ssr_receipt_of_feedback_sent:
         ASSERT(outgoing->wrstate == socket_done);
@@ -543,7 +545,7 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
     }
 }
 
-static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel) {
+static bool do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
@@ -551,6 +553,7 @@ static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel) {
     enum ssr_error error = ssr_error_client_decode;
     struct buffer_t *buf = NULL;
     struct buffer_t *feedback = NULL;
+    bool done = false;
 
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
@@ -560,20 +563,23 @@ static void do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel) {
     if (outgoing->result < 0) {
         pr_err("read error: %s", uv_strerror((int)outgoing->result));
         tunnel_shutdown(tunnel);
-        return;
+        return done;
     }
 
     buf = buffer_create_from((uint8_t *)outgoing->buf->base, (size_t)outgoing->result);
     error = tunnel_cipher_client_decrypt(cipher_ctx, buf, &feedback);
     ASSERT(error == ssr_ok);
-    ASSERT(feedback);
     ASSERT(buf->len == 0);
 
-    socket_write(outgoing, feedback->buffer, feedback->len);
-    ctx->state = session_ssr_receipt_of_feedback_sent;
+    if (feedback) {
+        socket_write(outgoing, feedback->buffer, feedback->len);
+        ctx->state = session_ssr_receipt_of_feedback_sent;
+        buffer_free(feedback);
+        done = true;
+    }
 
-    buffer_free(feedback);
     buffer_free(buf);
+    return done;
 }
 
 static void do_socks5_reply_success(struct tunnel_ctx *tunnel) {
