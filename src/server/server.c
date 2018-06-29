@@ -504,12 +504,12 @@ static size_t _get_read_size(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
+    struct buffer_t *receipt = NULL;
+    struct buffer_t *confirm = NULL;
+    struct buffer_t *result = NULL;
     do {
         BUFFER_CONSTANT_INSTANCE(buf, incoming->buf->base, incoming->result);
         size_t tcp_mss = _update_tcp_mss(incoming);
-        struct buffer_t *receipt = NULL;
-        struct buffer_t *confirm = NULL;
-        struct buffer_t *result = NULL;
 
         ASSERT(socket == incoming);
 
@@ -520,27 +520,34 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
 
         ASSERT(ctx->cipher == NULL);
         ctx->cipher = tunnel_cipher_create(ctx->env, tcp_mss);
-
         ctx->_tcp_mss = tcp_mss;
 
         result = tunnel_cipher_server_decrypt(ctx->cipher, buf, &receipt, &confirm);
-        ASSERT(confirm == NULL);
-        if (receipt) {
-            buffer_free(result);
 
+        if (receipt) {
+            ASSERT(confirm == NULL);
             socket_write(incoming, receipt->buffer, receipt->len);
             ctx->state = session_receipt_done;
-
-            buffer_free(receipt);
-            return;
+            break;
         }
 
         ASSERT(result && result->len!=0);
         buffer_replace(ctx->init_pkg, result);
-        buffer_free(result);
+
+        if (confirm) {
+            ASSERT(receipt == NULL);
+            socket_write(incoming, confirm->buffer, confirm->len);
+            ctx->state = session_confirm_done;
+            break;
+        }
 
         do_prepare_parse(tunnel, socket);
+        break;
     } while (0);
+
+    buffer_free(receipt);
+    buffer_free(confirm);
+    buffer_free(result);
 }
 
 static void do_prepare_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
@@ -553,6 +560,8 @@ static void do_prepare_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socke
 
         protocol = ctx->cipher->protocol;
         obfs = ctx->cipher->obfs;
+
+        pre_parse_header(init_pkg);
 
         info = protocol ? protocol->get_server_info(protocol) : (obfs ? obfs->get_server_info(obfs) : NULL);
         if (info) {
@@ -662,8 +671,7 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     }
 
     offset = socks5_address_size(s5addr);
-    ctx->init_pkg->len -= offset;
-    memmove(ctx->init_pkg->buffer, ctx->init_pkg->buffer + offset, ctx->init_pkg->len);
+    buffer_shorten(ctx->init_pkg, offset, ctx->init_pkg->len - offset);
 
     host = s5addr->addr.domainname;
 
