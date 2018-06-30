@@ -274,6 +274,7 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     struct server_ctx *ctx = (struct server_ctx *) calloc(1, sizeof(*ctx));
     ctx->env = env;
     ctx->init_pkg = buffer_alloc(SSR_BUFF_SIZE);
+    ctx->_recv_buffer_size = TCP_BUF_SIZE_MAX;
     tunnel->data = ctx;
 
     tunnel->tunnel_dying = &tunnel_dying;
