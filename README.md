@@ -174,7 +174,7 @@ make install
 cmake --version
 ```
 
-It will spend about 30 minites. And the `cmake --version` command will output messess likes:
+It will spend about 30 minites. And the `cmake --version` command will output message likes:
 ```
 cmake version 3.11.0
 CMake suite maintained and supported by Kitware (kitware.com/cmake).
