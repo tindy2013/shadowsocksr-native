@@ -36,10 +36,10 @@ no more than 5% on a low-end router (Buffalo WHR-G300N V2 with a 400MHz MIPS CPU
 For a full list of feature comparison between different versions of shadowsocks,
 refer to the [Wiki page](https://github.com/shadowsocksr-live/shadowsocksr-native/wiki/).
 
-## Protocols & obfuscates
+## Protocols & obfuscators
 
-| Protocols | obfuscates | 
-| --------- | ---------- | 
+| Protocols | obfuscators | 
+| --------- | ----------- | 
 | origin | plain |
 | auth_aes128_sha1 | tls1.2_ticket_auth |
 | auth_aes128_md5 |    |
@@ -50,7 +50,7 @@ progress of data flow
 |                +-------------------------------------------------------+   |
 |                |               +-----------------------------------+   |   |
 |                |               |            +------------------+   |   |   |
-|  obfuscator    |   encrypt     |  protocol  |     user data    |   |   |   |
+|  obfuscator    |   encryptor   |  protocol  |     user data    |   |   |   |
 |   |            |       |       |      |     +------------------+   |   |   |
 |   |            |       |       +------+----------------------------+   |   |
 |   |            +-------+--------------+--------------------------------+   |
