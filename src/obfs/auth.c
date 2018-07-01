@@ -141,6 +141,8 @@ void auth_sha1_v4_new_obfs(struct obfs_t *obfs) {
 }
 
 void auth_aes128_md5_new_obfs(struct obfs_t * obfs) {
+    auth_simple_local_data *l_data;
+
     obfs->init_data = auth_simple_init_data;
     obfs->get_overhead = auth_aes128_sha1_get_overhead;
     obfs->need_feedback = need_feedback_true;
@@ -161,21 +163,26 @@ void auth_aes128_md5_new_obfs(struct obfs_t * obfs) {
     obfs->server_udp_post_decrypt = generic_server_udp_post_decrypt;
 
     obfs->l_data = malloc(sizeof(auth_simple_local_data));
-    auth_simple_local_data_init((auth_simple_local_data*)obfs->l_data);
+    l_data = (auth_simple_local_data *) obfs->l_data;
 
-    ((auth_simple_local_data*)obfs->l_data)->hmac = ss_md5_hmac_with_key;
-    ((auth_simple_local_data*)obfs->l_data)->hash = ss_md5_hash_func;
-    ((auth_simple_local_data*)obfs->l_data)->hash_len = 16;
-    ((auth_simple_local_data*)obfs->l_data)->salt = "auth_aes128_md5";
+    auth_simple_local_data_init(l_data);
+
+    l_data->hmac = ss_md5_hmac_with_key;
+    l_data->hash = ss_md5_hash_func;
+    l_data->hash_len = 16;
+    l_data->salt = "auth_aes128_md5";
 }
 
 void auth_aes128_sha1_new_obfs(struct obfs_t *obfs) {
-    auth_aes128_md5_new_obfs(obfs);
+    auth_simple_local_data *l_data;
 
-    ((auth_simple_local_data*)obfs->l_data)->hmac = ss_sha1_hmac_with_key;
-    ((auth_simple_local_data*)obfs->l_data)->hash = ss_sha1_hash_func;
-    ((auth_simple_local_data*)obfs->l_data)->hash_len = 20;
-    ((auth_simple_local_data*)obfs->l_data)->salt = "auth_aes128_sha1";
+    auth_aes128_md5_new_obfs(obfs);
+    l_data = (auth_simple_local_data*)obfs->l_data;
+
+    l_data->hmac = ss_sha1_hmac_with_key;
+    l_data->hash = ss_sha1_hash_func;
+    l_data->hash_len = 20;
+    l_data->salt = "auth_aes128_sha1";
 }
 
 size_t
@@ -190,6 +197,7 @@ static struct buffer_t * auth_aes128_not_match_return(struct obfs_t *obfs, struc
     if (feedback) { *feedback = false; }
     if (local->salt && strlen(local->salt)) {
         struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+        ret->len = SSR_BUFF_SIZE;
         memset(ret->buffer, 'E', SSR_BUFF_SIZE);
         return ret;
     }

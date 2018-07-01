@@ -12,6 +12,9 @@
 #include "obfs.h"
 #include "auth_chain.h"
 
+struct buffer_t * auth_chain_a_server_pre_encrypt(struct obfs_t *obfs, const struct buffer_t *buf);
+struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback);
+
 #if defined(_MSC_VER) && (_MSC_VER < 1800)
 
 /*
@@ -162,8 +165,7 @@ struct auth_chain_c_data {
 struct auth_chain_local_data {
     struct obfs_t * obfs;
     int has_sent_header;
-    char * recv_buffer;
-    int recv_buffer_size;
+    struct buffer_t *recv_buffer;
     uint32_t recv_id;
     uint32_t pack_id;
     char * salt;
@@ -187,8 +189,7 @@ struct auth_chain_local_data {
 void auth_chain_local_data_init(struct obfs_t *obfs, struct auth_chain_local_data *local) {
     local->obfs = obfs;
     local->has_sent_header = 0;
-    local->recv_buffer = (char*)malloc(16384);
-    local->recv_buffer_size = 0;
+    local->recv_buffer = buffer_alloc(16384);
     local->recv_id = 1;
     local->pack_id = 1;
     local->salt = "";
@@ -238,6 +239,9 @@ void auth_chain_a_new_obfs(struct obfs_t *obfs) {
     obfs->client_post_decrypt = auth_chain_a_client_post_decrypt;
     obfs->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
     obfs->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
+
+    obfs->server_pre_encrypt = auth_chain_a_server_pre_encrypt;
+    obfs->server_post_decrypt = auth_chain_a_server_post_decrypt;
 }
 
 size_t auth_chain_a_get_overhead(struct obfs_t *obfs) {
@@ -246,10 +250,7 @@ size_t auth_chain_a_get_overhead(struct obfs_t *obfs) {
 
 void auth_chain_a_dispose(struct obfs_t *obfs) {
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
-    if (local->recv_buffer != NULL) {
-        free(local->recv_buffer);
-        local->recv_buffer = NULL;
-    }
+    buffer_free(local->recv_buffer);
     if (local->user_key != NULL) {
         free(local->user_key);
         local->user_key = NULL;
@@ -547,32 +548,31 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     char *plaindata = *pplaindata;
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
     struct server_info_t *server = (struct server_info_t*)&obfs->server;
-    uint8_t * recv_buffer = (uint8_t *)local->recv_buffer;
     int key_len;
     uint8_t *key;
     uint8_t * out_buffer;
     uint8_t * buffer;
     char error = 0;
 
-    if (local->recv_buffer_size + datalength > 16384) {
+    if (local->recv_buffer->len + datalength > 16384) {
         return -1;
     }
-    memmove(recv_buffer + local->recv_buffer_size, plaindata, datalength);
-    local->recv_buffer_size += datalength;
+    buffer_concatenate(local->recv_buffer, plaindata, datalength);
 
     key_len = local->user_key_len + 4;
     key = (uint8_t*)malloc((size_t)key_len);
     memcpy(key, local->user_key, local->user_key_len);
 
-    out_buffer = (uint8_t *)malloc((size_t)local->recv_buffer_size);
+    out_buffer = (uint8_t *)malloc((size_t)local->recv_buffer->len);
     buffer = out_buffer;
-    while (local->recv_buffer_size > 4) {
+    while (local->recv_buffer->len > 4) {
         uint8_t hash[16];
         int data_len;
         int rand_len;
         int len;
         unsigned int pos;
         size_t out_len;
+        uint8_t *recv_buffer = local->recv_buffer->buffer;
 
         memintcopy_lt(key + key_len - 4, local->recv_id);
 
@@ -580,11 +580,11 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
         rand_len = (int)get_server_rand_len(local, data_len);
         len = rand_len + data_len;
         if (len >= (SSR_BUFF_SIZE * 2)) {
-            local->recv_buffer_size = 0;
+            local->recv_buffer->len = 0;
             error = 1;
             break;
         }
-        if ((len += 4) > local->recv_buffer_size) {
+        if ((len += 4) > local->recv_buffer->len) {
             break;
         }
         {
@@ -593,7 +593,7 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
             ss_md5_hmac_with_key(hash, _msg, _key);
         }
         if (memcmp(hash, recv_buffer + len - 2, 2)) {
-            local->recv_buffer_size = 0;
+            local->recv_buffer->len = 0;
             error = 1;
             break;
         }
@@ -613,7 +613,7 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
         memcpy(local->last_server_hash, hash, 16);
         ++local->recv_id;
         buffer += out_len;
-        memmove(recv_buffer, recv_buffer + len, local->recv_buffer_size -= len);
+        buffer_shorten(local->recv_buffer, len, local->recv_buffer->len - len);
     }
     if (error == 0) {
         len = (int)(buffer - out_buffer);
@@ -775,6 +775,17 @@ ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaind
     }
 
     return (ssize_t)outlength;
+}
+
+struct buffer_t * auth_chain_a_server_pre_encrypt(struct obfs_t *obfs, const struct buffer_t *buf) {
+    return NULL;
+}
+
+struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback) {
+    struct server_info_t *server = (struct server_info_t *)&obfs->server;
+    struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
+
+    return NULL;
 }
 
 
