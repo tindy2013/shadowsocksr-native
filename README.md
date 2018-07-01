@@ -44,6 +44,23 @@ refer to the [Wiki page](https://github.com/shadowsocksr-live/shadowsocksr-nativ
 | auth_aes128_sha1 | tls1.2_ticket_auth |
 | auth_aes128_md5 |    |
 
+progress of data flow
+```
++----------------------------------------------------------------------------+
+|                +-------------------------------------------------------+   |
+|                |               +-----------------------------------+   |   |
+|                |               |            +------------------+   |   |   |
+|  obfuscator    |   encrypt     |  protocol  |     user data    |   |   |   |
+|   |            |       |       |      |     +------------------+   |   |   |
+|   |            |       |       +------+----------------------------+   |   |
+|   |            +-------+--------------+--------------------------------+   |
++---+--------------------+--------------+------------------------------------+
+    |                    |              |
+    +-- server_encode    +-- encrypt    +-- server_pre_encrypt       <<=== user data
+    |                    |              |  
+    +-- server_decode    +-- decrypt    +-- server_post_decrypt      ===>> user data
+```
+
 ## Installation
 
 ### Distribution-specific guide
