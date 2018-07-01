@@ -1,6 +1,6 @@
 # ShadowsocksR-native
 
-Index
+## Index
 
 - [Intro](#intro)
 - [Features](#features)
