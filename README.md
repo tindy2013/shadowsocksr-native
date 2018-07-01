@@ -4,7 +4,7 @@
 
 - [Intro](#intro)
 - [Features](#features)
-- [Protocols & obfuscates](#protocols--obfuscates)
+- [Protocols & obfuscators](#protocols--obfuscators)
 - [Installation](#installation)
 - [Sample configure file](#sample-configure-file)
 - [cmake](#cmake)
