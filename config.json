@@ -3,9 +3,9 @@
     "server_port": 443,
     "method": "aes-128-ctr",
     "password": "password",
-    "protocol": "origin", // "auth_aes128_md5",
+    "protocol": "auth_aes128_md5", // "origin", // 
     "protocol_param": "",
-    "obfs": "plain", // "tls1.2_ticket_auth",
+    "obfs": "tls1.2_ticket_auth", // "plain", // 
     "obfs_param": "",
     "local_address": "127.0.0.1",
     "local_port": 1080,
