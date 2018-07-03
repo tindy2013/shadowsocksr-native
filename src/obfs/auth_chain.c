@@ -165,13 +165,14 @@ struct auth_chain_c_data {
 struct auth_chain_local_data {
     struct obfs_t * obfs;
     int has_sent_header;
+    bool has_recv_header;
     struct buffer_t *recv_buffer;
     uint32_t recv_id;
     uint32_t pack_id;
     char * salt;
     uint8_t * user_key;
-    char uid[4];
     int user_key_len;
+    char uid[4];
     int last_data_len;
     uint8_t last_client_hash[16];
     uint8_t last_server_hash[16];
@@ -181,6 +182,12 @@ struct auth_chain_local_data {
     struct cipher_env_t *cipher;
     struct enc_ctx *cipher_client_ctx;
     struct enc_ctx *cipher_server_ctx;
+    uint32_t user_id_num;
+    uint16_t client_over_head;
+    int max_time_dif;
+    uint32_t client_id;
+    uint32_t connection_id;
+    struct buffer_t *decrypt_key;
 
     unsigned int (*get_tcp_rand_len)(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, uint8_t last_hash[16]);
     void *auth_chain_special_data;
@@ -202,6 +209,8 @@ void auth_chain_local_data_init(struct obfs_t *obfs, struct auth_chain_local_dat
     local->cipher_server_ctx = 0;
     local->get_tcp_rand_len = NULL;
     local->auth_chain_special_data = NULL;
+    local->max_time_dif = 60 * 60 * 24; // time dif (second) setting
+    local->decrypt_key = buffer_alloc(SSR_BUFF_SIZE);
 }
 
 unsigned int auth_chain_a_get_rand_len(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, uint8_t last_hash[16]);
@@ -251,6 +260,7 @@ size_t auth_chain_a_get_overhead(struct obfs_t *obfs) {
 void auth_chain_a_dispose(struct obfs_t *obfs) {
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
     buffer_free(local->recv_buffer);
+    buffer_free(local->decrypt_key);
     if (local->user_key != NULL) {
         free(local->user_key);
         local->user_key = NULL;
@@ -784,7 +794,108 @@ struct buffer_t * auth_chain_a_server_pre_encrypt(struct obfs_t *obfs, const str
 struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback) {
     struct server_info_t *server = (struct server_info_t *)&obfs->server;
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
+    struct buffer_t *out_buf = buffer_alloc(SSR_BUFF_SIZE);
 
+    if (need_feedback) { *need_feedback = false; }
+
+    buffer_concatenate2(local->recv_buffer, buf);
+
+    if (local->has_recv_header == false) {
+        uint8_t md5data[16 + 1] = { 0 };
+        size_t len = local->recv_buffer->len;
+        uint32_t uid = 0;
+        uint8_t head[16 + 1] = { 0 };
+        uint32_t utc_time = 0;
+        uint32_t client_id = 0;
+        uint32_t connection_id = 0;
+        int time_diff;
+
+        if (len>=12 || len==7 || len==8) {
+            size_t recv_len = min(len, 12);
+            struct buffer_t *mac_key = buffer_create_from(server->recv_iv, server->recv_iv_len);
+            buffer_concatenate(mac_key, server->key, server->key_len);
+            {
+                BUFFER_CONSTANT_INSTANCE(_msg, local->recv_buffer->buffer, 4);
+                ss_md5_hmac_with_key(md5data, _msg, mac_key);
+            }
+            buffer_free(mac_key);
+            if (memcmp(md5data, local->recv_buffer->buffer+4, recv_len-4) != 0) {
+                return out_buf;
+            }
+        }
+        if (local->recv_buffer->len < (12 + 24)) {
+            return out_buf;
+        }
+
+        memmove(local->last_client_hash, md5data, 16);
+        uid = *((uint32_t *)(local->recv_buffer->buffer + 12)); // TODO: ntohl
+        uid = uid ^ (*((uint32_t *)(md5data + 8))); // TODO: ntohl
+        local->user_id_num = uid;
+
+        memcpy(local->user_key, server->key, server->key_len);
+        local->user_key_len = server->key_len;
+
+        {
+            BUFFER_CONSTANT_INSTANCE(_key, local->user_key, local->user_key_len);
+            BUFFER_CONSTANT_INSTANCE(_msg, local->recv_buffer->buffer + 12, 20);
+            ss_md5_hmac_with_key(md5data, _msg, _key);
+        }
+        if (memcmp(md5data, local->recv_buffer->buffer+32, 4) != 0) {
+            // logging.error('%s data incorrect auth HMAC-MD5 from %s:%d, data %s' % (self.no_compatible_method, self.server_info.client, self.server_info.client_port, binascii.hexlify(self.recv_buf)))
+            return out_buf;
+        }
+
+        memcmp(local->last_server_hash, md5data, 16);
+        {
+            size_t b64len = (size_t) std_base64_encode_len((int) local->user_key_len);
+            size_t salt_len = strlen(local->salt);
+            uint8_t *key = (uint8_t *)calloc(b64len + salt_len, sizeof(uint8_t));
+            std_base64_encode(local->user_key, (int)local->user_key_len, key);
+            strcat(key, local->salt);
+            ss_aes_128_cbc_decrypt(16, local->recv_buffer->buffer+16, head, key);
+            free(key);
+        }
+        local->client_over_head = (uint16_t) (*((uint16_t *)(head + 12))); // TODO: ntohs
+
+        utc_time = (uint32_t) (*((uint32_t *)(head + 0))); // TODO: ntohl
+        client_id = (uint32_t) (*((uint32_t *)(head + 4))); // TODO: ntohl
+        connection_id = (uint32_t) (*((uint32_t *)(head + 8))); // TODO: ntohl
+
+        time_diff = abs((int)time(NULL) - (int)utc_time);
+        if (time_diff > local->max_time_dif) {
+            // logging.info('%s: wrong timestamp, time_dif %d, data %s' % (self.no_compatible_method, time_dif, binascii.hexlify(head)))
+            return out_buf;
+        }
+
+        local->client_id = client_id;
+        local->connection_id = connection_id;
+        {
+            size_t b64len1 = (size_t) std_base64_encode_len((int) local->user_key_len);
+            size_t b64len2 = (size_t) std_base64_encode_len((int) sizeof(local->last_client_hash));
+            uint8_t *key = (uint8_t *)calloc(b64len1 + b64len2, sizeof(uint8_t));
+            b64len1 = std_base64_encode(local->user_key, (int)local->user_key_len, key);
+            b64len2 = std_base64_encode(local->last_client_hash, (int)sizeof(local->last_client_hash), key + b64len1);
+            buffer_store(local->decrypt_key, key, b64len1 + b64len2);
+            free(key);
+        }
+        buffer_shorten(local->recv_buffer, 36, local->recv_buffer->len - 36);
+        local->has_recv_header = true;
+        if (need_feedback) { *need_feedback = true; }
+    }
+
+    while (local->recv_buffer->len) {
+        uint16_t data_len = 0;
+        struct buffer_t *mac_key = buffer_create_from(local->user_key, local->user_key_len);
+        buffer_concatenate(mac_key, (uint8_t *)&local->recv_id, 4); // TODO: htonl(local->recv_id);
+
+        data_len = *((uint16_t *)local->recv_buffer->buffer); // TODO: ntohs
+        data_len = data_len ^ (*((uint16_t *)(local->last_client_hash + 14))); // TODO: ntohs
+
+        //ss_decrypt_buffer(local->cipher, local->cipher_server_ctx,
+        //    (char*)recv_buffer + pos, (size_t)data_len, (char *)buffer, &out_len);
+
+        buffer_free(mac_key);
+    }
     return NULL;
 }
 
