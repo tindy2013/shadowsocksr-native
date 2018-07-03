@@ -427,21 +427,26 @@ struct buffer_t * tunnel_cipher_server_encrypt(struct tunnel_cipher_ctx *tc, con
     struct obfs_t *obfs = tc->obfs;
     struct obfs_t *protocol = tc->protocol;
     struct buffer_t *ret = NULL;
-    if (protocol && protocol->server_pre_encrypt) {
-        ret = protocol->server_pre_encrypt(protocol, buf);
-    } else {
-        ret = buffer_clone(buf);
-    }
-    err = ss_encrypt(env->cipher, ret, tc->e_ctx, SSR_BUFF_SIZE);
-    if (err != 0) {
-        ASSERT(false);
-        buffer_free(ret); ret = NULL;
-        return ret;
-    }
-    if (obfs && obfs->server_encode) {
-        struct buffer_t *tmp = obfs->server_encode(obfs, ret);
-        buffer_free(ret); ret = tmp;
-    }
+    do {
+        if (protocol && protocol->server_pre_encrypt) {
+            ret = protocol->server_pre_encrypt(protocol, buf);
+        } else {
+            ret = buffer_clone(buf);
+        }
+        if (ret == NULL) {
+            break;
+        }
+        err = ss_encrypt(env->cipher, ret, tc->e_ctx, SSR_BUFF_SIZE);
+        if (err != 0) {
+            ASSERT(false);
+            buffer_free(ret); ret = NULL;
+            break;
+        }
+        if (obfs && obfs->server_encode) {
+            struct buffer_t *tmp = obfs->server_encode(obfs, ret);
+            buffer_free(ret); ret = tmp;
+        }
+    } while (0);
     return ret;
 }
 
