@@ -653,7 +653,7 @@ cipher_context_update(struct cipher_ctx_t *ctx, uint8_t *output, size_t *olen,
 }
 
 size_t
-ss_md5_hmac_with_key(uint8_t *auth, const struct buffer_t *msg, const struct buffer_t *key)
+ss_md5_hmac_with_key(uint8_t auth[MD5_BYTES], const struct buffer_t *msg, const struct buffer_t *key)
 {
     uint8_t hash[MD5_BYTES];
 #if defined(USE_CRYPTO_OPENSSL)
@@ -1055,15 +1055,14 @@ int
 ss_decrypt_buffer(struct cipher_env_t *env, struct enc_ctx *ctx, char *in, size_t in_size, char *out, size_t *out_size)
 {
     int s;
-    struct buffer_t *cipher = buffer_alloc(in_size + 32);
-    cipher->len = in_size;
-    memcpy(cipher->buffer, in, in_size);
-    s = ss_decrypt(env, cipher, ctx, in_size + 32);
+    struct buffer_t *cipher_text = buffer_alloc(in_size + 32);
+    buffer_store(cipher_text, (uint8_t *)in, in_size);
+    s = ss_decrypt(env, cipher_text, ctx, in_size + 32);
     if (s == 0) {
-        *out_size = cipher->len;
-        memcpy(out, cipher->buffer, cipher->len);
+        *out_size = cipher_text->len;
+        memcpy(out, cipher_text->buffer, cipher_text->len);
     }
-    buffer_free(cipher);
+    buffer_free(cipher_text);
     return s;
 }
 

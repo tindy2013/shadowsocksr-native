@@ -89,7 +89,7 @@ uint8_t* enc_get_key(struct cipher_env_t* env);
 int enc_get_key_len(struct cipher_env_t* env);
 unsigned char *enc_md5(const unsigned char *d, size_t n, unsigned char *md);
 
-size_t ss_md5_hmac_with_key(uint8_t *auth, const struct buffer_t *msg, const struct buffer_t *key);
+size_t ss_md5_hmac_with_key(uint8_t auth[MD5_BYTES], const struct buffer_t *msg, const struct buffer_t *key);
 size_t ss_md5_hash_func(uint8_t *auth, const uint8_t *msg, size_t msg_len);
 size_t ss_sha1_hmac_with_key(uint8_t auth[SHA1_BYTES], const struct buffer_t *msg, const struct buffer_t *key);
 size_t ss_sha1_hash_func(uint8_t *auth, const uint8_t *msg, size_t msg_len);
