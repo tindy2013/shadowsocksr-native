@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>  // for LLONG_MIN and LLONG_MAX
+#include <assert.h>
 #include "auth.h"
 #include "obfsutil.h"
 #include "crc32.h"
@@ -186,7 +187,6 @@ struct auth_chain_local_data {
     int max_time_dif;
     uint32_t client_id;
     uint32_t connection_id;
-    struct buffer_t *decrypt_key;
 
     unsigned int (*get_tcp_rand_len)(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, uint8_t last_hash[16]);
     void *auth_chain_special_data;
@@ -208,7 +208,6 @@ void auth_chain_local_data_init(struct obfs_t *obfs, struct auth_chain_local_dat
     local->get_tcp_rand_len = NULL;
     local->auth_chain_special_data = NULL;
     local->max_time_dif = 60 * 60 * 24; // time dif (second) setting
-    local->decrypt_key = buffer_alloc(SSR_BUFF_SIZE);
 }
 
 unsigned int auth_chain_a_get_rand_len(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, uint8_t last_hash[16]);
@@ -258,7 +257,6 @@ size_t auth_chain_a_get_overhead(struct obfs_t *obfs) {
 void auth_chain_a_dispose(struct obfs_t *obfs) {
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
     buffer_free(local->recv_buffer);
-    buffer_free(local->decrypt_key);
     buffer_free(local->user_key);
     if (local->cipher_init_flag) {
         if (local->cipher_client_ctx) {
@@ -773,6 +771,7 @@ struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct b
     struct server_info_t *server = (struct server_info_t *)&obfs->server;
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
     struct buffer_t *out_buf = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *mac_key2 = NULL;
 
     if (need_feedback) { *need_feedback = false; }
 
@@ -787,6 +786,7 @@ struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct b
         uint32_t client_id = 0;
         uint32_t connection_id = 0;
         int time_diff;
+        uint8_t *password = NULL;
 
         if (len>=12 || len==7 || len==8) {
             size_t recv_len = min(len, 12);
@@ -850,31 +850,91 @@ struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct b
         {
             size_t b64len1 = (size_t) std_base64_encode_len((int) local->user_key->len);
             size_t b64len2 = (size_t) std_base64_encode_len((int) sizeof(local->last_client_hash));
-            uint8_t *key = (uint8_t *)calloc(b64len1 + b64len2, sizeof(uint8_t));
-            b64len1 = std_base64_encode(local->user_key->buffer, (int)local->user_key->len, key);
-            b64len2 = std_base64_encode(local->last_client_hash, (int)sizeof(local->last_client_hash), key + b64len1);
-            buffer_store(local->decrypt_key, key, b64len1 + b64len2);
-            free(key);
+            password = (uint8_t *)calloc(b64len1 + b64len2, sizeof(uint8_t));
+            b64len1 = std_base64_encode(local->user_key->buffer, (int)local->user_key->len, password);
+            b64len2 = std_base64_encode(local->last_client_hash, (int)sizeof(local->last_client_hash), password + b64len1);
         }
         buffer_shorten(local->recv_buffer, 36, local->recv_buffer->len - 36);
         local->has_recv_header = true;
         if (need_feedback) { *need_feedback = true; }
+
+        assert(local->cipher == NULL);
+        local->cipher = cipher_env_new_instance((char *)password, "rc4");
+        local->cipher_client_ctx = enc_ctx_new_instance(local->cipher, true);
+        local->cipher_server_ctx = enc_ctx_new_instance(local->cipher, false);
+        free(password);
     }
+
+    mac_key2 = buffer_alloc(SSR_BUFF_SIZE);
 
     while (local->recv_buffer->len) {
         uint16_t data_len = 0;
-        struct buffer_t *mac_key = buffer_clone(local->user_key);
-        buffer_concatenate(mac_key, (uint8_t *)&local->recv_id, 4); // TODO: htonl(local->recv_id);
+        size_t rand_len = 0;
+        size_t length = 0;
+        uint8_t client_hash[16 + 1] = { 0 };
+        size_t pos = 0;
+        buffer_replace(mac_key2, local->user_key);
+        buffer_concatenate(mac_key2, (uint8_t *)&local->recv_id, 4); // TODO: htonl(local->recv_id);
 
         data_len = *((uint16_t *)local->recv_buffer->buffer); // TODO: ntohs
         data_len = data_len ^ (*((uint16_t *)(local->last_client_hash + 14))); // TODO: ntohs
 
-        //ss_decrypt_buffer(local->cipher, local->cipher_server_ctx,
-        //    (char*)recv_buffer + pos, (size_t)data_len, (char *)buffer, &out_len);
+        rand_len = auth_chain_a_get_rand_len(local, data_len, &local->random_client, local->last_client_hash);
+        length = data_len + rand_len;
+        if (length >= 4096) {
+            // logging.info(self.no_compatible_method + ': over size')
+            buffer_reset(local->recv_buffer);
+            if (local->recv_id == 0) {
+                buffer_reset(out_buf);
+            } else {
+                buffer_free(out_buf); out_buf = NULL;
+            }
+            break;
+        }
+        if (length + 4 > local->recv_buffer->len) {
+            break;
+        }
+        {
+            BUFFER_CONSTANT_INSTANCE(_msg, local->recv_buffer->buffer, length + 2);
+            ss_md5_hmac_with_key(client_hash, _msg, mac_key2);
+        }
+        if (memcmp(client_hash, local->recv_buffer->buffer+length+2, 2) != 0) {
+            // logging.info('%s: checksum error, data %s' % (self.no_compatible_method, binascii.hexlify(self.recv_buf[:length])))
+            buffer_reset(local->recv_buffer);
+            if (local->recv_id == 0) {
+                buffer_reset(out_buf);
+            } else {
+                buffer_free(out_buf); out_buf = NULL;
+            }
+            break;
+        }
 
-        buffer_free(mac_key);
+        local->recv_id += 1;
+
+        if (data_len > 0 && rand_len > 0) {
+            pos = 2 + get_rand_start_pos((int)rand_len, &local->random_client);
+        } else {
+            pos = 2;
+        }
+
+        {
+            size_t out_len = 0;
+            char *buffer = (char *)calloc(local->recv_buffer->len, sizeof(char));
+            ss_decrypt_buffer(local->cipher, local->cipher_server_ctx,
+                (char*)local->recv_buffer->buffer + pos, (size_t)data_len, 
+                (char *)buffer, &out_len);
+            buffer_concatenate(out_buf, (uint8_t *)buffer, out_len);
+            free(buffer);
+        }
+        memcpy(local->last_client_hash, client_hash, 16);
+        buffer_shorten(local->recv_buffer, length + 4, local->recv_buffer->len - (length + 4));
+
+        if (data_len == 0) {
+            if (need_feedback) { *need_feedback = true; }
+        }
     }
-    return NULL;
+    buffer_free(mac_key2);
+    return out_buf;
 }
 
 
