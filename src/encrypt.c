@@ -1086,6 +1086,9 @@ enc_ctx_new_instance(struct cipher_env_t *env, bool encrypt)
 void
 enc_ctx_release_instance(struct cipher_env_t *env, struct enc_ctx *ctx)
 {
+    if (env==NULL || ctx==NULL) {
+        return;
+    }
     cipher_context_release(env, &ctx->cipher_ctx);
     free(ctx);
 }
