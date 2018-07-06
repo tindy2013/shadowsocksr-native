@@ -178,7 +178,6 @@ struct auth_chain_local_data {
     uint8_t last_server_hash[16];
     struct shift128plus_ctx random_client;
     struct shift128plus_ctx random_server;
-    int cipher_init_flag;
     struct cipher_env_t *cipher;
     struct enc_ctx *encrypt_ctx;
     struct enc_ctx *decrypt_ctx;
@@ -204,7 +203,6 @@ void auth_chain_local_data_init(struct obfs_t *obfs, struct auth_chain_local_dat
     local->user_key = buffer_alloc(SSR_BUFF_SIZE);
     memset(&local->random_client, 0, sizeof(local->random_client));
     memset(&local->random_server, 0, sizeof(local->random_server));
-    local->cipher_init_flag = 0;
     local->encrypt_ctx = NULL;
     local->decrypt_ctx = NULL;
     local->get_tcp_rand_len = NULL;
@@ -261,11 +259,10 @@ void auth_chain_a_dispose(struct obfs_t *obfs) {
     struct auth_chain_local_data *local = (struct auth_chain_local_data*)obfs->l_data;
     buffer_free(local->recv_buffer);
     buffer_free(local->user_key);
-    if (local->cipher_init_flag) {
+    if (local->cipher) {
         enc_ctx_release_instance(local->cipher, local->encrypt_ctx);
         enc_ctx_release_instance(local->cipher, local->decrypt_ctx);
         cipher_env_release(local->cipher);
-        local->cipher_init_flag = 0;
     }
     free(local);
     obfs->l_data = NULL;
@@ -558,7 +555,6 @@ size_t auth_chain_a_pack_auth_data(struct obfs_t *obfs, char *data, size_t datal
 
     std_base64_encode(local->user_key->buffer, (int)local->user_key->len, (unsigned char *)password);
     std_base64_encode(local->last_client_hash, 16, (unsigned char *)(password + strlen(password)));
-    local->cipher_init_flag = 1;
     local->cipher = cipher_env_new_instance(password, "rc4");
     local->encrypt_ctx = enc_ctx_new_instance(local->cipher, true);
     local->decrypt_ctx = enc_ctx_new_instance(local->cipher, false);
