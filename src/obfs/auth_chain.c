@@ -156,6 +156,7 @@ struct auth_chain_b_data {
     size_t  data_size_list_length;
     int    *data_size_list2;
     size_t  data_size_list2_length;
+    void *sub_class_context;
 };
 
 struct auth_chain_c_data {
@@ -1041,29 +1042,20 @@ struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct b
 //============================= auth_chain_b ==================================
 
 unsigned int auth_chain_b_get_rand_len(struct auth_chain_local_data *local, int datalength, struct shift128plus_ctx *random, const uint8_t last_hash[16]);
+void auth_chain_b_set_server_info(struct obfs_t *obfs, struct server_info_t *server);
 
 void auth_chain_b_new_obfs(struct obfs_t *obfs) {
-    struct auth_chain_local_data *l_data = (struct auth_chain_local_data *)
-        calloc(1, sizeof(struct auth_chain_local_data));
+    struct auth_chain_local_data *l_data = NULL;
 
-    auth_chain_local_data_init(obfs, l_data);
+    auth_chain_a_new_obfs(obfs);
+    l_data = (struct auth_chain_local_data *) obfs->l_data;
+
     l_data->salt = "auth_chain_b";
     l_data->get_tcp_rand_len = auth_chain_b_get_rand_len;
     l_data->auth_chain_special_data = calloc(1, sizeof(struct auth_chain_b_data));
 
-    obfs->l_data = l_data;
-
-    obfs->init_data = auth_chain_b_init_data;
-    obfs->get_overhead = auth_chain_b_get_overhead;
-    obfs->need_feedback = need_feedback_true;
-    obfs->get_server_info = get_server_info;
     obfs->set_server_info = auth_chain_b_set_server_info;
     obfs->dispose = auth_chain_b_dispose;
-
-    obfs->client_pre_encrypt = auth_chain_a_client_pre_encrypt;
-    obfs->client_post_decrypt = auth_chain_a_client_post_decrypt;
-    obfs->client_udp_pre_encrypt = auth_chain_a_client_udp_pre_encrypt;
-    obfs->client_udp_post_decrypt = auth_chain_a_client_udp_post_decrypt;
 }
 
 void auth_chain_b_dispose(struct obfs_t *obfs) {
@@ -1086,14 +1078,6 @@ void auth_chain_b_dispose(struct obfs_t *obfs) {
     auth_chain_a_dispose(obfs);
 }
 
-size_t auth_chain_b_get_overhead(struct obfs_t *obfs) {
-    return auth_chain_a_get_overhead(obfs);
-}
-
-void * auth_chain_b_init_data(void) {
-    return auth_chain_a_init_data();
-}
-
 void auth_chain_b_init_data_size(struct obfs_t *obfs) {
     size_t i = 0;
     struct server_info_t *server = &obfs->server;
@@ -1103,7 +1087,7 @@ void auth_chain_b_init_data_size(struct obfs_t *obfs) {
 
     shift128plus_init_from_bin(random, server->key, 16);
     special_data->data_size_list_length = shift128plus_next(random) % 8 + 4;
-    special_data->data_size_list = (int *)malloc(special_data->data_size_list_length * sizeof(special_data->data_size_list[0]));
+    special_data->data_size_list = (int *)calloc(special_data->data_size_list_length, sizeof(special_data->data_size_list[0]));
     for (i = 0; i < special_data->data_size_list_length; i++) {
         special_data->data_size_list[i] = shift128plus_next(random) % 2340 % 2040 % 1440;
     }
@@ -1115,7 +1099,7 @@ void auth_chain_b_init_data_size(struct obfs_t *obfs) {
         );
 
     special_data->data_size_list2_length = shift128plus_next(random) % 16 + 8;
-    special_data->data_size_list2 = (int *)malloc(special_data->data_size_list2_length * sizeof(special_data->data_size_list2[0]));
+    special_data->data_size_list2 = (int *)calloc(special_data->data_size_list2_length, sizeof(special_data->data_size_list2[0]));
     for (i = 0; i < special_data->data_size_list2_length; i++) {
         special_data->data_size_list2[i] = shift128plus_next(random) % 2340 % 2040 % 1440;
     }

@@ -22,9 +22,6 @@ ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaind
 //============================= auth_chain_b ==================================
 void auth_chain_b_new_obfs(struct obfs_t *obfs);
 void auth_chain_b_dispose(struct obfs_t *obfs);
-void * auth_chain_b_init_data(void);
-size_t auth_chain_b_get_overhead(struct obfs_t *self);
-void auth_chain_b_set_server_info(struct obfs_t *obfs, struct server_info_t *server);
 
 //============================= auth_chain_c ==================================
 void auth_chain_c_new_obfs(struct obfs_t *obfs);
