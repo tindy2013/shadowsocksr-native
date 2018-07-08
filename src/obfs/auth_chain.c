@@ -237,7 +237,8 @@ void * auth_chain_a_init_data(void) {
     return global;
 }
 
-void auth_chain_a_new_obfs(struct obfs_t *obfs) {
+struct obfs_t * auth_chain_a_new_obfs(void) {
+    struct obfs_t * obfs = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));
     struct auth_chain_a_context *auth_chain_a = (struct auth_chain_a_context *)
         calloc(1, sizeof(struct auth_chain_a_context));
 
@@ -261,6 +262,8 @@ void auth_chain_a_new_obfs(struct obfs_t *obfs) {
 
     obfs->server_pre_encrypt = auth_chain_a_server_pre_encrypt;
     obfs->server_post_decrypt = auth_chain_a_server_post_decrypt;
+
+    return obfs;
 }
 
 size_t auth_chain_a_get_overhead(struct obfs_t *obfs) {
@@ -1056,11 +1059,9 @@ unsigned int auth_chain_b_get_rand_len(struct auth_chain_a_context *local, int d
 void auth_chain_b_set_server_info(struct obfs_t *obfs, struct server_info_t *server);
 void auth_chain_b_dispose(struct obfs_t *obfs);
 
-void auth_chain_b_new_obfs(struct obfs_t *obfs) {
-    struct auth_chain_a_context *auth_chain_a = NULL;
-
-    auth_chain_a_new_obfs(obfs);
-    auth_chain_a = (struct auth_chain_a_context *) obfs->l_data;
+struct obfs_t * auth_chain_b_new_obfs(void) {
+    struct obfs_t * obfs = auth_chain_a_new_obfs();
+    struct auth_chain_a_context *auth_chain_a = (struct auth_chain_a_context *)obfs->l_data;
 
     auth_chain_a->salt = "auth_chain_b";
     auth_chain_a->get_tcp_rand_len = auth_chain_b_get_rand_len;
@@ -1068,6 +1069,8 @@ void auth_chain_b_new_obfs(struct obfs_t *obfs) {
 
     obfs->set_server_info = auth_chain_b_set_server_info;
     obfs->dispose = auth_chain_b_dispose;
+
+    return obfs;
 }
 
 void auth_chain_b_dispose(struct obfs_t *obfs) {
@@ -1180,11 +1183,9 @@ unsigned int auth_chain_c_get_rand_len(struct auth_chain_a_context *local, int d
 void auth_chain_c_set_server_info(struct obfs_t *obfs, struct server_info_t *server);
 void auth_chain_c_dispose(struct obfs_t *obfs);
 
-void auth_chain_c_new_obfs(struct obfs_t *obfs) {
-    struct auth_chain_a_context *auth_chain_a = NULL;
-
-    auth_chain_a_new_obfs(obfs);
-    auth_chain_a = (struct auth_chain_a_context *) obfs->l_data;
+struct obfs_t * auth_chain_c_new_obfs(void) {
+    struct obfs_t * obfs = auth_chain_a_new_obfs();
+    struct auth_chain_a_context *auth_chain_a = (struct auth_chain_a_context *)obfs->l_data;
 
     auth_chain_a->salt = "auth_chain_c";
     auth_chain_a->get_tcp_rand_len = auth_chain_c_get_rand_len;
@@ -1192,6 +1193,8 @@ void auth_chain_c_new_obfs(struct obfs_t *obfs) {
 
     obfs->set_server_info = auth_chain_c_set_server_info;
     obfs->dispose = auth_chain_c_dispose;
+
+    return obfs;
 }
 
 void auth_chain_c_dispose(struct obfs_t *obfs) {
@@ -1273,16 +1276,15 @@ unsigned int auth_chain_c_get_rand_len(struct auth_chain_a_context *local, int d
 unsigned int auth_chain_d_get_rand_len(struct auth_chain_a_context *local, int datalength, struct shift128plus_ctx *random, const uint8_t last_hash[16]);
 void auth_chain_d_set_server_info(struct obfs_t *obfs, struct server_info_t *server);
 
-void auth_chain_d_new_obfs(struct obfs_t *obfs) {
-    struct auth_chain_a_context *auth_chain_a = NULL;
-
-    auth_chain_c_new_obfs(obfs);
-    auth_chain_a = (struct auth_chain_a_context *) obfs->l_data;
+struct obfs_t * auth_chain_d_new_obfs(void) {
+    struct obfs_t *obfs = auth_chain_c_new_obfs();
+    struct auth_chain_a_context *auth_chain_a = (struct auth_chain_a_context *)obfs->l_data;
 
     auth_chain_a->salt = "auth_chain_d";
     auth_chain_a->get_tcp_rand_len = auth_chain_d_get_rand_len;
 
     obfs->set_server_info = auth_chain_d_set_server_info;
+    return obfs;
 }
 
 #define AUTH_CHAIN_D_MAX_DATA_SIZE_LIST_LIMIT_SIZE 64
@@ -1365,14 +1367,14 @@ unsigned int auth_chain_d_get_rand_len(struct auth_chain_a_context *local, int d
 
 unsigned int auth_chain_e_get_rand_len(struct auth_chain_a_context *local, int datalength, struct shift128plus_ctx *random, const uint8_t last_hash[16]);
 
-void auth_chain_e_new_obfs(struct obfs_t *obfs) {
-    struct auth_chain_a_context *auth_chain_a = NULL;
-
-    auth_chain_d_new_obfs(obfs);
-    auth_chain_a = (struct auth_chain_a_context *)obfs->l_data;
+struct obfs_t * auth_chain_e_new_obfs(void) {
+    struct obfs_t *obfs = auth_chain_d_new_obfs();
+    struct auth_chain_a_context *auth_chain_a = (struct auth_chain_a_context *)obfs->l_data;
 
     auth_chain_a->salt = "auth_chain_e";
     auth_chain_a->get_tcp_rand_len = auth_chain_e_get_rand_len;
+
+    return obfs;
 }
 
 unsigned int auth_chain_e_get_rand_len(struct auth_chain_a_context *local, int datalength, struct shift128plus_ctx *random, const uint8_t last_hash[16]) {
@@ -1406,15 +1408,15 @@ unsigned int auth_chain_e_get_rand_len(struct auth_chain_a_context *local, int d
 
 void auth_chain_f_set_server_info(struct obfs_t *obfs, struct server_info_t *server);
 
-void auth_chain_f_new_obfs(struct obfs_t *obfs) {
-    struct auth_chain_a_context *auth_chain_a = NULL;
-
-    auth_chain_e_new_obfs(obfs);
-    auth_chain_a = (struct auth_chain_a_context *)obfs->l_data;
+struct obfs_t * auth_chain_f_new_obfs(void) {
+    struct obfs_t *obfs = auth_chain_e_new_obfs();
+    struct auth_chain_a_context *auth_chain_a = (struct auth_chain_a_context *)obfs->l_data;
 
     auth_chain_a->salt = "auth_chain_f";
 
     obfs->set_server_info = auth_chain_f_set_server_info;
+
+    return obfs;
 }
 
 static void auth_chain_f_init_data_size(struct obfs_t *obfs, const uint8_t *key_change_datetime_key_bytes) {

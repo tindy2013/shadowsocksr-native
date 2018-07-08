@@ -149,46 +149,34 @@ new_obfs_instance(const char *plugin_name)
         struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));
         auth_sha1_v4_new_obfs(plugin);
         return plugin;
-    } else if ((ssr_protocol_auth_aes128_md5 == protocol_type) || (ssr_protocol_auth_aes128_sha1 == protocol_type)) {
+    } else if (ssr_protocol_auth_aes128_md5 == protocol_type) {
         // auth_aes128_md5
+        struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));
+        auth_aes128_md5_new_obfs(plugin);
+        return plugin;
+    } else if (ssr_protocol_auth_aes128_sha1 == protocol_type) {
         // auth_aes128_sha1
         struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));
-        if (ssr_protocol_auth_aes128_md5 == protocol_type) {
-            auth_aes128_md5_new_obfs(plugin);
-        } else {
-            auth_aes128_sha1_new_obfs(plugin);
-        }
+        auth_aes128_sha1_new_obfs(plugin);
         return plugin;
     } else if (ssr_protocol_auth_chain_a == protocol_type) {
         // auth_chain_a
-        struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));
-        auth_chain_a_new_obfs(plugin);
-        return plugin;
+        return auth_chain_a_new_obfs();
     } else if (ssr_protocol_auth_chain_b == protocol_type) {
         // auth_chain_b
-        struct obfs_t *plugin = (struct obfs_t *)calloc(1, sizeof(struct obfs_t));
-        auth_chain_b_new_obfs(plugin);
-        return plugin;
+        return auth_chain_b_new_obfs();
     } else if (ssr_protocol_auth_chain_c == protocol_type) {
         // auth_chain_c
-        struct obfs_t *plugin = (struct obfs_t *) calloc(1, sizeof(struct obfs_t));
-        auth_chain_c_new_obfs(plugin);
-        return plugin;
+        return auth_chain_c_new_obfs();
     } else if (ssr_protocol_auth_chain_d == protocol_type) {
         // auth_chain_d
-        struct obfs_t *plugin = (struct obfs_t *) calloc(1, sizeof(struct obfs_t));
-        auth_chain_d_new_obfs(plugin);
-        return plugin;
+        return auth_chain_d_new_obfs();
     } else if (ssr_protocol_auth_chain_e == protocol_type) {
         // auth_chain_e
-        struct obfs_t *plugin = (struct obfs_t *)calloc(1, sizeof(struct obfs_t));
-        auth_chain_e_new_obfs(plugin);
-        return plugin;
+        return auth_chain_e_new_obfs();
     } else if (ssr_protocol_auth_chain_f == protocol_type) {
         // auth_chain_f
-        struct obfs_t *plugin = (struct obfs_t *)calloc(1, sizeof(struct obfs_t));
-        auth_chain_f_new_obfs(plugin);
-        return plugin;
+        return auth_chain_f_new_obfs();
     }
     assert(0); // LOGE("Load obfs '%s' failed", plugin_name);
     return NULL;
