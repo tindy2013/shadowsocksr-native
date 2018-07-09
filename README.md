@@ -41,6 +41,7 @@ refer to the [Wiki page](https://github.com/shadowsocksr-live/shadowsocksr-nativ
 | Protocols | obfuscators | 
 | --------- | ----------- | 
 | origin | plain |
+| auth_sha1_v4 |    |
 | auth_aes128_sha1 | tls1.2_ticket_auth |
 | auth_aes128_md5 |    |
 | auth_chain_a |    |
