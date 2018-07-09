@@ -14,6 +14,9 @@
 #include <netinet/in.h>
 #endif
 
+struct buffer_t * auth_sha1_v4_server_pre_encrypt(struct obfs_t *obfs, const struct buffer_t *buf);
+struct buffer_t * auth_sha1_v4_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback);
+
 static size_t auth_simple_pack_unit_size = 2000;
 typedef size_t (*hmac_with_key_func)(uint8_t auth[SHA1_BYTES], const struct buffer_t *msg, const struct buffer_t *key);
 typedef size_t (*hash_func)(uint8_t *auth, const uint8_t *msg, size_t msg_len);
@@ -124,8 +127,13 @@ void auth_sha1_v2_new_obfs(struct obfs_t *obfs) {
     obfs->client_udp_post_decrypt = NULL;
 }
 
-void auth_sha1_v4_new_obfs(struct obfs_t *obfs) {
+struct obfs_t * auth_sha1_v4_new_obfs(void) {
+    struct obfs_t *obfs = (struct obfs_t *)calloc(1, sizeof(struct obfs_t));
+    auth_simple_local_data *local;
     auth_simple_new_obfs(obfs);
+
+    local = (auth_simple_local_data *) obfs->l_data;
+    local->salt = "auth_sha1_v4";
 
     obfs->init_data = auth_simple_init_data;
     obfs->get_overhead = get_overhead;
@@ -138,6 +146,11 @@ void auth_sha1_v4_new_obfs(struct obfs_t *obfs) {
     obfs->client_post_decrypt = auth_sha1_v4_client_post_decrypt;
     obfs->client_udp_pre_encrypt = NULL;
     obfs->client_udp_post_decrypt = NULL;
+
+    obfs->server_pre_encrypt = auth_sha1_v4_server_pre_encrypt;
+    obfs->server_post_decrypt = auth_sha1_v4_server_post_decrypt;
+
+    return obfs;
 }
 
 void auth_aes128_md5_new_obfs(struct obfs_t * obfs) {
@@ -454,7 +467,7 @@ auth_sha1_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int datale
         if (length > local->recv_buffer->len) {
             break;
         }
-        if (checkadler32((unsigned char*)recv_buffer, (unsigned int)length) == 0) {
+        if (checkadler32((unsigned char*)recv_buffer, (unsigned int)length) == false) {
             free(out_buffer);
             local->recv_buffer->len = 0;
             return -1;
@@ -604,7 +617,7 @@ auth_sha1_v2_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int dat
         if (length > local->recv_buffer->len) {
             break;
         }
-        if (checkadler32((unsigned char*)recv_buffer, (unsigned int)length) == 0) {
+        if (checkadler32((unsigned char*)recv_buffer, (unsigned int)length) == false) {
             local->recv_buffer->len = 0;
             error = 1;
             break;
@@ -778,7 +791,7 @@ auth_sha1_v4_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int dat
         if (length > local->recv_buffer->len) {
             break;
         }
-        if (checkadler32((unsigned char*)recv_buffer, (unsigned int)length) == 0) {
+        if (checkadler32((unsigned char*)recv_buffer, (unsigned int)length) == false) {
             local->recv_buffer->len = 0;
             error = 1;
             break;
@@ -806,6 +819,164 @@ auth_sha1_v4_client_post_decrypt(struct obfs_t *obfs, char **pplaindata, int dat
     }
     free(out_buffer);
     return (ssize_t)len;
+}
+
+struct buffer_t * auth_sha1_v4_server_pre_encrypt(struct obfs_t *obfs, const struct buffer_t *buf) {
+    struct buffer_t *ret = buffer_alloc(buf->len * 2 + SSR_BUFF_SIZE * 2);
+    struct buffer_t *in_buf = buffer_clone(buf);
+    auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
+    char * buffer = (char *) ret->buffer;
+    size_t pack_len;
+
+    while(in_buf->len > local->unit_len) {
+        pack_len = auth_sha1_v4_pack_data((char *)in_buf->buffer, local->unit_len, buffer);
+        buffer += pack_len;
+        ret->len += pack_len;
+        buffer_shorten(in_buf, local->unit_len, in_buf->len - local->unit_len);
+    }
+    pack_len = auth_sha1_v4_pack_data((char *)in_buf->buffer, in_buf->len, buffer);
+    ret->len += pack_len;
+
+    buffer_free(in_buf);
+    return ret;
+}
+
+struct buffer_t * auth_sha1_v4_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback) {
+    auth_simple_local_data *local = (auth_simple_local_data*)obfs->l_data;
+    struct server_info_t *server = &obfs->server;
+    bool sendback = false;
+    struct buffer_t *out_buf = buffer_alloc(SSR_BUFF_SIZE);
+    do {
+        buffer_concatenate2(local->recv_buffer, buf);
+        if (local->has_recv_header == false) {
+            uint8_t *buffer = local->recv_buffer->buffer;
+            struct buffer_t *crc_src;
+            uint32_t crc_val;
+            uint32_t crc_stock;
+            uint16_t length = 0;
+            uint8_t sha1data[SHA1_BYTES];
+            size_t pos;
+            uint32_t utc_time;
+            uint32_t client_id;
+            uint32_t connection_id;
+            int time_diff;
+
+            if (local->recv_buffer->len <= 6) {
+                break;
+            }
+
+            crc_src = buffer_create_from(buffer, 2);
+            buffer_concatenate(crc_src, (uint8_t *)local->salt, strlen(local->salt));
+            buffer_concatenate(crc_src, server->key, server->key_len);
+            crc_val = crc32_imp((unsigned char*)crc_src->buffer, crc_src->len);
+            buffer_free(crc_src);
+
+            crc_stock = *((uint32_t *)(buffer + 2)); // TODO: ntohl
+            if (crc_val != crc_stock) {
+                buffer_free(out_buf); out_buf = NULL;
+                break;
+            }
+
+            length = ntohs(*((uint16_t *)(buffer + 0)));
+            if (length > local->recv_buffer->len) {
+                break;
+            }
+
+            ss_sha1_hmac(sha1data,
+                buffer, length - 10,
+                server->recv_iv, server->recv_iv_len,
+                server->key, server->key_len);
+            if (memcmp(sha1data, buffer + length - 10, 10) != 0) {
+                // logging.error('auth_sha1_v4 data incorrect auth HMAC-SHA1')
+                buffer_free(out_buf); out_buf = NULL;
+                break;
+            }
+
+            pos = (size_t) (*((uint8_t *)(buffer + 6)));
+            if (pos < 255) {
+                pos += 6;
+            } else {
+                pos = (size_t) ntohs(*((uint16_t *)(buffer + 7))) + 6;
+            }
+            buffer_store(out_buf, buffer + pos, length - 10 - pos);
+            if (out_buf->len < 12) {
+                // logging.info('auth_sha1_v4: too short, data %s' % (binascii.hexlify(self.recv_buf),))
+                buffer_free(out_buf); out_buf = NULL;
+                break;
+            }
+
+            utc_time = (*((uint32_t *)(out_buf->buffer + 0))); // TODO: ntohl
+            client_id = (*((uint32_t *)(out_buf->buffer + 4))); // TODO: ntohl
+            connection_id = (*((uint32_t *)(out_buf->buffer + 8))); // TODO: ntohl
+            time_diff = abs((int)time(NULL) - (int)utc_time);
+            if (time_diff > local->max_time_dif) {
+                // logging.info('auth_sha1_v4: wrong timestamp, time_dif %d, data %s' % (time_dif, binascii.hexlify(out_buf),))
+                buffer_free(out_buf); out_buf = NULL;
+                break;
+            }
+
+            //TODO: check client_id / connection_id to avoid `Replay Attacks`
+
+            buffer_shorten(out_buf, 12, out_buf->len - 12);
+            local->client_id = client_id;
+            local->connection_id = connection_id;
+
+            buffer_shorten(local->recv_buffer, length, local->recv_buffer->len - length);
+
+            local->has_recv_header = true;
+            sendback = true;
+        }
+
+        while (local->recv_buffer->len > 4) {
+            uint8_t *buffer = local->recv_buffer->buffer;
+            uint16_t crc_val;
+            uint16_t crc_stock;
+            size_t length;
+            size_t pos;
+            crc_val = (uint16_t) crc32_imp((unsigned char*)buffer, 2);
+            crc_stock = *((uint16_t *)(buffer + 2)); // TODO: ntohs
+            if (crc_stock != crc_val) {
+                // logging.info('auth_sha1_v4: wrong crc')
+                buffer_free(out_buf); out_buf = NULL;
+                break;
+            }
+            length = (size_t) ntohs(*((uint16_t *)(buffer + 0)));
+            if (length >= 8192 || length < 7) {
+                // logging.info('auth_sha1_v4: over size')
+                buffer_reset(local->recv_buffer);
+                buffer_free(out_buf); out_buf = NULL;
+                break;
+            }
+            if (length > local->recv_buffer->len) {
+                break;
+            }
+            if (checkadler32(buffer, length) == false) {
+                // logging.info('auth_sha1_v4: checksum error, data %s' % (binascii.hexlify(self.recv_buf[:length]),))
+                buffer_reset(local->recv_buffer);
+                buffer_free(out_buf); out_buf = NULL;
+                break;
+            }
+            pos = (size_t) (*((uint8_t *)(buffer + 4)));
+            if (pos < 255) {
+                pos += 4;
+            } else {
+                pos = (size_t) ntohs(*((uint16_t *)(buffer + 5))) + 4;
+            }
+            buffer_concatenate(out_buf, buffer + pos, length - 4 - pos);
+
+            if (pos == (length - 4)) {
+                sendback = true;
+            }
+
+            buffer_shorten(local->recv_buffer, length, local->recv_buffer->len - length);
+        }
+    } while(0);
+    if (need_feedback) { *need_feedback = sendback; }
+    //if (out_buf && out_buf->len) {
+    //    self.server_info.data.update(self.client_id, self.connection_id)
+    //    self.decrypt_packet_num += 1
+    //}
+    return out_buf;
 }
 
 size_t

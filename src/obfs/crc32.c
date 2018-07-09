@@ -100,7 +100,7 @@ void filladler32(unsigned char *buffer, size_t size) {
     buffer[3] = (unsigned char)(checksum >> 24);
 }
 
-int checkadler32(unsigned char *buffer, size_t size) {
+bool checkadler32(unsigned char *buffer, size_t size) {
     uint32_t checksum;
     size -= 4;
     checksum = adler32(buffer, size);

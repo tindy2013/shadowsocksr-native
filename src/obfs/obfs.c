@@ -146,9 +146,7 @@ new_obfs_instance(const char *plugin_name)
         return plugin;
     } else if (ssr_protocol_auth_sha1_v4 == protocol_type) {
         // auth_sha1_v4
-        struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));
-        auth_sha1_v4_new_obfs(plugin);
-        return plugin;
+        return auth_sha1_v4_new_obfs();
     } else if (ssr_protocol_auth_aes128_md5 == protocol_type) {
         // auth_aes128_md5
         struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));

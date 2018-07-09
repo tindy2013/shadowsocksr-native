@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 void init_crc32_table(void);
 
@@ -14,6 +15,6 @@ void fillcrc32(unsigned char *buffer, size_t size);
 
 void filladler32(unsigned char *buffer, size_t size);
 
-int checkadler32(unsigned char *buffer, size_t size);
+bool checkadler32(unsigned char *buffer, size_t size);
 
 #endif // _OBFS_CRC32_H

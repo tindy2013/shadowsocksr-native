@@ -17,7 +17,7 @@ void * auth_simple_init_data(void);
 void auth_simple_new_obfs(struct obfs_t *obfs);
 void auth_sha1_new_obfs(struct obfs_t *obfs);
 void auth_sha1_v2_new_obfs(struct obfs_t *obfs);
-void auth_sha1_v4_new_obfs(struct obfs_t *obfs);
+struct obfs_t * auth_sha1_v4_new_obfs(void);
 
 void auth_aes128_md5_new_obfs(struct obfs_t *obfs);
 void auth_aes128_sha1_new_obfs(struct obfs_t *obfs);

@@ -56,16 +56,16 @@ size_t ss_md5_hmac(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint
     return result;
 }
 
-size_t ss_sha1_hmac(uint8_t *auth, const uint8_t *msg, size_t msg_len, const uint8_t *iv, size_t enc_iv_len, const uint8_t *enc_key, size_t enc_key_len)
+size_t ss_sha1_hmac(uint8_t auth[20], const uint8_t *msg, size_t msg_len, const uint8_t *iv, size_t iv_len, const uint8_t *key, size_t key_len)
 {
     size_t result;
     size_t len = ss_max_iv_length() + ss_max_key_length();
     uint8_t *auth_key = (uint8_t *) calloc(len, sizeof(auth_key[0]));
-    memcpy(auth_key, iv, enc_iv_len);
-    memcpy(auth_key + enc_iv_len, enc_key, enc_key_len);
+    memcpy(auth_key, iv, iv_len);
+    memcpy(auth_key + iv_len, key, key_len);
     {
         BUFFER_CONSTANT_INSTANCE(_msg, msg, msg_len);
-        BUFFER_CONSTANT_INSTANCE(_key, auth_key, enc_iv_len + enc_key_len);
+        BUFFER_CONSTANT_INSTANCE(_key, auth_key, iv_len + key_len);
         result = ss_sha1_hmac_with_key(auth, _msg, _key);
     }
     free(auth_key);
