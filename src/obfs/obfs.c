@@ -106,14 +106,10 @@ new_obfs_instance(const char *plugin_name)
     init_shift128plus();
     if (ssr_obfs_http_simple == obfs_type) {
         // http_simple
-        struct obfs_t * plugin = (struct obfs_t *)calloc(1, sizeof(struct obfs_t));
-        http_simple_new_obfs(plugin);
-        return plugin;
+        return http_simple_new_obfs();
     } else if (ssr_obfs_http_post == obfs_type) {
         // http_post
-        struct obfs_t * plugin = (struct obfs_t *)calloc(1, sizeof(struct obfs_t));
-        http_simple_new_obfs(plugin);
-        return plugin;
+        return http_post_new_obfs();
     } else if (ssr_obfs_tls_1_2_ticket_auth == obfs_type) {
         // tls1.2_ticket_auth
         struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));

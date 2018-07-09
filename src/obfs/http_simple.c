@@ -41,7 +41,8 @@ void http_simple_local_data_init(http_simple_local_data* local) {
     }
 }
 
-void http_simple_new_obfs(struct obfs_t * obfs) {
+struct obfs_t * http_simple_new_obfs(void) {
+    struct obfs_t * obfs = (struct obfs_t *)calloc(1, sizeof(struct obfs_t));
     obfs->init_data = init_data;
     obfs->get_overhead = get_overhead;
     obfs->need_feedback = need_feedback_false;
@@ -53,6 +54,14 @@ void http_simple_new_obfs(struct obfs_t * obfs) {
 
     obfs->l_data = malloc(sizeof(http_simple_local_data));
     http_simple_local_data_init((http_simple_local_data*)obfs->l_data);
+
+    return obfs;
+}
+
+struct obfs_t * http_post_new_obfs(void) {
+    struct obfs_t * obfs = http_simple_new_obfs();
+    obfs->client_encode = http_post_client_encode;
+    return obfs;
 }
 
 void http_simple_dispose(struct obfs_t *obfs) {
