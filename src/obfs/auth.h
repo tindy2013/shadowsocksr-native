@@ -19,8 +19,8 @@ void auth_sha1_new_obfs(struct obfs_t *obfs);
 void auth_sha1_v2_new_obfs(struct obfs_t *obfs);
 struct obfs_t * auth_sha1_v4_new_obfs(void);
 
-void auth_aes128_md5_new_obfs(struct obfs_t *obfs);
-void auth_aes128_sha1_new_obfs(struct obfs_t *obfs);
+struct obfs_t * auth_aes128_md5_new_obfs(void);
+struct obfs_t * auth_aes128_sha1_new_obfs(void);
 void auth_simple_dispose(struct obfs_t *obfs);
 
 size_t auth_simple_client_pre_encrypt(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity);

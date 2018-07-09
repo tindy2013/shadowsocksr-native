@@ -149,14 +149,10 @@ new_obfs_instance(const char *plugin_name)
         return auth_sha1_v4_new_obfs();
     } else if (ssr_protocol_auth_aes128_md5 == protocol_type) {
         // auth_aes128_md5
-        struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));
-        auth_aes128_md5_new_obfs(plugin);
-        return plugin;
-    } else if (ssr_protocol_auth_aes128_sha1 == protocol_type) {
+        return auth_aes128_md5_new_obfs();
+   } else if (ssr_protocol_auth_aes128_sha1 == protocol_type) {
         // auth_aes128_sha1
-        struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));
-        auth_aes128_sha1_new_obfs(plugin);
-        return plugin;
+        return auth_aes128_sha1_new_obfs();
     } else if (ssr_protocol_auth_chain_a == protocol_type) {
         // auth_chain_a
         return auth_chain_a_new_obfs();

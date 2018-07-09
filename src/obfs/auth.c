@@ -153,7 +153,8 @@ struct obfs_t * auth_sha1_v4_new_obfs(void) {
     return obfs;
 }
 
-void auth_aes128_md5_new_obfs(struct obfs_t * obfs) {
+struct obfs_t * auth_aes128_md5_new_obfs(void) {
+    struct obfs_t *obfs = (struct obfs_t *)calloc(1, sizeof(struct obfs_t));
     auth_simple_local_data *l_data;
 
     obfs->init_data = auth_simple_init_data;
@@ -184,18 +185,21 @@ void auth_aes128_md5_new_obfs(struct obfs_t * obfs) {
     l_data->hash = ss_md5_hash_func;
     l_data->hash_len = 16;
     l_data->salt = "auth_aes128_md5";
+
+    return obfs;
 }
 
-void auth_aes128_sha1_new_obfs(struct obfs_t *obfs) {
+struct obfs_t * auth_aes128_sha1_new_obfs(void) {
+    struct obfs_t *obfs = auth_aes128_md5_new_obfs();
     auth_simple_local_data *l_data;
 
-    auth_aes128_md5_new_obfs(obfs);
     l_data = (auth_simple_local_data*)obfs->l_data;
 
     l_data->hmac = ss_sha1_hmac_with_key;
     l_data->hash = ss_sha1_hash_func;
     l_data->hash_len = 20;
     l_data->salt = "auth_aes128_sha1";
+    return obfs;
 }
 
 size_t
