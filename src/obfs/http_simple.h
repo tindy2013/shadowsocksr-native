@@ -17,9 +17,4 @@ void http_simple_dispose(struct obfs_t *obfs);
 
 struct obfs_t * http_post_new_obfs(void);
 
-size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
-ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback);
-
-size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
-
 #endif // _OBFS_HTTP_SIMPLE_H

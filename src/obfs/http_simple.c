@@ -8,6 +8,14 @@
 #include "obfsutil.h"
 #include "obfs.h"
 
+size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
+ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback);
+
+struct buffer_t * http_simple_server_encode(struct obfs_t *obfs, const struct buffer_t *buf);
+struct buffer_t * http_simple_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback);
+
+size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
+
 static char* g_useragent[] = {
     "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0",
     "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/44.0",
@@ -51,6 +59,9 @@ struct obfs_t * http_simple_new_obfs(void) {
     obfs->dispose = http_simple_dispose;
     obfs->client_encode = http_simple_client_encode;
     obfs->client_decode = http_simple_client_decode;
+
+    obfs->server_encode = http_simple_server_encode;
+    obfs->server_decode = http_simple_server_decode;
 
     obfs->l_data = malloc(sizeof(struct http_simple_local_data));
     http_simple_local_data_init((struct http_simple_local_data*)obfs->l_data);
@@ -223,6 +234,14 @@ ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size
     } else {
         return 0;
     }
+}
+
+struct buffer_t * http_simple_server_encode(struct obfs_t *obfs, const struct buffer_t *buf) {
+    return NULL;
+}
+
+struct buffer_t * http_simple_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback) {
+    return NULL;
 }
 
 void boundary(char result[])
