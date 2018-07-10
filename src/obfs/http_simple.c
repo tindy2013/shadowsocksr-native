@@ -25,13 +25,13 @@ static char* g_useragent[] = {
 
 static int g_useragent_index = -1;
 
-typedef struct http_simple_local_data {
+struct http_simple_local_data {
     int has_sent_header;
     int has_recv_header;
     char *encode_buffer;
-}http_simple_local_data;
+};
 
-void http_simple_local_data_init(http_simple_local_data* local) {
+void http_simple_local_data_init(struct http_simple_local_data *local) {
     local->has_sent_header = 0;
     local->has_recv_header = 0;
     local->encode_buffer = NULL;
@@ -52,8 +52,8 @@ struct obfs_t * http_simple_new_obfs(void) {
     obfs->client_encode = http_simple_client_encode;
     obfs->client_decode = http_simple_client_decode;
 
-    obfs->l_data = malloc(sizeof(http_simple_local_data));
-    http_simple_local_data_init((http_simple_local_data*)obfs->l_data);
+    obfs->l_data = malloc(sizeof(struct http_simple_local_data));
+    http_simple_local_data_init((struct http_simple_local_data*)obfs->l_data);
 
     return obfs;
 }
@@ -65,7 +65,7 @@ struct obfs_t * http_post_new_obfs(void) {
 }
 
 void http_simple_dispose(struct obfs_t *obfs) {
-    http_simple_local_data *local = (http_simple_local_data*)obfs->l_data;
+    struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
     if (local->encode_buffer != NULL) {
         free(local->encode_buffer);
         local->encode_buffer = NULL;
@@ -79,7 +79,7 @@ char http_simple_hex(char c) {
     return c - 10 + 'a';
 }
 
-void http_simple_encode_head(http_simple_local_data *local, char *data, int datalength) {
+void http_simple_encode_head(struct http_simple_local_data *local, char *data, int datalength) {
     int pos = 0;
     if (local->encode_buffer == NULL) {
         local->encode_buffer = (char*)malloc((size_t)(datalength * 3 + 1));
@@ -94,7 +94,7 @@ void http_simple_encode_head(http_simple_local_data *local, char *data, int data
 
 size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity) {
     char *encryptdata = *pencryptdata;
-    http_simple_local_data *local = (http_simple_local_data*)obfs->l_data;
+    struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
     char hosts[(SSR_BUFF_SIZE / 2)];
     char * phost[128];
     int host_num = 0;
@@ -205,7 +205,7 @@ size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_
 
 ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback) {
     char *encryptdata = *pencryptdata;
-    http_simple_local_data *local = (http_simple_local_data*)obfs->l_data;
+    struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
     char* data_begin;
 
     *needsendback = 0;
@@ -241,7 +241,7 @@ void boundary(char result[])
 
 size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity) {
     char *encryptdata = *pencryptdata;
-    http_simple_local_data *local = (http_simple_local_data*)obfs->l_data;
+    struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
     char hosts[(SSR_BUFF_SIZE / 2)];
     char * phost[128];
     int host_num = 0;

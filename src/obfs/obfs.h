@@ -49,36 +49,21 @@ struct obfs_t {
     void (*set_server_info)(struct obfs_t *obfs, struct server_info_t *server);
     void (*dispose)(struct obfs_t *obfs);
 
-    size_t (*client_pre_encrypt)(struct obfs_t *obfs,
-            char **pplaindata,
-            size_t datalength,
-            size_t* capacity);
-    size_t (*client_encode)(struct obfs_t *obfs,
-            char **pencryptdata,
-            size_t datalength,
-            size_t* capacity);
-    ssize_t (*client_decode)(struct obfs_t *obfs,
-            char **pencryptdata,
-            size_t datalength,
-            size_t* capacity,
-            int *needsendback);
-    ssize_t (*client_post_decrypt)(struct obfs_t *obfs,
-            char **pplaindata,
-            int datalength,
-            size_t* capacity);
-    ssize_t (*client_udp_pre_encrypt)(struct obfs_t *obfs,
-            char **pplaindata,
-            size_t datalength,
-            size_t* capacity);
-    ssize_t (*client_udp_post_decrypt)(struct obfs_t *obfs,
-            char **pplaindata,
-            size_t datalength,
-            size_t* capacity);
+    size_t (*client_pre_encrypt)(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity);
+    ssize_t (*client_post_decrypt)(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);
+
+    size_t (*client_encode)(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
+    ssize_t (*client_decode)(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback);
+
+    ssize_t (*client_udp_pre_encrypt)(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity);
+    ssize_t (*client_udp_post_decrypt)(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity);
 
     struct buffer_t * (*server_pre_encrypt)(struct obfs_t *obfs, const struct buffer_t *buf);
+    struct buffer_t * (*server_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback);
+
     struct buffer_t * (*server_encode)(struct obfs_t *obfs, const struct buffer_t *buf);
     struct buffer_t * (*server_decode)(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback);
-    struct buffer_t * (*server_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback);
+
     bool (*server_udp_pre_encrypt)(struct obfs_t *obfs, struct buffer_t *buf);
     bool (*server_udp_post_decrypt)(struct obfs_t *obfs, struct buffer_t *buf, uint32_t *uid);
 };
