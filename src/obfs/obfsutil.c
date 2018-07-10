@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <time.h>
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(WIN32)
 #include <sys/time.h>
 #endif
 
