@@ -488,6 +488,8 @@ struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, const str
         buffer_concatenate(data, (uint8_t *)&size2, sizeof(size2));
         buffer_concatenate2(data, chunk2);
 
+        srand((unsigned int)time((time_t *)NULL));
+
         if ((rand() % 8) < 1) {
             rand_bytes(rand_buf, 2);
             size = (size_t)((ntohs(*((uint16_t *)rand_buf)) % 164) * 2 + 64);
