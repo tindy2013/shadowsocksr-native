@@ -1,5 +1,8 @@
 #include <stdint.h>
 #include <time.h>
+#if !defined(_WIN32)
+#include <sys/time.h>
+#endif
 
 #include "obfsutil.h"
 #include "encrypt.h"
