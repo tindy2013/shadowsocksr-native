@@ -41,10 +41,10 @@ refer to the [Wiki page](https://github.com/shadowsocksr-live/shadowsocksr-nativ
 | Protocols | obfuscators | 
 | --------- | ----------- | 
 | origin | plain |
-| auth_sha1_v4 |    |
-| auth_aes128_sha1 | tls1.2_ticket_auth |
+| auth_sha1_v4 | http_simple |
+| auth_aes128_sha1 | http_post |
 | auth_aes128_md5 |    |
-| auth_chain_a |    |
+| auth_chain_a | tls1.2_ticket_auth |
 | auth_chain_b |    |
 | auth_chain_c/d/e/f |    |
 

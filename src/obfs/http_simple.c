@@ -7,6 +7,7 @@
 #include "http_simple.h"
 #include "obfsutil.h"
 #include "obfs.h"
+#include "ssrbuffer.h"
 
 size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
 ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback);
@@ -37,12 +38,14 @@ struct http_simple_local_data {
     int has_sent_header;
     int has_recv_header;
     char *encode_buffer;
+    struct buffer_t *recv_buffer;
 };
 
 void http_simple_local_data_init(struct http_simple_local_data *local) {
     local->has_sent_header = 0;
     local->has_recv_header = 0;
     local->encode_buffer = NULL;
+    local->recv_buffer = buffer_alloc(SSR_BUFF_SIZE);
 
     if (g_useragent_index == -1) {
         g_useragent_index = xorshift128plus() % (sizeof(g_useragent) / sizeof(*g_useragent));
@@ -81,6 +84,7 @@ void http_simple_dispose(struct obfs_t *obfs) {
         free(local->encode_buffer);
         local->encode_buffer = NULL;
     }
+    buffer_free(local->recv_buffer);
     free(local);
     dispose_obfs(obfs);
 }
@@ -88,6 +92,43 @@ void http_simple_dispose(struct obfs_t *obfs) {
 char http_simple_hex(char c) {
     if (c < 10) return c + '0';
     return c - 10 + 'a';
+}
+
+// Converts a hex character to its integer value
+uint8_t from_hex(uint8_t ch) {
+    return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
+}
+
+struct buffer_t * get_data_from_http_header(const uint8_t *buf) {
+    struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+    const uint8_t *iter = (uint8_t *) strchr((char *)buf, '%');
+    uint8_t *target = ret->buffer;
+    while(iter) {
+        *target++ = from_hex(iter[1]) << 4 | from_hex(iter[2]);
+        iter += 3;
+        if (*iter != '%') {
+            break;
+        }
+    }
+    ret->len = target - ret->buffer;
+    return ret;
+}
+
+void get_host_from_http_header(const uint8_t *buf, char host_port[128]) {
+    static const char *hoststr = "Host: ";
+    static const char *crlf = "\r\n";
+    struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+    const uint8_t *iter = (uint8_t *) strstr((char *)buf, hoststr);
+    if(iter) {
+        const uint8_t *end = NULL;
+        iter += strlen(hoststr);
+        end = (const uint8_t *) strstr((const char *)iter, crlf);
+        if (end) {
+            size_t len = end - iter;
+            memmove(host_port, iter, len);
+            host_port[len] = 0;
+        }
+    }
 }
 
 void http_simple_encode_head(struct http_simple_local_data *local, char *data, int datalength) {
@@ -237,11 +278,114 @@ ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size
 }
 
 struct buffer_t * http_simple_server_encode(struct obfs_t *obfs, const struct buffer_t *buf) {
-    return NULL;
+    struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
+    struct buffer_t *header = buffer_alloc(SSR_BUFF_SIZE);
+    static const char *header1 = "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Encoding: gzip\r\nContent-Type: text/html\r\nDate: ";
+    static const char *header2 = "\r\nServer: nginx\r\nVary: Accept-Encoding\r\n\r\n";
+    do {
+        if (local->has_sent_header) {
+            buffer_concatenate2(header, buf);
+            break;
+        }
+
+        buffer_store(header, (const uint8_t *)header1, strlen(header1));
+        {
+            time_t t = time(NULL);
+            struct tm *tmp = gmtime(&t);
+            char current[128] = { 0 };
+            strftime(current, sizeof(current), "%a, %d %b %Y %H:%M:%S GMT", tmp);
+
+            buffer_concatenate(header, (uint8_t *)current, strlen(current));
+        }
+        buffer_concatenate(header, (const uint8_t *)header2, strlen(header2));
+        buffer_concatenate2(header, buf);
+
+        local->has_sent_header = true;
+    } while (0);
+    return header;
+}
+
+bool match_http_header(struct buffer_t *buf) {
+    bool result = false;
+    static char * header[] = {
+        "GET ",
+        "POST ",
+    };
+    int i = 0;
+    if (buf==NULL || buf->len==0) {
+        return result;
+    }
+    for(i=0; i< sizeof(header)/sizeof(header[0]); ++i) {
+        if (memcmp(header[i], buf->buffer, strlen(header[i])) == 0) {
+            result = true;
+            break;
+        }
+    }
+    return result;
 }
 
 struct buffer_t * http_simple_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback) {
-    return NULL;
+    struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
+    static const char *crlfcrlf = "\r\n\r\n";
+    struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *in_buf = NULL;
+    uint8_t *real_data = NULL;
+    size_t len = 0;
+    char host_port[128] = { 0 };
+    do {
+        if (need_decrypt) { *need_decrypt = true; }
+        if (need_feedback) { *need_feedback = false; }
+        if (local->has_recv_header) {
+            buffer_concatenate2(ret, buf);
+            break;
+        }
+
+        local->has_recv_header = true;
+
+        buffer_concatenate2(local->recv_buffer, buf);
+        in_buf = buffer_clone(local->recv_buffer);
+        if (in_buf->len <= 10) {
+            break;
+        }
+        if (match_http_header(in_buf) == false) {
+            // logging.debug('http_simple: not match begin')
+            buffer_reset(local->recv_buffer);
+            break;
+        }
+        if (in_buf->len > 65536) {
+            // logging.warn('http_simple: over size')
+            buffer_reset(local->recv_buffer);
+            if (need_decrypt) { *need_decrypt = false; }
+            break;
+        }
+        real_data = (uint8_t *) strstr((char *)in_buf->buffer, crlfcrlf);
+        if (real_data == NULL) {
+            break;
+        }
+        *real_data = 0;
+        real_data += strlen(crlfcrlf);
+
+        buffer_free(ret);
+        ret = get_data_from_http_header(in_buf->buffer);
+        get_host_from_http_header(in_buf->buffer, host_port);
+
+        // TODO: check obfs_param
+        // if host_port and self.server_info.obfs_param: 
+        //     ....
+
+        len = (in_buf->buffer + in_buf->len - real_data);
+        if (len > 0) {
+            buffer_concatenate(ret, real_data, len);
+        }
+
+        if (ret->len < 13) {
+            // not_match_return
+            buffer_replace(ret, buf);
+        }
+
+    } while(0);
+    buffer_free(in_buf);
+    return ret;
 }
 
 void boundary(char result[])
