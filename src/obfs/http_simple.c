@@ -32,19 +32,29 @@ static char* g_useragent[] = {
     "Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3",
 };
 
+static const char *request_path[] = {
+    "", "",
+    "login.php?redir=", "",
+    "register.php?code=", "",
+    "?keyword=", "",
+    "search?src=typd&q=", "&lang=en",
+    "s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&ch=&bar=&wd=", "&rn=",
+    "post.php?id=", "&goto=view.php",
+};
+
 static int g_useragent_index = -1;
 
 struct http_simple_local_data {
     int has_sent_header;
     int has_recv_header;
-    char *encode_buffer;
+    struct buffer_t *encode_buffer;
     struct buffer_t *recv_buffer;
 };
 
 void http_simple_local_data_init(struct http_simple_local_data *local) {
     local->has_sent_header = 0;
     local->has_recv_header = 0;
-    local->encode_buffer = NULL;
+    local->encode_buffer = buffer_alloc(SSR_BUFF_SIZE);
     local->recv_buffer = buffer_alloc(SSR_BUFF_SIZE);
 
     if (g_useragent_index == -1) {
@@ -80,10 +90,7 @@ struct obfs_t * http_post_new_obfs(void) {
 
 void http_simple_dispose(struct obfs_t *obfs) {
     struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
-    if (local->encode_buffer != NULL) {
-        free(local->encode_buffer);
-        local->encode_buffer = NULL;
-    }
+    buffer_free(local->encode_buffer);
     buffer_free(local->recv_buffer);
     free(local);
     dispose_obfs(obfs);
@@ -131,17 +138,38 @@ void get_host_from_http_header(const uint8_t *buf, char host_port[128]) {
     }
 }
 
-void http_simple_encode_head(struct http_simple_local_data *local, char *data, int datalength) {
-    int pos = 0;
-    if (local->encode_buffer == NULL) {
-        local->encode_buffer = (char*)malloc((size_t)(datalength * 3 + 1));
-    }
+void http_simple_encode_head(struct http_simple_local_data *local, char *data, size_t datalength) {
+    size_t pos = 0;
+    char *buffer;
+    buffer_realloc(local->encode_buffer, (size_t)(datalength * 3 + 1));
+    buffer = (char *) local->encode_buffer->buffer;
     for (; pos < datalength; ++pos) {
-        local->encode_buffer[pos * 3] = '%';
-        local->encode_buffer[pos * 3 + 1] = http_simple_hex(((unsigned char)data[pos] >> 4));
-        local->encode_buffer[pos * 3 + 2] = http_simple_hex(data[pos] & 0xF);
+        buffer[pos * 3] = '%';
+        buffer[pos * 3 + 1] = http_simple_hex(((unsigned char)data[pos] >> 4));
+        buffer[pos * 3 + 2] = http_simple_hex(data[pos] & 0xF);
     }
-    local->encode_buffer[pos * 3] = 0;
+    buffer[pos * 3] = 0;
+    local->encode_buffer->len = pos * 3;
+}
+
+struct buffer_t * fake_request_data(const char *url_encoded_data) {
+    struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+    size_t arr_size = sizeof(request_path)/sizeof(request_path[0]);
+    size_t index = 0;
+    const char *ptr;
+    srand((unsigned int)current_timestamp());
+    index = (rand() % (arr_size / 2)) * 2;
+
+    ptr = request_path[index];
+    buffer_concatenate(ret, (const uint8_t *)ptr, strlen(ptr));
+
+    ptr = url_encoded_data;
+    buffer_concatenate(ret, (const uint8_t *)ptr, strlen(ptr));
+
+    ptr = request_path[index + 1];
+    buffer_concatenate(ret, (const uint8_t *)ptr, strlen(ptr));
+
+    return ret;
 }
 
 size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity) {
@@ -156,6 +184,7 @@ size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_
     size_t outlength;
     char * out_buffer;
     char * body_buffer = NULL;
+    struct buffer_t *fake_path = NULL;
 
     if (local->has_sent_header) {
         return datalength;
@@ -164,7 +193,7 @@ size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_
     out_buffer = (char*)malloc((size_t)(datalength + SSR_BUFF_SIZE));
     if ((size_t)head_size > datalength)
         head_size = datalength;
-    http_simple_encode_head(local, encryptdata, (int)head_size);
+    http_simple_encode_head(local, encryptdata, head_size);
     if (obfs->server.param && strlen(obfs->server.param) == 0)
         obfs->server.param = NULL;
     strncpy(hosts, obfs->server.param ? obfs->server.param : obfs->server.host, sizeof hosts);
@@ -211,12 +240,15 @@ size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_
         sprintf(hostport, "%s", phost[host_num]);
     else
         sprintf(hostport, "%s:%d", phost[host_num], obfs->server.port);
+
+    fake_path = fake_request_data((char *)local->encode_buffer->buffer);
+
     if (body_buffer) {
         sprintf(out_buffer,
             "GET /%s HTTP/1.1\r\n"
             "Host: %s\r\n"
             "%s\r\n\r\n",
-            local->encode_buffer,
+            (char *)fake_path->buffer,
             hostport,
             body_buffer);
     } else {
@@ -230,7 +262,7 @@ size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_
             "DNT: 1\r\n"
             "Connection: keep-alive\r\n"
             "\r\n",
-            local->encode_buffer,
+            (char *)fake_path->buffer,
             hostport,
             g_useragent[g_useragent_index]
             );
@@ -248,10 +280,7 @@ size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_
     free(out_buffer);
     if (body_buffer != NULL)
         free(body_buffer);
-    if (local->encode_buffer != NULL) {
-        free(local->encode_buffer);
-        local->encode_buffer = NULL;
-    }
+    buffer_free(fake_path);
     return outlength;
 }
 
@@ -381,6 +410,7 @@ struct buffer_t * http_simple_server_decode(struct obfs_t *obfs, const struct bu
         if (ret->len < 13) {
             // not_match_return
             buffer_replace(ret, buf);
+            break;
         }
 
     } while(0);
@@ -414,6 +444,7 @@ size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t 
     size_t outlength;
     char * out_buffer;
     char * body_buffer = NULL;
+    struct buffer_t *fake_path = NULL;
 
     if (local->has_sent_header) {
         return datalength;
@@ -422,7 +453,7 @@ size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t 
     out_buffer = (char*)malloc((size_t)(datalength + (SSR_BUFF_SIZE * 2)));
     if ((size_t)head_size > datalength)
         head_size = datalength;
-    http_simple_encode_head(local, encryptdata, (int)head_size);
+    http_simple_encode_head(local, encryptdata, head_size);
     if (obfs->server.param && strlen(obfs->server.param) == 0)
         obfs->server.param = NULL;
     strncpy(hosts, obfs->server.param ? obfs->server.param : obfs->server.host, sizeof hosts);
@@ -470,12 +501,15 @@ size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t 
     } else {
         snprintf(hostport, sizeof(hostport), "%s:%d", phost[host_num], obfs->server.port);
     }
+
+    fake_path = fake_request_data((char *)local->encode_buffer->buffer);
+
     if (body_buffer) {
         snprintf(out_buffer, SSR_BUFF_SIZE,
             "POST /%s HTTP/1.1\r\n"
             "Host: %s\r\n"
             "%s\r\n\r\n",
-            local->encode_buffer,
+            (char *)fake_path->buffer,
             hostport,
             body_buffer);
     } else {
@@ -492,7 +526,7 @@ size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t 
             "DNT: 1\r\n"
             "Connection: keep-alive\r\n"
             "\r\n",
-            local->encode_buffer,
+            (char *)fake_path->buffer,
             hostport,
             g_useragent[g_useragent_index],
             result
@@ -511,9 +545,6 @@ size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t 
     free(out_buffer);
     if (body_buffer != NULL)
         free(body_buffer);
-    if (local->encode_buffer != NULL) {
-        free(local->encode_buffer);
-        local->encode_buffer = NULL;
-    }
+    buffer_free(fake_path);
     return outlength;
 }
