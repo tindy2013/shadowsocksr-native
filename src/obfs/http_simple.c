@@ -166,8 +166,7 @@ struct buffer_t * fake_request_data(const char *url_encoded_data) {
     size_t arr_size = sizeof(request_path)/sizeof(request_path[0]);
     size_t index = 0;
     const char *ptr;
-    srand((unsigned int)current_timestamp());
-    index = (rand() % (arr_size / 2)) * 2;
+    index = (rand_integer() % (arr_size / 2)) * 2;
 
     ptr = request_path[index];
     buffer_concatenate(ret, (const uint8_t *)ptr, strlen(ptr));
@@ -436,7 +435,7 @@ void boundary(char result[])
     srand((unsigned int)time((time_t *)NULL));
     for(i = 0; i < 32; ++i)
     {
-        sprintf(ss, "%c", str[(rand()%lstr)]);
+        sprintf(ss, "%c", str[(rand_integer()%lstr)]);
         strcat(result, ss);
     }
 }

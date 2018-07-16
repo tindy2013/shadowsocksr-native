@@ -490,7 +490,7 @@ struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, const str
 
         srand((unsigned int)time((time_t *)NULL));
 
-        if ((rand() % 8) < 1) {
+        if ((rand_integer() % 8) < 1) {
             rand_bytes(rand_buf, 2);
             size = (size_t)((ntohs(*((uint16_t *)rand_buf)) % 164) * 2 + 64);
             rand_bytes(rand_buf, (int)size);
@@ -514,7 +514,7 @@ struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, const str
         buffer_concatenate(data, (uint8_t *)"\x00\x01\x01", 3);
 
         // data += b"\x16" + self.tls_version + struct.pack('>H', finish_len) + os.urandom(finish_len - 10) #Finished
-        size2 = (uint16_t)((rand() % 8) + 32);
+        size2 = (uint16_t)((rand_integer() % 8) + 32);
         rand_bytes(rand_buf, (int)(size2 - 10));
         size3 = htons(size2);
         buffer_concatenate(data, (uint8_t *)"\x16", 1);

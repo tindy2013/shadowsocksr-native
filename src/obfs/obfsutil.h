@@ -5,9 +5,6 @@
 
 size_t get_s5_head_size(const uint8_t *plaindata, size_t size, size_t def_size);
 
-// current timestamp in microseconds from epoch
-uint64_t current_timestamp(void);
-
 void init_shift128plus(void);
 
 uint64_t xorshift128plus(void);
