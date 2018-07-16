@@ -114,7 +114,7 @@ Before build `ssr-Native`, we must install `cmake` 3.x first. following [this](#
 ```bash
 # CentOS / Fedora / RHEL
 sudo su
-yum install wget git gcc gcc-c++ autoconf automake libtool make asciidoc xmlto cmake -y
+yum install wget git gcc gcc-c++ autoconf automake libtool make asciidoc xmlto -y
 cd /
 git clone https://github.com/ShadowsocksR-Live/shadowsocksr-native.git
 mv shadowsocksr-native ssr-n
