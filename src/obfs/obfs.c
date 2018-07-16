@@ -110,6 +110,9 @@ new_obfs_instance(const char *plugin_name)
     } else if (ssr_obfs_http_post == obfs_type) {
         // http_post
         return http_post_new_obfs();
+    } else if (ssr_obfs_http_mix == obfs_type) {
+        // http_mix
+        return http_mix_new_obfs();
     } else if (ssr_obfs_tls_1_2_ticket_auth == obfs_type) {
         // tls1.2_ticket_auth
         struct obfs_t * plugin = (struct obfs_t*)calloc(1, sizeof(struct obfs_t));

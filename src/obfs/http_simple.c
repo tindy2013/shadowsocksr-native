@@ -16,6 +16,7 @@ struct buffer_t * http_simple_server_encode(struct obfs_t *obfs, const struct bu
 struct buffer_t * http_simple_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback);
 
 size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
+size_t http_mix_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
 
 static char* g_useragent[] = {
     "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0",
@@ -85,6 +86,12 @@ struct obfs_t * http_simple_new_obfs(void) {
 struct obfs_t * http_post_new_obfs(void) {
     struct obfs_t * obfs = http_simple_new_obfs();
     obfs->client_encode = http_post_client_encode;
+    return obfs;
+}
+
+struct obfs_t * http_mix_new_obfs(void) {
+    struct obfs_t * obfs = http_simple_new_obfs();
+    obfs->client_encode = http_mix_client_encode;
     return obfs;
 }
 
@@ -547,4 +554,18 @@ size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t 
         free(body_buffer);
     buffer_free(fake_path);
     return outlength;
+}
+
+size_t http_mix_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity) {
+    size_t rate = 0;
+    srand((unsigned int)current_timestamp());
+
+    // The probability of occurrence of `post` is 1/3 to 1/7.
+    rate = (rand() % 3) + 4;
+
+    if ((rand() % rate) == 0) {
+        return http_post_client_encode(obfs, pencryptdata, datalength, capacity);
+    } else {
+        return http_simple_client_encode(obfs, pencryptdata, datalength, capacity);
+    }
 }
