@@ -185,18 +185,15 @@ So we must install it by ourselves.
 
 ```bash
 sudo su
-yum install wget git gcc gcc-c++ autoconf automake libtool make asciidoc xmlto cmake -y
 cd /
-wget https://cmake.org/files/v3.11/cmake-3.11.0.tar.gz
-tar zxvf cmake-3.11.0.tar.gz && cd cmake-3.11.0
-./bootstrap --prefix=/usr
-make -j$(nproc)
-make install
+curl https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o a.sh
+sh a.sh  --prefix=/usr/ --exclude-subdir
+rm -rf a.sh
 cmake --version
 ```
 
 It will spend about 30 minites. And the `cmake --version` command will output message likes:
 ```
-cmake version 3.11.0
+cmake version 3.11.4
 CMake suite maintained and supported by Kitware (kitware.com/cmake).
 ```
