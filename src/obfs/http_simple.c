@@ -3,11 +3,13 @@
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "http_simple.h"
 #include "obfsutil.h"
 #include "obfs.h"
 #include "ssrbuffer.h"
+#include "encrypt.h"
 
 size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
 ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback);
@@ -110,7 +112,7 @@ char http_simple_hex(char c) {
 
 // Converts a hex character to its integer value
 uint8_t from_hex(uint8_t ch) {
-    return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
+    return isdigit((int)ch) ? ch - '0' : (uint8_t)tolower((int)ch) - 'a' + 10;
 }
 
 struct buffer_t * get_data_from_http_header(const uint8_t *buf) {
@@ -557,13 +559,12 @@ size_t http_post_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t 
 }
 
 size_t http_mix_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity) {
-    size_t rate = 0;
-    srand((unsigned int)current_timestamp());
+    int rate = 0;
 
     // The probability of occurrence of `post` is 1/3 to 1/7.
-    rate = (rand() % 3) + 4;
+    rate = (rand_integer() % 4) + 3;
 
-    if ((rand() % rate) == 0) {
+    if ((rand_integer() % rate) == 0) {
         return http_post_client_encode(obfs, pencryptdata, datalength, capacity);
     } else {
         return http_simple_client_encode(obfs, pencryptdata, datalength, capacity);

@@ -70,6 +70,7 @@ size_t ss_max_key_length(void);
 void bytes_to_key_with_size(const uint8_t *pass, size_t len, uint8_t *md, size_t md_size);
 
 int rand_bytes(uint8_t *output, int len);
+int rand_integer(void);
 
 int ss_encrypt_all(struct cipher_env_t* env, struct buffer_t *plaintext, size_t capacity);
 int ss_decrypt_all(struct cipher_env_t* env, struct buffer_t *ciphertext, size_t capacity);

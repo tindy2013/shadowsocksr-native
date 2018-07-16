@@ -462,6 +462,12 @@ rand_bytes(uint8_t *output, int len)
     return 0;
 }
 
+int rand_integer(void) {
+    int result = 0;
+    rand_bytes((uint8_t *)&result, sizeof(result));
+    return abs(result);
+}
+
 const cipher_core_t *
 get_cipher_of_type(enum ss_cipher_type method)
 {
