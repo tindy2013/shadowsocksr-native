@@ -49,9 +49,7 @@ int main(int argc, char **argv) {
     do {
         set_app_name(argv[0]);
 
-        if (argc > 1) {
-            cmds = cmd_line_info_create(argc, argv);
-        }
+        cmds = cmd_line_info_create(argc, argv);
 
         if (cmds == NULL) {
             break;

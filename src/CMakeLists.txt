@@ -216,3 +216,10 @@ target_link_libraries(ssr-local ${ss_lib_net})
 target_link_libraries(ssr-server ${ss_lib_net})
 #target_link_libraries(ss_manager ${ss_lib_common} )
 #target_link_libraries(ss_redir ${ss_lib_net})
+
+install(TARGETS ssr-server ssr-local ssr-client 
+    RUNTIME DESTINATION /usr/bin)
+
+install(FILES ../config.json 
+    DESTINATION /etc/ssr-native/)
+

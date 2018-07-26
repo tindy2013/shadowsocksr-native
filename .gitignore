@@ -70,6 +70,7 @@ shadowsocks-libev.pc
 debian/libshadowsocks-libev*.symbols
 libsodium/src/libsodium/include/sodium/version.h
 rpm/SPECS/shadowsocks-libev.spec
+install_manifest.txt
 
 *.xcworkspace
 xcuserdata

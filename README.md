@@ -103,6 +103,7 @@ git submodule foreach -q 'git checkout $(git config -f $toplevel/.gitmodules sub
 
 # build ShadowsocksR-native
 cmake CMakeLists.txt && make
+make install
 ```
 
 ### CentOS
@@ -121,6 +122,7 @@ mv shadowsocksr-native ssr-n
 cd ssr-n
 git submodule update --init
 cmake . && make
+make install
 ```
 
 ### OS X
