@@ -480,12 +480,15 @@ static size_t _get_read_size(struct tunnel_ctx *tunnel, struct socket_ctx *socke
     size_t buffer_size;
     size_t frame_size;
     int fd = 0;
-    char tmp[256];
     if (ctx->_overhead) {
         return suggested_size;
     }
     fd = uv_stream_fd(&socket->handle.tcp);
+    {
+    char *tmp = (char *)calloc(suggested_size + 1, sizeof(*tmp));
     buffer_size = (size_t) recv(fd, tmp, (int)suggested_size, MSG_PEEK);
+    free(tmp);
+    }
     frame_size = ctx->_tcp_mss - ctx->_overhead;
 
     buffer_size = min(buffer_size, ctx->_recv_d_max_size);
