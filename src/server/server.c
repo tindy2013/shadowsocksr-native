@@ -487,6 +487,7 @@ static size_t _get_read_size(struct tunnel_ctx *tunnel, struct socket_ctx *socke
     {
     char *tmp = (char *)calloc(suggested_size + 1, sizeof(*tmp));
     buffer_size = (size_t) recv(fd, tmp, (int)suggested_size, MSG_PEEK);
+    if (buffer_size == 0) { buffer_size = suggested_size; }
     free(tmp);
     }
     frame_size = ctx->_tcp_mss - ctx->_overhead;
