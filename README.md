@@ -5,7 +5,7 @@
 - [Intro](#intro)
 - [Features](#features)
 - [Protocols & obfuscators](#protocols--obfuscators)
-- [Installation](#installation)
+- [Build](#build)
 - [Sample configure file](#sample-configure-file)
 - [cmake](#cmake)
 
@@ -65,7 +65,7 @@ progress of data flow
     +-- server_decode    +-- decrypt    +-- server_post_decrypt      ===>>> user data
 ```
 
-## Installation
+## Build
 
 ### Distribution-specific guide
 
@@ -107,6 +107,8 @@ cmake CMakeLists.txt && make
 # /bin/cp -rfa src/ssr-* /usr/bin
 ```
 
+The target binaries are `ssr-n/src/ssr-server`, `ssr-n/src/ssr-client` and `ssr-n/src/ssr-local`.
+
 ### CentOS
 
 CentOS 7 only. we don't support CentOS 6.x, it's too old.
@@ -124,10 +126,14 @@ git clone https://github.com/ShadowsocksR-Live/shadowsocksr-native.git
 mv shadowsocksr-native ssr-n
 cd ssr-n
 git submodule update --init
+git submodule foreach -q 'git checkout $(git config -f $toplevel/.gitmodules submodule.$name.branch || echo master)'
+
 cmake . && make
 # make install
 # /bin/cp -rfa src/ssr-* /usr/bin
 ```
+
+The target binaries are `ssr-n/src/ssr-server`, `ssr-n/src/ssr-client` and `ssr-n/src/ssr-local`.
 
 ### OS X
 
@@ -138,6 +144,7 @@ Install Homebrew:
 ```bash
 
 ```
+The target binaries are `ssr-n/src/ssr-server`, `ssr-n/src/ssr-client` and `ssr-n/src/ssr-local`.
 
 ### Windows
 
