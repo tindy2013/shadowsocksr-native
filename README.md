@@ -8,7 +8,7 @@
 - [Build](#build)
 - [Sample configure file](#sample-configure-file)
 - [cmake](#cmake)
-
+- [Deploy server](#deploy-server)
 
 ## Intro
 
@@ -209,4 +209,25 @@ It will spend about 30 minites. And the `cmake --version` command will output me
 ```
 cmake version 3.11.4
 CMake suite maintained and supported by Kitware (kitware.com/cmake).
+```
+
+## Deploy server
+
+Supporting `CentOS 7` / `Debian` / `Ubuntu` with the following commands
+
+```
+sudo su
+wget --no-check-certificate https://raw.githubusercontent.com/ShadowsocksR-Live/shadowsocksr-native/master/install/install-ssr.sh
+chmod +x install-ssr.sh
+./install-ssr.sh
+```
+
+After installation, we can view the status with 
+```
+systemctl status ssr-native.service
+```
+
+And we can view or edit the configuration with `cat` or `vi` in `root` privilege
+```
+cat /etc/ssr-native/config.json
 ```
