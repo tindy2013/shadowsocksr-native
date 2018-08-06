@@ -2,7 +2,7 @@
 # description: A secure socks5 proxy, designed to protect your Internet traffic.
 
 ### BEGIN INIT INFO
-# Provides:          ShadowsocksR Native
+# Provides:          ssr-native
 # Required-Start:    $network $syslog
 # Required-Stop:     $network
 # Default-Start:     2 3 4 5
@@ -13,7 +13,7 @@
 
 # Author: ssrlive
 
-NAME=SSR-Native
+NAME="ShadowsocksR Native"
 DAEMON=/usr/bin/ssr-server
 CONF=/etc/ssr-native/config.json
 

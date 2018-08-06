@@ -22,6 +22,7 @@ daemon_script_url="https://raw.githubusercontent.com/ShadowsocksR-Live/shadowsoc
 
 target_dir=/usr/bin
 config_dir=/etc/ssr-native
+service_dir=/lib/systemd/system
 service_name=ssr-native
 service_stub=/etc/init.d/${service_name}
 bin_name=ssr-server
@@ -336,7 +337,7 @@ build_ssr_native(){
     cd ..
 
     /bin/cp -rfa ./shadowsocksr-native/src/${bin_name} ${target_dir}
-    [ ! -d ${config_dir} ] && mkdir ${config_dir}
+
     rm -rf shadowsocksr-native
 }
 
@@ -374,7 +375,9 @@ firewall_settings(){
 # Config ShadowsocksR
 write_ssr_config(){
     public_ip=$(get_ip)
-    
+
+    [ ! -d ${config_dir} ] && mkdir ${config_dir}
+
     cat > ${config_dir}/config.json<<-EOF
 {
     "server":"${public_ip}",
@@ -397,7 +400,7 @@ write_service_description_file(){
     local svc_name=${1}
     local svc_stub=${2}
 
-    cat > /lib/systemd/system/${svc_name}.service<<-EOF
+    cat > ${service_dir}/${svc_name}.service<<-EOF
 [Unit]
     Description=${svc_name}
     After=network.target
@@ -411,7 +414,7 @@ write_service_description_file(){
     WantedBy=multi-user.target
 EOF
 
-    chmod 754 /lib/systemd/system/${svc_name}.service
+    chmod 754 ${service_dir}/${svc_name}.service
 }
 
 # Install ShadowsocksR Native
@@ -465,21 +468,22 @@ uninstall_shadowsocksr(){
     read -p "(Default: n):" answer
     [ -z ${answer} ] && answer="n"
     if [ "${answer}" == "y" ] || [ "${answer}" == "Y" ]; then
-        # /etc/init.d/shadowsocks status > /dev/null 2>&1
-        systemctl status ${service_name}.service
-
+        ${service_stub} status > /dev/null 2>&1
         if [ $? -eq 0 ]; then
-            /etc/init.d/shadowsocks stop
+            ${service_stub} stop
         fi
         if check_sys packageManager yum; then
-            chkconfig --del shadowsocks
+            chkconfig --del ${service_name}
         elif check_sys packageManager apt; then
-            update-rc.d -f shadowsocks remove
+            update-rc.d -f ${service_name} remove
         fi
-        rm -f /etc/shadowsocks.json
-        rm -f /etc/init.d/shadowsocks
-        rm -f /var/log/shadowsocks.log
-        rm -rf /usr/local/shadowsocks
+
+        systemctl stop ${service_name}.service
+
+        rm -rf ${config_dir}
+        rm -f ${service_stub}
+        rm -f ${target_dir}/${bin_name}
+        rm -f ${service_dir}/${service_name}.service
         echo "ShadowsocksR uninstall success!"
     else
         echo
