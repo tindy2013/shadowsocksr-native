@@ -18,16 +18,13 @@ echo "# Github: https://github.com/ShadowsocksR-Live/shadowsocksr-native #"
 echo "####################################################################"
 echo
 
-libsodium_file="libsodium-1.0.16"
-libsodium_url="https://github.com/jedisct1/libsodium/releases/download/1.0.16/libsodium-1.0.16.tar.gz"
-shadowsocks_r_file="shadowsocksr-3.2.2"
-shadowsocks_r_url="https://github.com/shadowsocksrr/shadowsocksr/archive/3.2.2.tar.gz"
-
-daemon_script="https://raw.githubusercontent.com/ShadowsocksR-Live/shadowsocksr-native/master/install/ssr-daemon.sh"
+daemon_script_url="https://raw.githubusercontent.com/ShadowsocksR-Live/shadowsocksr-native/master/install/ssr-daemon.sh"
 
 target_dir=/usr/bin
 config_dir=/etc/ssr-native
-service_stub=/etc/init.d/ssr-native
+service_name=ssr-native
+service_stub=/etc/init.d/${service_name}
+bin_name=ssr-server
 
 #Current folder
 cur_dir=`pwd`
@@ -59,7 +56,6 @@ chacha20-ietf
 
 # Reference URL:
 # https://github.com/shadowsocksr-rm/shadowsocks-rss/blob/master/ssr.md
-# https://github.com/shadowsocksrr/shadowsocksr/commit/a3cf0254508992b7126ab1151df0c2f10bf82680
 # Protocol
 protocols=(
 origin
@@ -328,15 +324,6 @@ install_build_tools() {
     fi
 }
 
-# Download files
-download_files(){
-    # Download ShadowsocksR init script
-    if ! wget --no-check-certificate ${daemon_script} -O ${service_stub} ; then
-        echo -e "[${red}Error${plain}] Failed to download ${proj_name} Native chkconfig file!"
-        exit 1
-    fi
-}
-
 build_ssr_native(){
     git clone https://github.com/ShadowsocksR-Live/shadowsocksr-native.git
     cd shadowsocksr-native
@@ -348,13 +335,13 @@ build_ssr_native(){
 
     cd ..
 
-    /bin/cp -rfa ./shadowsocksr-native/src/ssr-server ${target_dir}
+    /bin/cp -rfa ./shadowsocksr-native/src/${bin_name} ${target_dir}
     [ ! -d ${config_dir} ] && mkdir ${config_dir}
     rm -rf shadowsocksr-native
 }
 
 # Firewall set
-firewall_set(){
+firewall_settings(){
     echo -e "[${green}Info${plain}] firewall set start..."
     if centosversion 6; then
         /etc/init.d/iptables status > /dev/null 2>&1
@@ -406,39 +393,57 @@ write_ssr_config(){
 EOF
 }
 
-# Install ShadowsocksR
-install_ssr(){
-    # Install libsodium
-    if [ ! -f /usr/lib/libsodium.a ]; then
-        cd ${cur_dir}
-        tar zxf ${libsodium_file}.tar.gz
-        cd ${libsodium_file}
-        ./configure --prefix=/usr && make && make install
-        if [ $? -ne 0 ]; then
-            echo -e "[${red}Error${plain}] libsodium install failed!"
-            install_cleanup
+write_service_description_file(){
+    local svc_name=${1}
+    local svc_stub=${2}
+
+    cat > /lib/systemd/system/${svc_name}.service<<-EOF
+[Unit]
+    Description=${svc_name}
+    After=network.target
+[Service]
+    Type=forking
+    ExecStart=${svc_stub} start
+    ExecReload=${svc_stub} restart
+    ExecStop=${svc_stub} stop
+    PrivateTmp=true
+[Install]
+    WantedBy=multi-user.target
+EOF
+
+    chmod 754 /lib/systemd/system/${svc_name}.service
+}
+
+# Install ShadowsocksR Native
+install_ssr_service(){
+    ldconfig
+    # Install ShadowsocksR Native
+    cd ${cur_dir}
+    if [ -f ${target_dir}/${bin_name} ]; then
+
+        # Download ShadowsocksR Native service script
+        if ! wget --no-check-certificate ${daemon_script_url} -O ${service_stub} ; then
+            echo -e "[${red}Error${plain}] Failed to download ${proj_name} Native chkconfig file!"
             exit 1
         fi
-    fi
 
-    ldconfig
-    # Install ShadowsocksR
-    cd ${cur_dir}
-    tar zxf ${shadowsocks_r_file}.tar.gz
-    mv ${shadowsocks_r_file}/shadowsocks /usr/local/
-    if [ -f /usr/local/shadowsocks/server.py ]; then
-        chmod +x /etc/init.d/shadowsocks
+        chmod +x ${service_stub}
         if check_sys packageManager yum; then
-            chkconfig --add shadowsocks
-            chkconfig shadowsocks on
+            chkconfig --add ${service_name}
+            chkconfig ${service_name} on
         elif check_sys packageManager apt; then
-            update-rc.d -f shadowsocks defaults
+            update-rc.d -f ${service_name} defaults
         fi
-        /etc/init.d/shadowsocks start
+
+        write_service_description_file ${service_name} ${service_stub}
+
+        # ${service_stub} start
+        systemctl enable ${service_name}.service
+        systemctl start ${service_name}.service
 
         # clear
         echo
-        echo -e "Congratulations, ShadowsocksR server install completed!"
+        echo -e "Congratulations, ${proj_name} server install completed!"
         echo -e "Your Server IP        : \033[41;37m $(get_ip) \033[0m"
         echo -e "Your Server Port      : \033[41;37m ${shadowsocksport} \033[0m"
         echo -e "Your Password         : \033[41;37m ${shadowsockspwd} \033[0m"
@@ -446,22 +451,13 @@ install_ssr(){
         echo -e "Your obfs             : \033[41;37m ${shadowsockobfs} \033[0m"
         echo -e "Your Encryption Method: \033[41;37m ${shadowsockscipher} \033[0m"
         echo
-        echo "Welcome to visit:https://shadowsocks.be/9.html"
         echo "Enjoy it!"
         echo
     else
-        echo "ShadowsocksR install failed, please Email to Teddysun <i@teddysun.com> and contact"
-        install_cleanup
+        echo "${proj_name} install failed, please contact @ssrlive"
         exit 1
     fi
 }
-
-# Install cleanup
-install_cleanup(){
-    cd ${cur_dir}
-    rm -rf ${shadowsocks_r_file}.tar.gz ${shadowsocks_r_file} ${libsodium_file}.tar.gz ${libsodium_file}
-}
-
 
 # Uninstall ShadowsocksR
 uninstall_shadowsocksr(){
@@ -469,7 +465,9 @@ uninstall_shadowsocksr(){
     read -p "(Default: n):" answer
     [ -z ${answer} ] && answer="n"
     if [ "${answer}" == "y" ] || [ "${answer}" == "Y" ]; then
-        /etc/init.d/shadowsocks status > /dev/null 2>&1
+        # /etc/init.d/shadowsocks status > /dev/null 2>&1
+        systemctl status ${service_name}.service
+
         if [ $? -eq 0 ]; then
             /etc/init.d/shadowsocks stop
         fi
@@ -509,13 +507,10 @@ install_shadowsocksr(){
     write_ssr_config
 
     if check_sys packageManager yum; then
-        firewall_set
+        firewall_settings
     fi
 
-    exit 0
-
-    install_ssr
-    install_cleanup
+    install_ssr_service
 }
 
 #=================================================================#
