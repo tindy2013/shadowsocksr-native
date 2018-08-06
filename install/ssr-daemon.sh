@@ -16,6 +16,9 @@
 NAME=SSR-Native
 DAEMON=/usr/bin/ssr-server
 CONF=/etc/ssr-native/config.json
+
+command_start="${DAEMON} -d -c ${CONF}"
+
 PID=0
 RETVAL=0
 
@@ -34,8 +37,8 @@ do_start(){
         echo "${NAME} (pid ${PID}) is already running..."
         exit 0
     else
-        ${DAEMON} -d -c ${CONF}
-        {RETVAL}=$?
+        ${command_start}
+        RETVAL=$?
         if [ ${RETVAL} -eq 0 ]; then
             echo "Starting ${NAME} success"
         else
@@ -47,9 +50,8 @@ do_start(){
 do_stop(){
     check_running
     if [ $? -eq 0 ]; then
-        # ${DAEMON} -c ${CONF} -d stop
         kill ${PID}
-        {RETVAL}=$?
+        RETVAL=$?
         if [ ${RETVAL} -eq 0 ]; then
             echo "Stopping ${NAME} success"
         else
@@ -57,7 +59,7 @@ do_stop(){
         fi
     else
         echo "${NAME} is stopped"
-        {RETVAL}=1
+        RETVAL=1
     fi
 }
 
@@ -67,7 +69,7 @@ do_status(){
         echo "${NAME} (pid ${PID}) is running..."
     else
         echo "${NAME} is stopped"
-        {RETVAL}=1
+        RETVAL=1
     fi
 }
 
@@ -83,7 +85,7 @@ case "${1}" in
         ;;
     *)
         echo "Usage: ${0} { start | stop | restart | status }"
-        {RETVAL}=1
+        RETVAL=1
         ;;
 esac
 

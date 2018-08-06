@@ -90,9 +90,9 @@ e.g. Ubuntu, Debian or Linux Mint, you can build the binary like this:
 sudo su                       # using root account
 apt-get install --no-install-recommends build-essential autoconf libtool asciidoc xmlto -y
 apt-get install git gcc g++ cmake automake -y
-apt-get -f install
-apt-get update
-apt-get upgrade
+apt-get -f install -y
+apt-get update -y
+apt-get upgrade -y
 
 cd /                          # switch to root directory
 git clone https://github.com/ShadowsocksR-Live/shadowsocksr-native.git
@@ -103,7 +103,8 @@ git submodule foreach -q 'git checkout $(git config -f $toplevel/.gitmodules sub
 
 # build ShadowsocksR-native
 cmake CMakeLists.txt && make
-make install
+# make install
+# /bin/cp -rfa src/ssr-* /usr/bin
 ```
 
 ### CentOS
@@ -116,13 +117,16 @@ Before build `ssr-Native`, we must install `cmake` 3.x first. following [this](#
 # CentOS / Fedora / RHEL
 sudo su
 yum install wget git gcc gcc-c++ autoconf automake libtool make asciidoc xmlto -y
+curl https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o a.sh
+sh a.sh --prefix=/usr/ --exclude-subdir && rm -rf a.sh
 cd /
 git clone https://github.com/ShadowsocksR-Live/shadowsocksr-native.git
 mv shadowsocksr-native ssr-n
 cd ssr-n
 git submodule update --init
 cmake . && make
-make install
+# make install
+# /bin/cp -rfa src/ssr-* /usr/bin
 ```
 
 ### OS X
