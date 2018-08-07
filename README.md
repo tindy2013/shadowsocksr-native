@@ -1,5 +1,8 @@
 # ShadowsocksR-native
 
+[![Join the chat at https://gitter.im/ShadowsocksR-Live/](https://cdn03.gitter.im/_s/9177b02/images/favicon-read.ico)](https://gitter.im/ShadowsocksR-Live/Lobby)
+
+
 ## Index
 
 - [Intro](#intro)
@@ -230,4 +233,14 @@ systemctl status ssr-native.service
 And we can view or edit the configuration with `cat` or `vi` in `root` privilege
 ```
 cat /etc/ssr-native/config.json
+```
+
+After we changed the server configuration, we must restart the service to make the changes take effect.
+```
+systemctl restart ssr-native.service
+```
+
+To uninstall the server, use the following command
+```
+./install-ssr.sh uninstall
 ```
