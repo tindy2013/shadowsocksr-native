@@ -231,3 +231,13 @@ And we can view or edit the configuration with `cat` or `vi` in `root` privilege
 ```
 cat /etc/ssr-native/config.json
 ```
+
+After we changed the server configuration, we must restart the service to make the changes take effect.
+```
+systemctl restart ssr-native.service
+```
+
+To uninstall the server, use the following command
+```
+./install-ssr.sh uninstall
+```
