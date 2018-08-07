@@ -32,6 +32,20 @@ struct tls12_ticket_auth_local_data {
     bool     fastauth;
 };
 
+void tls12_ticket_auth_dispose(struct obfs_t *obfs);
+
+size_t tls12_ticket_auth_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
+ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback);
+
+size_t tls12_ticket_auth_get_overhead(struct obfs_t *obfs);
+
+struct buffer_t * tls12_ticket_auth_server_pre_encrypt(struct obfs_t *obfs, const struct buffer_t *buf);
+struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, const struct buffer_t *buf);
+struct buffer_t * tls12_ticket_auth_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback);
+struct buffer_t * tls12_ticket_auth_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback);
+bool tls12_ticket_auth_server_udp_pre_encrypt(struct obfs_t *obfs, struct buffer_t *buf);
+bool tls12_ticket_auth_server_udp_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, uint32_t *uid);
+
 static void tls12_ticket_auth_local_data_init(struct tls12_ticket_auth_local_data* local) {
     local->handshake_status = 0;
     local->send_buffer = (uint8_t *) malloc(1);
@@ -399,17 +413,23 @@ ssize_t tls12_ticket_auth_client_decode(struct obfs_t *obfs, char **pencryptdata
         return -1;
     }
     {
-        uint8_t hash[SHA1_BYTES];
+        uint8_t hash[SHA1_BYTES] = { 0 };
         BUFFER_CONSTANT_INSTANCE(pClientID, global->local_client_id, 32);
         BUFFER_CONSTANT_INSTANCE(pMsg, encryptdata + 11, 22);
+        BUFFER_CONSTANT_INSTANCE(pTotal, encryptdata, datalength - 10);
+
         tls12_sha1_hmac(obfs, pClientID, pMsg, hash);
+        if (memcmp(encryptdata + 33, hash, OBFS_HMAC_SHA1_LEN)) {
+            return -1;
+        }
 
-    if (memcmp(encryptdata + 33, hash, OBFS_HMAC_SHA1_LEN)) {
-        return -1;
-    }
+        tls12_sha1_hmac(obfs, pClientID, pTotal, hash);
+        if (memcmp(encryptdata + datalength - 10, hash, OBFS_HMAC_SHA1_LEN)) {
+            return -1;
+        }
 
-    *needsendback = 1;
-    return 0;
+        *needsendback = 1;
+        return 0;
     }
 }
 
@@ -801,6 +821,11 @@ bool tls12_ticket_auth_server_udp_post_decrypt(struct obfs_t *obfs, struct buffe
 
 
 //============================= tls1.2_ticket_fastauth ==================================
+
+size_t tls12_ticket_fastauth_get_overhead(struct obfs_t *obfs);
+void tls12_ticket_fastauth_dispose(struct obfs_t *obfs);
+size_t tls12_ticket_fastauth_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
+ssize_t tls12_ticket_fastauth_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback);
 
 void * tls12_ticket_fastauth_init_data(void) {
     return tls12_ticket_auth_init_data();
