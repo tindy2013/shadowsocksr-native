@@ -1,6 +1,6 @@
 # ShadowsocksR-native
 
-[![Join the chat at https://gitter.im/ShadowsocksR-Live/Lobby](https://avatars-05.gitter.im/group/iv/4/5b6926d9d73408ce4fa3bb21?s=48)](https://gitter.im/ShadowsocksR-Live/Lobby)
+[![Join the chat at https://gitter.im/ShadowsocksR-Live/Lobby](https://cdn03.gitter.im/_s/9177b02/images/favicon-read.ico)](https://gitter.im/ShadowsocksR-Live/Lobby)
 
 
 ## Index
