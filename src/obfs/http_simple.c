@@ -12,7 +12,7 @@
 #include "encrypt.h"
 
 size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
-ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback);
+struct buffer_t * http_simple_client_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *needsendback);
 
 struct buffer_t * http_simple_server_encode(struct obfs_t *obfs, const struct buffer_t *buf);
 struct buffer_t * http_simple_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback);
@@ -292,26 +292,27 @@ size_t http_simple_client_encode(struct obfs_t *obfs, char **pencryptdata, size_
     return outlength;
 }
 
-ssize_t http_simple_client_decode(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback) {
-    char *encryptdata = *pencryptdata;
+struct buffer_t * http_simple_client_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *needsendback) {
+    struct buffer_t *result = buffer_clone(buf);
+    char *encryptdata = (char *) result->buffer;
     struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
     char* data_begin;
 
-    *needsendback = 0;
+    *needsendback = false;
     if (local->has_recv_header) {
-        return (ssize_t)datalength;
+        return result;
     }
     data_begin = strstr(encryptdata, "\r\n\r\n");
     if (data_begin) {
-        ssize_t outlength;
+        size_t outlength;
         data_begin += 4;
         local->has_recv_header = 1;
-        outlength = (ssize_t)datalength - (data_begin - encryptdata);
-        memmove(encryptdata, data_begin, (size_t)outlength);
-        return outlength;
+        outlength = result->len - (data_begin - encryptdata);
+        buffer_shorten(result, (data_begin - encryptdata), outlength);
     } else {
-        return 0;
+        buffer_reset(result);
     }
+    return result;
 }
 
 struct buffer_t * http_simple_server_encode(struct obfs_t *obfs, const struct buffer_t *buf) {

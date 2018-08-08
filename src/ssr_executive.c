@@ -389,12 +389,12 @@ enum ssr_error tunnel_cipher_client_decrypt(struct tunnel_cipher_ctx *tc, struct
     ASSERT(buf->len <= SSR_BUFF_SIZE);
 
     if (obfs_plugin && obfs_plugin->client_decode) {
-        int needsendback = 0;
-        ssize_t len = obfs_plugin->client_decode(tc->obfs, (char **)&buf->buffer, buf->len, &buf->capacity, &needsendback);
-        if (len < 0) {
+        bool needsendback = 0;
+        struct buffer_t *result = obfs_plugin->client_decode(tc->obfs, buf, &needsendback);
+        if (result == NULL) {
             return ssr_error_client_decode;
         }
-        buf->len = (size_t)len;
+        buffer_replace(buf, result); buffer_free(result);
         if (needsendback && obfs_plugin->client_encode) {
             struct buffer_t *sendback = buffer_alloc(SSR_BUFF_SIZE);
             sendback->len = obfs_plugin->client_encode(tc->obfs, (char **)&sendback->buffer, 0, &sendback->capacity);

@@ -53,7 +53,7 @@ struct obfs_t {
     ssize_t (*client_post_decrypt)(struct obfs_t *obfs, char **pplaindata, int datalength, size_t* capacity);
 
     size_t (*client_encode)(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity);
-    ssize_t (*client_decode)(struct obfs_t *obfs, char **pencryptdata, size_t datalength, size_t* capacity, int *needsendback);
+    struct buffer_t * (*client_decode)(struct obfs_t *obfs, const struct buffer_t *buf, bool *needsendback);
 
     ssize_t (*client_udp_pre_encrypt)(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity);
     ssize_t (*client_udp_post_decrypt)(struct obfs_t *obfs, char **pplaindata, size_t datalength, size_t* capacity);
