@@ -371,8 +371,8 @@ enum ssr_error tunnel_cipher_client_encrypt(struct tunnel_cipher_ctx *tc, struct
 
     obfs_plugin = tc->obfs;
     if (obfs_plugin && obfs_plugin->client_encode) {
-        buf->len = obfs_plugin->client_encode(
-            tc->obfs, (char **)&buf->buffer, buf->len, &buf->capacity);
+        struct buffer_t *tmp = obfs_plugin->client_encode(tc->obfs, buf);
+        buffer_replace(buf, tmp); buffer_free(tmp);
     }
     // SSR end
     return ssr_ok;
@@ -396,8 +396,8 @@ enum ssr_error tunnel_cipher_client_decrypt(struct tunnel_cipher_ctx *tc, struct
         }
         buffer_replace(buf, result); buffer_free(result);
         if (needsendback && obfs_plugin->client_encode) {
-            struct buffer_t *sendback = buffer_alloc(SSR_BUFF_SIZE);
-            sendback->len = obfs_plugin->client_encode(tc->obfs, (char **)&sendback->buffer, 0, &sendback->capacity);
+            BUFFER_CONSTANT_INSTANCE(empty, "", 0);
+            struct buffer_t *sendback = obfs_plugin->client_encode(tc->obfs, empty);
             ASSERT(feedback);
             *feedback = sendback;
         }
