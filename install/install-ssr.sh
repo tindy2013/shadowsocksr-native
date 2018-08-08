@@ -317,11 +317,11 @@ install_build_tools() {
         sh cmake_pkg.sh --prefix=/usr/ --exclude-subdir && rm -rf cmake_pkg.sh
         yum install wget git gcc gcc-c++ autoconf automake libtool make asciidoc xmlto -y
     elif check_sys packageManager apt; then
-        apt-get -y install --no-install-recommends build-essential autoconf libtool asciidoc xmlto
-        apt-get -y install git gcc g++ cmake automake
         apt-get -f install
         apt-get -y update
         apt-get -y upgrade
+        apt-get -y install --no-install-recommends build-essential autoconf libtool asciidoc xmlto
+        apt-get -y install git gcc g++ cmake automake
     fi
 }
 
