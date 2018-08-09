@@ -159,11 +159,8 @@ static int tls12_ticket_pack_auth_data(struct obfs_t *obfs, const struct buffer_
 }
 
 void tls12_ticket_auth_pack_data(const uint8_t *encryptdata, uint16_t start, uint16_t len, uint8_t *out_buffer, uint16_t outlength) {
-    out_buffer[outlength] = 0x17;
-    out_buffer[outlength + 1] = 0x3;
-    out_buffer[outlength + 2] = 0x3;
-    out_buffer[outlength + 3] = (uint8_t)(len >> 8);
-    out_buffer[outlength + 4] = (uint8_t)len;
+    memmove(out_buffer + outlength, "\x17\x03\x03", 3);
+    *((uint16_t *)(out_buffer + outlength + 3)) = htons(len);
     memcpy(out_buffer + outlength + 5, encryptdata + start, len);
 }
 
@@ -194,7 +191,7 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
             size_t outlength = 0;
             size_t len;
             encryptdata = (uint8_t *)buf->buffer;
-            out_buffer = (uint8_t*)malloc((size_t)(datalength + (SSR_BUFF_SIZE * 2)));
+            out_buffer = (uint8_t*)calloc((size_t)(datalength + (SSR_BUFF_SIZE * 2)), sizeof(uint8_t));
             while (datalength - start > SSR_BUFF_SIZE) {
                 len = xorshift128plus() % (SSR_BUFF_SIZE * 2) + 100;
                 if (len > datalength - start) {
@@ -224,7 +221,7 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
             size_t start = 0;
             size_t outlength = 0;
             size_t len;
-            out_buffer = (uint8_t *)malloc(datalength + (SSR_BUFF_SIZE * 2));
+            out_buffer = (uint8_t *)calloc(datalength + (SSR_BUFF_SIZE * 2), sizeof(uint8_t));
             while (datalength - start > SSR_BUFF_SIZE) {
                 len = xorshift128plus() % (SSR_BUFF_SIZE * 2) + 100;
                 if (len > datalength - start) {
