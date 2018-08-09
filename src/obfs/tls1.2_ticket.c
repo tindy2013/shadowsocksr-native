@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdbool.h>
+#include <assert.h>
 #if defined(WIN32) || defined(_WIN32)
 #include <winsock2.h>
 #else
@@ -120,24 +121,38 @@ static void tls12_sha1_hmac(struct obfs_t *obfs,
     free(key);
 }
 
-static int tls12_ticket_pack_auth_data(struct obfs_t *obfs, const uint8_t client_id[32], uint8_t outdata[32]) {
-    uint8_t hash[SHA1_BYTES];
+struct buffer_t * tls12_ticket_auth_sni(const char *url0) {
+    const char *url = url0 ? url0 : "";
+    size_t url_len = strlen(url);
+    size_t len0 = 1 + sizeof(uint16_t) + url_len;
+    size_t len = 2 + sizeof(uint16_t) + sizeof(uint16_t) + len0;
+    struct buffer_t *result = buffer_alloc(len);
+    uint8_t *iter = result->buffer;
+
+    memmove(iter, "\x00\x00", 2); iter += 2;
+    *((uint16_t *)iter) = htons((uint16_t)len0 + 2); iter += sizeof(uint16_t);
+    *((uint16_t *)iter) = htons((uint16_t)len0); iter += sizeof(uint16_t);
+
+    memmove(iter, "\x00", 1); iter += 1;
+    *((uint16_t *)iter) = htons((uint16_t)url_len); iter += sizeof(uint16_t);
+    memmove(iter, url, url_len); iter += url_len;
+
+    assert(iter - result->buffer == len);
+
+    result->len = len;
+    return result;
+}
+
+static int tls12_ticket_pack_auth_data(struct obfs_t *obfs, const struct buffer_t *client_id, uint8_t outdata[32]) {
+    uint8_t hash[SHA1_BYTES] = { 0 };
     int out_size = 32;
-#if 0
-    time_t t = time(NULL);
-    outdata[0] = (uint8_t)(t >> 24);
-    outdata[1] = (uint8_t)(t >> 16);
-    outdata[2] = (uint8_t)(t >> 8);
-    outdata[3] = (uint8_t)t;
-#else
     *((uint32_t *)(outdata + 0)) = htonl((uint32_t)time(NULL));
-#endif
     rand_bytes((uint8_t*)outdata + sizeof(uint32_t), 18);
 
     {
-        BUFFER_CONSTANT_INSTANCE(pClientID, client_id, 32);
         BUFFER_CONSTANT_INSTANCE(pMsg, outdata, 22);
-        tls12_sha1_hmac(obfs, pClientID, pMsg, hash);
+        assert(client_id->len == 32);
+        tls12_sha1_hmac(obfs, client_id, pMsg, hash);
     }
     memcpy(outdata + out_size - OBFS_HMAC_SHA1_LEN, hash, OBFS_HMAC_SHA1_LEN);
     return out_size;
@@ -310,7 +325,10 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
         pdata -= 32; len += 32;
         pdata[-1] = 0x20;
         pdata -= 1; len += 1;
-        tls12_ticket_pack_auth_data(obfs, global->local_client_id, pdata - 32);
+        {
+            BUFFER_CONSTANT_INSTANCE(client_id, global->local_client_id, sizeof(global->local_client_id));
+            tls12_ticket_pack_auth_data(obfs, client_id, pdata - 32);
+        }
         pdata -= 32; len += 32;
         pdata[-1] = 0x3;
         pdata[-2] = 0x3; // tls version
@@ -474,7 +492,7 @@ struct buffer_t * tls12_ticket_auth_server_encode(struct obfs_t *obfs, const str
         uint16_t size3 = 0;
 
         local->handshake_status |= 8;
-        tls12_ticket_pack_auth_data(obfs, local->client_id->buffer, auth_data);
+        tls12_ticket_pack_auth_data(obfs, local->client_id, auth_data);
 
         // data = self.tls_version + self.pack_auth_data(self.client_id) + b"\x20" + self.client_id + binascii.unhexlify(b"c02f000005ff01000100")
         chunk1 = buffer_alloc(SSR_BUFF_SIZE);
