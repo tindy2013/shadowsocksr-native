@@ -61,36 +61,36 @@ extern FILE *logfile;
 
 #define USE_LOGFILE(ident)                                     \
     do {                                                       \
-        if (ident != NULL) { logfile = fopen(ident, "w+"); } } \
-    while (0)
+        if (ident != NULL) { logfile = fopen(ident, "w+"); }   \
+    } while (0)
 
 #define CLOSE_LOGFILE                               \
     do {                                            \
-        if (logfile != NULL) { fclose(logfile); } } \
-    while (0)
+        if (logfile != NULL) { fclose(logfile); }   \
+    } while (0)
 
 #define LOGI(format, ...)                                                        \
     do {                                                                         \
         if (logfile != NULL) {                                                   \
             time_t now = time(NULL);                                             \
-            char timestr[20];                                                    \
+            char timestr[20] = { 0 };                                            \
             strftime(timestr, 20, TIME_FORMAT, localtime(&now));                 \
             fprintf(logfile, " %s INFO: " format "\n", timestr, ## __VA_ARGS__); \
-            fflush(logfile); }                                                   \
-    }                                                                            \
-    while (0)
+            fflush(logfile);                                                     \
+        }                                                                        \
+    } while (0)
 
 #define LOGE(format, ...)                                        \
     do {                                                         \
         if (logfile != NULL) {                                   \
             time_t now = time(NULL);                             \
-            char timestr[20];                                    \
+            char timestr[20] = { 0 };                            \
             strftime(timestr, 20, TIME_FORMAT, localtime(&now)); \
             fprintf(logfile, " %s ERROR: " format "\n", timestr, \
                     ## __VA_ARGS__);                             \
-            fflush(logfile); }                                   \
-    }                                                            \
-    while (0)
+            fflush(logfile);                                     \
+        }                                                        \
+    } while (0)
 
 #elif defined(_WIN32)
 
@@ -103,20 +103,20 @@ extern FILE *logfile;
 #define LOGI(format, ...)                                                   \
     do {                                                                    \
         time_t now = time(NULL);                                            \
-        char timestr[20];                                                   \
+        char timestr[20] = { 0 };                                           \
         strftime(timestr, 20, TIME_FORMAT, localtime(&now));                \
         fprintf(stderr, " %s INFO: " format "\n", timestr, ## __VA_ARGS__); \
-        fflush(stderr); }                                                   \
-    while (0)
+        fflush(stderr);                                                     \
+    } while (0)
 
 #define LOGE(format, ...)                                                    \
     do {                                                                     \
         time_t now = time(NULL);                                             \
-        char timestr[20];                                                    \
+        char timestr[20] = { 0 };                                            \
         strftime(timestr, 20, TIME_FORMAT, localtime(&now));                 \
         fprintf(stderr, " %s ERROR: " format "\n", timestr, ## __VA_ARGS__); \
-        fflush(stderr); }                                                    \
-    while (0)
+        fflush(stderr);                                                      \
+    } while (0)
 
 #else
 
@@ -145,7 +145,7 @@ extern int use_syslog;
             syslog(LOG_INFO, format, ## __VA_ARGS__);                            \
         } else {                                                                 \
             time_t now = time(NULL);                                             \
-            char timestr[20];                                                    \
+            char timestr[20] = { 0 };                                            \
             strftime(timestr, 20, TIME_FORMAT, localtime(&now));                 \
             if (use_tty) {                                                       \
                 fprintf(stderr, "\e[01;32m %s INFO: \e[0m" format "\n", timestr, \
@@ -163,7 +163,7 @@ extern int use_syslog;
             syslog(LOG_ERR, format, ## __VA_ARGS__);                              \
         } else {                                                                  \
             time_t now = time(NULL);                                              \
-            char timestr[20];                                                     \
+            char timestr[20] = { 0 };                                             \
             strftime(timestr, 20, TIME_FORMAT, localtime(&now));                  \
             if (use_tty) {                                                        \
                 fprintf(stderr, "\e[01;35m %s ERROR: \e[0m" format "\n", timestr, \

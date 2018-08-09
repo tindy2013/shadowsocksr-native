@@ -117,8 +117,17 @@ size_t buffer_store(struct buffer_t *ptr, const uint8_t *data, size_t size) {
 }
 
 void buffer_replace(struct buffer_t *dst, const struct buffer_t *src) {
+    if (dst) {
+        if (src) {
+            buffer_store(dst, src->buffer, src->len);
+        } else {
+            buffer_reset(dst);
+        }
+    }
+    /*
     if (dst==NULL || src==NULL) { return; }
     buffer_store(dst, src->buffer, src->len);
+    */
 }
 
 void buffer_insert(struct buffer_t *ptr, const struct buffer_t *data, size_t pos) {

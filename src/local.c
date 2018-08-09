@@ -311,8 +311,8 @@ int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
 
     obfs_plugin = local->obfs;
     if (obfs_plugin && obfs_plugin->client_encode) {
-        buf->len = obfs_plugin->client_encode(
-            local->obfs, (char **)&buf->buffer, buf->len, &buf->capacity);
+        struct buffer_t *tmp = obfs_plugin->client_encode(local->obfs, buf);
+        buffer_replace(buf, tmp); buffer_free(tmp);
     }
     // SSR end
     return 0;
@@ -331,15 +331,15 @@ int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t
     // SSR beg
     obfs_plugin = local->obfs;
     if (obfs_plugin && obfs_plugin->client_decode) {
-        int needsendback = 0;
-        ssize_t len = obfs_plugin->client_decode(local->obfs, (char **)&buf->buffer, buf->len, &buf->capacity, &needsendback);
-        if (len < 0) {
+        bool needsendback = 0;
+        struct buffer_t *tmp = obfs_plugin->client_decode(local->obfs, buf, &needsendback);
+        if (tmp == NULL) {
             return -1;
         }
-        buf->len = (size_t)len;
+        buffer_replace(buf, tmp); buffer_free(tmp);
         if (needsendback && obfs_plugin->client_encode) {
-            struct buffer_t *sendback = buffer_alloc(SSR_BUFF_SIZE);
-            sendback->len = obfs_plugin->client_encode(local->obfs, (char **)&sendback->buffer, 0, &sendback->capacity);
+            BUFFER_CONSTANT_INSTANCE(empty, "", 0);
+            struct buffer_t *sendback = obfs_plugin->client_encode(local->obfs, empty);
             assert(feedback);
             *feedback = sendback;
         }
@@ -393,7 +393,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
     if (nread <= 0) {
         if (nread < 0) {
             if (nread != UV_EOF) {
-                LOGE("local_recv_cb \"%s\"", uv_strerror(nread));
+                LOGE("local_recv_cb \"%s\"", uv_strerror((int)nread));
             }
             tunnel_close_and_free(remote, local);
         }
@@ -982,7 +982,7 @@ remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             // (errno == EAGAIN || errno == EWOULDBLOCK):
             ; // LOGI("remote_recv_cb: no data. continue to wait for recv");
         } else if (nread < 0) {
-            LOGE("remote_recv_cb \"%s\"", uv_strerror(nread));
+            LOGE("remote_recv_cb \"%s\"", uv_strerror((int)nread));
             tunnel_close_and_free(remote, local);
         }
         return;
