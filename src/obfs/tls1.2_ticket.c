@@ -29,8 +29,8 @@ struct tls12_ticket_auth_local_data {
     struct buffer_t *recv_buffer;
     struct buffer_t *client_id;
     uint32_t max_time_dif;
-    int      send_id;
-    bool     fastauth;
+    int send_id;
+    bool fastauth;
 };
 
 void tls12_ticket_auth_dispose(struct obfs_t *obfs);
@@ -164,6 +164,19 @@ void tls12_ticket_auth_pack_data(const uint8_t *encryptdata, uint16_t start, uin
     memcpy(out_buffer + outlength + 5, encryptdata + start, len);
 }
 
+static struct buffer_t * _pack_data(const uint8_t *encryptdata, uint16_t len) {
+    struct buffer_t *result = buffer_alloc(5 + len);
+    uint8_t *iter = result->buffer;
+    memmove(iter, "\x17\x03\x03", 3);
+    iter += 3;
+    *((uint16_t *)(iter)) = htons(len);
+    iter += sizeof(uint16_t);
+    memcpy(iter, encryptdata, len);
+    iter += len;
+    result->len = iter - result->buffer;
+    return result;
+}
+
 struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const struct buffer_t *buf) {
     uint8_t *encryptdata = buf->buffer;
     size_t datalength = buf->len;
@@ -175,16 +188,8 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
     if (local->handshake_status == 8) {
         if (buf->len < (SSR_BUFF_SIZE / 2)) {
             result = buffer_alloc(5 + buf->len);
-            encryptdata = (uint8_t *)result->buffer;
-
-            encryptdata[0] = 0x17;
-            encryptdata[1] = 0x3;
-            encryptdata[2] = 0x3;
-            encryptdata[3] = (uint8_t)(datalength >> 8);
-            encryptdata[4] = (uint8_t)datalength;
-            result->len = 5;
-
-            buffer_concatenate2(result, buf);
+            tls12_ticket_auth_pack_data(buf->buffer, 0, (uint16_t)buf->len, result->buffer, 0);
+            result->len = 5 + buf->len;
             return result;
         } else {
             size_t start = 0;
