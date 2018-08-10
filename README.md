@@ -18,7 +18,7 @@
 **ShadowsocksR-native** is a lightweight secured SOCKS5 proxy for embedded devices and low-end boxes.
 It's derived from [Shadowsocks-libev](http://shadowsocks.org).
 
-It is a port of [ShadowsocksR](https://github.com/breakwa11)
+It is a port of [ShadowsocksR](https://github.com/ShadowsocksR-Live/shadowsocksr)
 created by [@breakwa11](https://github.com/breakwa11), 
 which is maintained by [@ssrlive](https://github.com/ssrlive).
 
@@ -238,6 +238,11 @@ cat /etc/ssr-native/config.json
 After we changed the server configuration, we must restart the service to make the changes take effect.
 ```
 systemctl restart ssr-native.service
+```
+
+To stop the server, please run
+```
+systemctl stop ssr-native.service
 ```
 
 To uninstall the server, use the following command
