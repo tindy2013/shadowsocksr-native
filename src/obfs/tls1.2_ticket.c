@@ -24,8 +24,7 @@ struct tls12_ticket_auth_global_data {
 
 struct tls12_ticket_auth_local_data {
     int handshake_status;
-    uint8_t *send_buffer;
-    size_t   send_buffer_size;
+    struct buffer_t *send_buffer;
     struct buffer_t *recv_buffer;
     struct buffer_t *client_id;
     uint32_t max_time_dif;
@@ -49,8 +48,7 @@ bool tls12_ticket_auth_server_udp_post_decrypt(struct obfs_t *obfs, struct buffe
 
 static void tls12_ticket_auth_local_data_init(struct tls12_ticket_auth_local_data* local) {
     local->handshake_status = 0;
-    local->send_buffer = (uint8_t *) malloc(1);
-    local->send_buffer_size = 0;
+    local->send_buffer = buffer_alloc(SSR_BUFF_SIZE);
     local->recv_buffer = buffer_alloc(SSR_BUFF_SIZE);
     local->client_id = buffer_alloc(SSR_BUFF_SIZE);
     local->max_time_dif = 60 * 60 *24; // time dif (second) setting
@@ -94,10 +92,7 @@ size_t tls12_ticket_auth_get_overhead(struct obfs_t *obfs) {
 
 void tls12_ticket_auth_dispose(struct obfs_t *obfs) {
     struct tls12_ticket_auth_local_data *local = (struct tls12_ticket_auth_local_data*)obfs->l_data;
-    if (local->send_buffer != NULL) {
-        free(local->send_buffer);
-        local->send_buffer = NULL;
-    }
+    buffer_free(local->send_buffer);
     buffer_free(local->recv_buffer);
     buffer_free(local->client_id);
     free(local);
@@ -164,12 +159,12 @@ void tls12_ticket_auth_pack_data(const uint8_t *encryptdata, uint16_t start, uin
     memcpy(out_buffer + outlength + 5, encryptdata + start, len);
 }
 
-static struct buffer_t * _pack_data(const uint8_t *encryptdata, uint16_t len) {
+static struct buffer_t * _pack_data(const uint8_t *encryptdata, size_t len) {
     struct buffer_t *result = buffer_alloc(5 + len);
     uint8_t *iter = result->buffer;
     memmove(iter, "\x17\x03\x03", 3);
     iter += 3;
-    *((uint16_t *)(iter)) = htons(len);
+    *((uint16_t *)(iter)) = htons((uint16_t)len);
     iter += sizeof(uint16_t);
     memcpy(iter, encryptdata, len);
     iter += len;
@@ -219,9 +214,9 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
 
     if (datalength > 0) {
         if (datalength < (SSR_BUFF_SIZE / 2)) {
-            local->send_buffer = (uint8_t *)realloc(local->send_buffer, (local->send_buffer_size + datalength + 5));
-            tls12_ticket_auth_pack_data(encryptdata, 0, (uint16_t)datalength, local->send_buffer, (uint16_t)local->send_buffer_size);
-            local->send_buffer_size += datalength + 5;
+            struct buffer_t *tmp = _pack_data(encryptdata, datalength);
+            buffer_concatenate2(local->send_buffer, tmp);
+            buffer_free(tmp);
         } else {
             size_t start = 0;
             size_t outlength = 0;
@@ -241,9 +236,7 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
                 tls12_ticket_auth_pack_data(encryptdata, (uint16_t)start, (uint16_t)len, out_buffer, (uint16_t)outlength);
                 outlength += len + 5;
             }
-            local->send_buffer = (uint8_t *)realloc(local->send_buffer, (local->send_buffer_size + outlength));
-            memcpy(local->send_buffer + local->send_buffer_size, out_buffer, outlength);
-            local->send_buffer_size += outlength;
+            buffer_concatenate(local->send_buffer, out_buffer, outlength);
             free(out_buffer);
         }
     }
@@ -358,7 +351,7 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
         uint8_t *pdata;
         uint8_t hash[SHA1_BYTES];
 
-        datalength = local->send_buffer_size + 43;
+        datalength = local->send_buffer->len + 43;
         out_buffer = (uint8_t *)malloc(datalength);
         pdata = out_buffer;
         memcpy(pdata, "\x14\x03\x03\x00\x01\x01", 6);
@@ -376,10 +369,8 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
         memcpy(pdata, hash, OBFS_HMAC_SHA1_LEN);
 
         pdata += OBFS_HMAC_SHA1_LEN;
-        memcpy(pdata, local->send_buffer, local->send_buffer_size);
-        free(local->send_buffer);
-        local->send_buffer = NULL;
-        local->send_buffer_size = 0;
+        memcpy(pdata, local->send_buffer->buffer, local->send_buffer->len);
+        buffer_reset(local->send_buffer);
 
         if (tmp == 0) {
             local->handshake_status = 8;
