@@ -162,12 +162,11 @@ void tls12_ticket_auth_pack_data(const uint8_t *encryptdata, uint16_t start, uin
 static struct buffer_t * _pack_data(const uint8_t *encryptdata, size_t len) {
     struct buffer_t *result = buffer_alloc(5 + len);
     uint8_t *iter = result->buffer;
-    memmove(iter, "\x17\x03\x03", 3);
-    iter += 3;
-    *((uint16_t *)(iter)) = htons((uint16_t)len);
-    iter += sizeof(uint16_t);
-    memcpy(iter, encryptdata, len);
-    iter += len;
+
+    memmove(iter, "\x17\x03\x03", 3);  iter += 3;
+    *((uint16_t *)(iter)) = htons((uint16_t)len);  iter += sizeof(uint16_t);
+    memcpy(iter, encryptdata, len);  iter += len;
+
     result->len = iter - result->buffer;
     return result;
 }
@@ -182,9 +181,7 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
 
     if (local->handshake_status == 8) {
         if (buf->len < (SSR_BUFF_SIZE / 2)) {
-            result = buffer_alloc(5 + buf->len);
-            tls12_ticket_auth_pack_data(buf->buffer, 0, (uint16_t)buf->len, result->buffer, 0);
-            result->len = 5 + buf->len;
+            result = _pack_data(buf->buffer, buf->len);
             return result;
         } else {
             size_t start = 0;
