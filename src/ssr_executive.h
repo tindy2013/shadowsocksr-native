@@ -100,7 +100,7 @@ void objects_container_remove(struct cstl_set *set, void *obj);
 void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p);
 
 struct cstl_map;
-struct cstl_map * obj_map_create(int(*compare_key)(void*,void*), void (*destroy_key)(void*), void (*destroy_value)(void*));
+struct cstl_map * obj_map_create(int(*compare_key)(const void*,const void*), void (*destroy_key)(void*), void (*destroy_value)(void*));
 void obj_map_destroy(struct cstl_map *map);
 bool obj_map_add(struct cstl_map *map, void *key, size_t k_size, void *value, size_t v_size);
 bool obj_map_exists(struct cstl_map *map, void *key);

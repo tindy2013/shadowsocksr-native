@@ -93,7 +93,7 @@ static void do_connect_host_start(struct tunnel_ctx *tunnel, struct socket_ctx *
 static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 
-static int resolved_ips_compare_key(void *left, void *right);
+static int resolved_ips_compare_key(const void *left, const void *right);
 static void resolved_ips_destroy_object(void *obj);
 
 void print_server_info(const struct server_config *config);
@@ -869,7 +869,7 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
     return result;
 }
 
-static int resolved_ips_compare_key(void *left, void *right) {
+static int resolved_ips_compare_key(const void *left, const void *right) {
     char *l = *(char **)left;
     char *r = *(char **)right;
     return strcmp(l, r);

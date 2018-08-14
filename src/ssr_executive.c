@@ -104,7 +104,7 @@ void config_change_for_server(struct server_config *config) {
     config->remote_port = 0;
 }
 
-static int c_set_compare_element(void *left, void *right) {
+static int c_set_compare_element(const void *left, const void *right) {
     struct tunnel_ctx *l = *(struct tunnel_ctx **)left;
     struct tunnel_ctx *r = *(struct tunnel_ctx **)right;
     if ( l < r ) {
@@ -187,9 +187,16 @@ void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void 
     cstl_set_delete_iterator(iterator);
 }
 
+struct cstl_slist * obj_list_create(int(*compare_objs)(const void*,const void*), void (*destroy_obj)(void*)) {
+    return cstl_slist_new(destroy_obj, compare_objs);
+}
+
+void obj_list_destroy(struct cstl_slist *list) {
+    cstl_slist_delete(list);
+}
 
 
-struct cstl_map * obj_map_create(int(*compare_key)(void*,void*), void (*destroy_key)(void*), void (*destroy_value)(void*)) {
+struct cstl_map * obj_map_create(int(*compare_key)(const void*,const void*), void (*destroy_key)(void*), void (*destroy_value)(void*)) {
     return cstl_map_new(compare_key, destroy_key, destroy_value);
 }
 
