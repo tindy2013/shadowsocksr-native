@@ -313,13 +313,13 @@ pre_install(){
 install_build_tools() {
     # Install necessary dependencies
     if check_sys packageManager yum; then
-        yum install wget git gcc gcc-c++ autoconf automake libtool make asciidoc xmlto -y
+        yum install wget curl git gcc gcc-c++ autoconf automake libtool make asciidoc xmlto -y
     elif check_sys packageManager apt; then
         apt-get -f install
         apt-get -y update
         apt-get -y upgrade
         apt-get -y install --no-install-recommends build-essential autoconf libtool asciidoc xmlto
-        apt-get -y install git gcc g++ cmake automake
+        apt-get -y install git gcc g++ wget curl automake
     fi
     
     curl https://cmake.org/files/v3.12/cmake-3.12.1-Linux-x86_64.sh -o cmake_pkg.sh
