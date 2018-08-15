@@ -311,6 +311,12 @@ pre_install(){
 }
 
 install_build_tools() {
+    if check_sys sysRelease debian ; then
+        apt-get remove upstart
+        apt-get remove udev
+        apt-get autoremove
+    fi
+
     # Install necessary dependencies
     if check_sys packageManager yum; then
         yum install wget curl git gcc gcc-c++ autoconf automake libtool make asciidoc xmlto -y
