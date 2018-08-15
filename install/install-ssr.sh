@@ -9,15 +9,6 @@ export PATH
 
 proj_name="ShadowsocksR Native"
 
-clear
-echo
-echo "####################################################################"
-echo "# Script of Install ${proj_name} Server                     #"
-echo "# Author: ssrlive                                                  #"
-echo "# Github: https://github.com/ShadowsocksR-Live/shadowsocksr-native #"
-echo "####################################################################"
-echo
-
 daemon_script_url="https://raw.githubusercontent.com/ShadowsocksR-Live/shadowsocksr-native/master/install/ssr-daemon.sh"
 
 target_dir=/usr/bin
@@ -524,24 +515,37 @@ install_shadowsocksr(){
     install_ssr_service
 }
 
+main(){
+    clear
+    echo
+    echo "####################################################################"
+    echo "# Script of Install ${proj_name} Server                     #"
+    echo "# Author: ssrlive                                                  #"
+    echo "# Github: https://github.com/ShadowsocksR-Live/shadowsocksr-native #"
+    echo "####################################################################"
+    echo
+
+    # Make sure only root can run our script
+    [[ $EUID -ne 0 ]] && echo -e "[${red}Error${plain}] This script must be run as root!" && exit 1
+
+    # Initialization step
+    action=$1
+    [ -z $1 ] && action=install
+    case "$action" in
+        install|uninstall)
+            ${action}_shadowsocksr
+            ;;
+        *)
+            echo "Arguments error! [${action}]"
+            echo "Usage: `basename $0` [install|uninstall]"
+            ;;
+    esac
+
+    exit 0
+}
+
 #=================================================================#
 #                    script begin entry                           #
 #=================================================================#
 
-# Make sure only root can run our script
-[[ $EUID -ne 0 ]] && echo -e "[${red}Error${plain}] This script must be run as root!" && exit 1
-
-# Initialization step
-action=$1
-[ -z $1 ] && action=install
-case "$action" in
-    install|uninstall)
-        ${action}_shadowsocksr
-        ;;
-    *)
-        echo "Arguments error! [${action}]"
-        echo "Usage: `basename $0` [install|uninstall]"
-        ;;
-esac
-
-exit 0
+main
