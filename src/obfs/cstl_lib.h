@@ -94,8 +94,8 @@ struct cstl_iterator {
 
 // #include "c_array.h"
 struct cstl_array {
-    int no_max_elements; /* Number of maximum elements array can hold without reallocation */
-    int no_of_elements;  /* Number of current elements in the array */
+    int capacity; /* Number of maximum elements array can hold without reallocation */
+    int count;  /* Number of current elements in the array */
     struct cstl_object** pElements; /* actual storage area */
     cstl_compare compare_fn; /* Compare function pointer*/
     cstl_destroy destruct_fn; /* Destructor function pointer*/
@@ -121,10 +121,10 @@ extern void cstl_array_delete_iterator ( struct cstl_iterator* pItr);
 // #include "c_deque.h"
 struct cstl_deque {
     struct cstl_object**pElements;
-    int no_max_elements;
+    int capacity;
     int head;
     int tail;
-    int no_of_elements;
+    int count;
     cstl_compare compare_fn;
     cstl_destroy destruct_fn;
 };
@@ -228,13 +228,15 @@ extern cstl_error     cstl_slist_push_back(struct cstl_slist* pSlist, void* elem
 extern void           cstl_slist_remove   (struct cstl_slist* pSlist, int pos);
 extern void           cstl_slist_for_each (struct cstl_slist* pSlist, void (*fn)(const void *elem, void *p), void *p);
 extern const void *   cstl_slist_find(struct cstl_slist* pSlist, void* find_value);
+extern const void *   cstl_slist_element_at(struct cstl_slist* pSlist, int pos);
+extern size_t  cstl_slist_size(struct cstl_slist* pSlist);
 
 extern struct cstl_iterator* cstl_slist_new_iterator(struct cstl_slist* pSlit);
 extern void cstl_slist_delete_iterator ( struct cstl_iterator* pItr);
 
 
 // #include "c_algorithms.h"
-extern void cstl_for_each(struct cstl_iterator* pIterator, void (*fn)(const void*));
+extern void cstl_for_each(struct cstl_iterator *pIterator, void(*fn)(const void*, void *p), void *p);
 
 
 /* ------------------------------------------------------------------------*/
