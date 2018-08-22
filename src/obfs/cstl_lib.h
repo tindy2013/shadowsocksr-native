@@ -87,31 +87,31 @@ struct cstl_iterator {
     void (*replace_value)(struct cstl_iterator*,void*,size_t);
     const void* (*get_value)(void*);
     void* pContainer;
-    int   pCurrent;
-    void* pCurrentElement;
+    size_t current_index;
+    void* current_element;
 };
 
 
 // #include "c_array.h"
 struct cstl_array {
-    int capacity; /* Number of maximum elements array can hold without reallocation */
-    int count;  /* Number of current elements in the array */
+    size_t capacity; /* Number of maximum elements array can hold without reallocation */
+    size_t count;  /* Number of current elements in the array */
     struct cstl_object** pElements; /* actual storage area */
     cstl_compare compare_fn; /* Compare function pointer*/
     cstl_destroy destruct_fn; /* Destructor function pointer*/
 };
 
-extern struct cstl_array* cstl_array_new ( int init_size, cstl_compare fn_c, cstl_destroy fn_d);
+extern struct cstl_array* cstl_array_new ( size_t init_size, cstl_compare fn_c, cstl_destroy fn_d);
 extern cstl_error cstl_array_push_back ( struct cstl_array* pArray, void* elem, size_t elem_size);
-extern const void * cstl_array_element_at(struct cstl_array* pArray, int index);
-extern cstl_error cstl_array_insert_at ( struct cstl_array* pArray, int index, void* elem, size_t elem_size);
-extern int cstl_array_size( struct cstl_array* pArray);
-extern int cstl_array_capacity( struct cstl_array* pArray );
+extern const void * cstl_array_element_at(struct cstl_array* pArray, size_t index);
+extern cstl_error cstl_array_insert_at ( struct cstl_array* pArray, size_t index, void* elem, size_t elem_size);
+extern size_t cstl_array_size( struct cstl_array* pArray);
+extern size_t cstl_array_capacity( struct cstl_array* pArray );
 extern cstl_bool  cstl_array_empty( struct cstl_array* pArray);
-extern cstl_error cstl_array_reserve( struct cstl_array* pArray, int pos);
+extern cstl_error cstl_array_reserve( struct cstl_array* pArray, size_t pos);
 extern const void * cstl_array_front(struct cstl_array* pArray);
 extern const void * cstl_array_back(struct cstl_array* pArray);
-extern cstl_error cstl_array_remove_from ( struct cstl_array*, int pos);
+extern cstl_error cstl_array_remove_from ( struct cstl_array*, size_t pos);
 extern cstl_error cstl_array_delete( struct cstl_array* pArray);
 
 extern struct cstl_iterator* cstl_array_new_iterator(struct cstl_array* pArray);
@@ -121,26 +121,26 @@ extern void cstl_array_delete_iterator ( struct cstl_iterator* pItr);
 // #include "c_deque.h"
 struct cstl_deque {
     struct cstl_object**pElements;
-    int capacity;
-    int head;
-    int tail;
-    int count;
+    size_t capacity;
+    size_t head;
+    size_t tail;
+    size_t count;
     cstl_compare compare_fn;
     cstl_destroy destruct_fn;
 };
 
-extern struct cstl_deque* cstl_deque_new( int deq_size , cstl_compare fn_c, cstl_destroy fn_d);
+extern struct cstl_deque* cstl_deque_new( size_t deq_size , cstl_compare fn_c, cstl_destroy fn_d);
 extern cstl_error     cstl_deque_push_back (struct cstl_deque* pDeq, void* elem, size_t elem_size);
 extern cstl_error     cstl_deque_push_front(struct cstl_deque* pDeq, void* elem, size_t elem_size);
 
-extern cstl_error     cstl_deque_front(struct cstl_deque* pDeq, const void **elem);
-extern cstl_error     cstl_deque_back(struct cstl_deque* pDeq, const void **elem);
+extern const void * cstl_deque_front(struct cstl_deque* pDeq);
+extern const void * cstl_deque_back(struct cstl_deque* pDeq);
 extern cstl_error     cstl_deque_pop_back  (struct cstl_deque* pDeq);
 extern cstl_error     cstl_deque_pop_front (struct cstl_deque* pDeq);
 extern cstl_bool      cstl_deque_empty     (struct cstl_deque* pDeq);
-extern int            cstl_deque_size ( struct cstl_deque* pDeq);
+extern size_t            cstl_deque_size ( struct cstl_deque* pDeq);
 extern cstl_error     cstl_deque_delete ( struct cstl_deque* pDeq);
-extern const void *   cstl_deque_element_at(struct cstl_deque* pDeq, int index);
+extern const void *   cstl_deque_element_at(struct cstl_deque* pDeq, size_t index);
 
 extern struct cstl_iterator* cstl_deque_new_iterator(struct cstl_deque* pDeq);
 extern void cstl_deque_delete_iterator ( struct cstl_iterator* pItr);
@@ -165,9 +165,9 @@ struct cstl_rb {
 };
 
 extern struct cstl_rb* cstl_rb_new(cstl_compare fn_c,cstl_destroy fn_ed, cstl_destroy fn_vd );
-extern cstl_error  cstl_rb_insert(struct cstl_rb* pTree, void* key, size_t key_size, void* value, size_t value_size);
-extern struct cstl_rb_node*   cstl_rb_find (struct cstl_rb* pTree, void* key);
-extern struct cstl_rb_node* cstl_rb_remove (struct cstl_rb* pTree, void* key);
+extern cstl_error cstl_rb_insert(struct cstl_rb* pTree, const void* k, size_t key_size, const void* v, size_t value_size);
+extern struct cstl_rb_node* cstl_rb_find(struct cstl_rb* pTree, const void* key);
+extern struct cstl_rb_node* cstl_rb_remove(struct cstl_rb* pTree, const void* key);
 extern cstl_error  cstl_rb_delete (struct cstl_rb* pTree);
 extern cstl_bool   cstl_rb_empty  (struct cstl_rb* pTree);
 
@@ -184,7 +184,7 @@ extern struct cstl_set* cstl_set_new( cstl_compare fn_c, cstl_destroy fn_d);
 extern cstl_error   cstl_set_insert ( struct cstl_set* pSet, void* key, size_t key_size);
 extern cstl_bool    cstl_set_exists ( struct cstl_set* pSet, void* key);
 extern cstl_error   cstl_set_remove ( struct cstl_set* pSet, void* key);
-extern cstl_bool    cstl_set_find   ( struct cstl_set* pSet, void* key, const void** outKey);
+extern const void * cstl_set_find(struct cstl_set* pSet, const void* key);
 extern cstl_error   cstl_set_delete ( struct cstl_set* pSet);
 
 extern struct cstl_iterator* cstl_set_new_iterator(struct cstl_set* pSet);
@@ -197,7 +197,7 @@ struct cstl_map {
 };
 
 extern struct cstl_map* cstl_map_new( cstl_compare fn_c_k, cstl_destroy fn_k_d, cstl_destroy fn_v_d);
-extern cstl_error   cstl_map_insert ( struct cstl_map* pMap, void* key, size_t key_size, void* value,  size_t value_size);
+extern cstl_error   cstl_map_insert(struct cstl_map* pMap, const void* key, size_t key_size, const void* value, size_t value_size);
 extern cstl_bool    cstl_map_exists ( struct cstl_map* pMap, void* key);
 extern cstl_error   cstl_map_replace( struct cstl_map* pMap, void* key, void* value,  size_t value_size);
 extern cstl_error   cstl_map_remove ( struct cstl_map* pMap, void* key);
@@ -209,30 +209,31 @@ extern void cstl_map_delete_iterator ( struct cstl_iterator* pItr);
 
 
 //#include "c_slist.h"
-struct cstl_slist_node {
+struct cstl_list_node {
     struct cstl_object* elem;
-    struct cstl_slist_node *next;
+    struct cstl_list_node *next;
 };
 
-struct cstl_slist {
-    struct cstl_slist_node* head;
+struct cstl_list {
+    struct cstl_list_node* head;
     cstl_destroy destruct_fn;
     cstl_compare compare_key_fn;
-    int size;
+    size_t size;
 };
 
-extern struct cstl_slist * cstl_slist_new (cstl_destroy fn_d, cstl_compare fn_c);
-extern void           cstl_slist_delete   (struct cstl_slist* pSlist);
-extern cstl_error     cstl_slist_insert   (struct cstl_slist* pSlist, int pos, void* elem, size_t elem_size);
-extern cstl_error     cstl_slist_push_back(struct cstl_slist* pSlist, void* elem, size_t elem_size);
-extern void           cstl_slist_remove   (struct cstl_slist* pSlist, int pos);
-extern void           cstl_slist_for_each (struct cstl_slist* pSlist, void (*fn)(const void *elem, void *p), void *p);
-extern const void *   cstl_slist_find(struct cstl_slist* pSlist, void* find_value);
-extern const void *   cstl_slist_element_at(struct cstl_slist* pSlist, int pos);
-extern size_t  cstl_slist_size(struct cstl_slist* pSlist);
+extern struct cstl_list * cstl_list_new (cstl_destroy fn_d, cstl_compare fn_c);
+extern void           cstl_list_destroy   (struct cstl_list* pSlist);
+extern void           cstl_list_clear   (struct cstl_list* pSlist);
+extern cstl_error     cstl_list_insert   (struct cstl_list* pSlist, size_t pos, void* elem, size_t elem_size);
+extern cstl_error     cstl_list_push_back(struct cstl_list* pSlist, void* elem, size_t elem_size);
+extern void           cstl_list_remove   (struct cstl_list* pSlist, size_t pos);
+extern void           cstl_list_for_each (struct cstl_list* pSlist, void (*fn)(const void *elem, void *p), void *p);
+extern const void *   cstl_list_find(struct cstl_list* pSlist, void* find_value);
+extern const void *   cstl_list_element_at(struct cstl_list* pSlist, size_t pos);
+extern size_t  cstl_list_size(struct cstl_list* pSlist);
 
-extern struct cstl_iterator* cstl_slist_new_iterator(struct cstl_slist* pSlit);
-extern void cstl_slist_delete_iterator ( struct cstl_iterator* pItr);
+extern struct cstl_iterator* cstl_list_new_iterator(struct cstl_list* pSlit);
+extern void cstl_list_delete_iterator ( struct cstl_iterator* pItr);
 
 
 // #include "c_algorithms.h"
@@ -247,10 +248,10 @@ extern void  cstl_copy(void* destination, void* source, size_t size);
 extern void  cstl_get(void* destination, void* source, size_t size);
 extern char* cstl_strdup(char *ptr);
 
-extern struct cstl_object* cstl_object_new(void* inObject, size_t obj_size);
+extern struct cstl_object* cstl_object_new(const void* inObject, size_t obj_size);
 extern cstl_error cstl_object_get_raw(struct cstl_object *inObject, void**elem);
 extern const void * cstl_object_get_data(struct cstl_object *inObject);
 extern void  cstl_object_delete(struct cstl_object* inObject);
-extern void cstl_object_replace_raw(struct cstl_object* current_object, void* elem, size_t elem_size);
+extern void  cstl_object_replace_raw(struct cstl_object* current_object, const void* elem, size_t elem_size);
 
 #endif // __CSTL_LIB_H__

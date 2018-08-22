@@ -99,6 +99,15 @@ void objects_container_add(struct cstl_set *set, void *obj);
 void objects_container_remove(struct cstl_set *set, void *obj);
 void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p);
 
+struct cstl_list;
+struct cstl_list * obj_list_create(int(*compare_objs)(const void*,const void*), void(*destroy_obj)(void*));
+void obj_list_destroy(struct cstl_list *list);
+void obj_list_clear(struct cstl_list *list);
+void obj_list_insert(struct cstl_list* pList, size_t pos, void* elem, size_t elem_size);
+void obj_list_for_each(struct cstl_list* pSlist, void (*fn)(const void *elem, void *p), void *p);
+const void * obj_list_element_at(struct cstl_list* pList, size_t pos);
+size_t obj_list_size(struct cstl_list* pSlist);
+
 struct cstl_map;
 struct cstl_map * obj_map_create(int(*compare_key)(const void*,const void*), void (*destroy_key)(void*), void (*destroy_value)(void*));
 void obj_map_destroy(struct cstl_map *map);

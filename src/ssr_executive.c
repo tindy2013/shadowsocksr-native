@@ -187,12 +187,32 @@ void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void 
     cstl_set_delete_iterator(iterator);
 }
 
-struct cstl_slist * obj_list_create(int(*compare_objs)(const void*,const void*), void (*destroy_obj)(void*)) {
-    return cstl_slist_new(destroy_obj, compare_objs);
+struct cstl_list * obj_list_create(int(*compare_objs)(const void*,const void*), void (*destroy_obj)(void*)) {
+    return cstl_list_new(destroy_obj, compare_objs);
 }
 
-void obj_list_destroy(struct cstl_slist *list) {
-    cstl_slist_delete(list);
+void obj_list_destroy(struct cstl_list *list) {
+    cstl_list_destroy(list);
+}
+
+void obj_list_clear(struct cstl_list *list) {
+    cstl_list_clear(list);
+}
+
+void obj_list_insert(struct cstl_list* pList, size_t pos, void* elem, size_t elem_size) {
+    cstl_list_insert(pList, pos, elem, elem_size);
+}
+
+void obj_list_for_each(struct cstl_list* pSlist, void (*fn)(const void *elem, void *p), void *p) {
+    cstl_list_for_each (pSlist, fn, p);
+}
+
+const void * obj_list_element_at(struct cstl_list* pList, size_t pos) {
+    return cstl_list_element_at(pList, pos);
+}
+
+size_t obj_list_size(struct cstl_list* pSlist) {
+    return cstl_list_size(pSlist);
 }
 
 
@@ -232,7 +252,7 @@ void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const voi
     }
     iterator = cstl_map_new_iterator(map);
     while( (element = iterator->get_next(iterator)) ) {
-        struct cstl_rb_node *current = (struct cstl_rb_node *)iterator->pCurrentElement;
+        struct cstl_rb_node *current = (struct cstl_rb_node *)iterator->current_element;
         const void *key = cstl_object_get_data(current->key);
         const void *value = cstl_object_get_data(current->value);
         fn(key, value, p);
