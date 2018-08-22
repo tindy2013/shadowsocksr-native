@@ -11,6 +11,10 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+#if !defined(ARRAY_SIZE)
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*(arr)))
+#endif
+
 #define OBFS_HMAC_SHA1_LEN 10
 
 #ifndef SSR_BUFF_SIZE

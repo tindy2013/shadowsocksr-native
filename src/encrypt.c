@@ -454,12 +454,8 @@ bytes_to_key(const struct cipher_wrapper *cipher, const digest_type_t *md,
 #endif
 }
 
-int
-rand_bytes(uint8_t *output, int len)
-{
+void rand_bytes(uint8_t *output, size_t len) {
     randombytes_buf(output, (size_t)len);
-    // always return success
-    return 0;
 }
 
 int rand_integer(void) {

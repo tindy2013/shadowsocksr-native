@@ -378,13 +378,13 @@ write_ssr_config(){
 
     cat > ${config_dir}/config.json<<-EOF
 {
-    "server":"${public_ip}",
+    "server": "${public_ip}",
     "server_port": ${shadowsocksport},
-    "method":"${shadowsockscipher}",
-    "password":"${shadowsockspwd}",
-    "protocol":"${shadowsockprotocol}",
+    "password": "${shadowsockspwd}",
+    "method": "${shadowsockscipher}",
+    "protocol": "${shadowsockprotocol}",
     "protocol_param": "",
-    "obfs":"${shadowsockobfs}",
+    "obfs": "${shadowsockobfs}",
     "obfs_param": "",
     "local_address": "127.0.0.1",
     "local_port": 1080,

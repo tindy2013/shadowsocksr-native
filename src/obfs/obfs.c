@@ -3,7 +3,7 @@
 #include <assert.h>
 #include "obfs.h"
 
-int rand_bytes(uint8_t *output, int len);
+void rand_bytes(uint8_t *output, size_t len);
 
 #include "obfsutil.h"
 #include "crc32.h"
