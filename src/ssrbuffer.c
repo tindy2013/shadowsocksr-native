@@ -130,18 +130,25 @@ void buffer_replace(struct buffer_t *dst, const struct buffer_t *src) {
     */
 }
 
-void buffer_insert(struct buffer_t *ptr, const struct buffer_t *data, size_t pos) {
+void buffer_insert(struct buffer_t *ptr, size_t pos, const uint8_t *data, size_t size) {
     size_t result;
-    if (ptr==NULL || data==NULL || data->len==0) {
+    if (ptr==NULL || data==NULL || size==0) {
         return;
     }
     if (pos > ptr->len) {
         pos = ptr->len;
     }
-    result = buffer_realloc(ptr, ptr->len + data->len);
-    memmove(ptr->buffer + pos + data->len, ptr->buffer + pos, ptr->len - pos);
-    memmove(ptr->buffer + pos, data->buffer, data->len);
-    ptr->len += data->len;
+    result = buffer_realloc(ptr, ptr->len + size);
+    memmove(ptr->buffer + pos + size, ptr->buffer + pos, ptr->len - pos);
+    memmove(ptr->buffer + pos, data, size);
+    ptr->len += size;
+}
+
+void buffer_insert2(struct buffer_t *ptr, size_t pos, const struct buffer_t *data) {
+    if (ptr==NULL || data==NULL) {
+        return;
+    }
+    buffer_insert(ptr, pos, data->buffer, data->len);
 }
 
 size_t buffer_concatenate(struct buffer_t *ptr, const uint8_t *data, size_t size) {

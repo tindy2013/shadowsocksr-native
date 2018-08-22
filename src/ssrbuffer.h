@@ -47,7 +47,8 @@ int buffer_compare(const struct buffer_t *ptr1, const struct buffer_t *ptr2, siz
 void buffer_reset(struct buffer_t *ptr);
 struct buffer_t * buffer_clone(const struct buffer_t *ptr);
 size_t buffer_realloc(struct buffer_t *ptr, size_t capacity);
-void buffer_insert(struct buffer_t *ptr, const struct buffer_t *data, size_t pos);
+void buffer_insert(struct buffer_t *ptr, size_t pos, const uint8_t *data, size_t size);
+void buffer_insert2(struct buffer_t *ptr, size_t pos, const struct buffer_t *data);
 size_t buffer_store(struct buffer_t *ptr, const uint8_t *data, size_t size);
 void buffer_replace(struct buffer_t *dst, const struct buffer_t *src);
 size_t buffer_concatenate(struct buffer_t *ptr, const uint8_t *data, size_t size);

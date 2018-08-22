@@ -455,8 +455,7 @@ struct buffer_t * auth_chain_a_pack_server_data(struct obfs_t *obfs, const struc
 
     {
         uint16_t length3 = length; // TODO: htons
-        BUFFER_CONSTANT_INSTANCE(other, &length3, sizeof(length3));
-        buffer_insert(data, other, 0);
+        buffer_insert(data, 0, (uint8_t *)&length3, sizeof(length3));
     }
     ss_md5_hmac_with_key(local->last_server_hash, data, mac_key);
     buffer_concatenate(data, local->last_server_hash, 2);
