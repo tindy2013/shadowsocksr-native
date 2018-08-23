@@ -226,22 +226,24 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
             int index = rand_integer() % (ARRAY_SIZE(finish_len_set));
             size_t finish_len = finish_len_set[index];
             uint8_t *rnd = (uint8_t *)calloc(finish_len - 10, sizeof(*rnd));
-            // const char *handshake_finish = "\x14\x03\x03\x00\x01\x01\x16\x03\x03\x00\x20";
-            uint8_t handshake_finish[] = { 0x14, 0x03, 0x03, 0x00, 0x01, 0x01, 0x16, 0x03, 0x03, 0x00, 0x20, };
+#define CSTR_DECL(name, len, str) const char* (name) = (str); const size_t (len) = (sizeof(str) - 1)
+            CSTR_DECL(handshake_finish, handshake_finish_len, "\x14\x03\x03\x00\x01\x01\x16\x03\x03");
+#undef CSTR_DECL
+            uint16_t len = 0;
             struct buffer_t *hmac_data = buffer_alloc(SSR_BUFF_SIZE);
             uint8_t hash[SHA1_BYTES + 1] = { 0 };
             BUFFER_CONSTANT_INSTANCE(client_id, global->local_client_id, 32);
             
+            buffer_concatenate(hmac_data, (uint8_t *)handshake_finish, handshake_finish_len);
+
+            len = htons((uint16_t)finish_len);
+            buffer_concatenate(hmac_data, (uint8_t *)&len, sizeof(len));
+
             rand_bytes(rnd, finish_len - 10);
-
-            handshake_finish[ARRAY_SIZE(handshake_finish) - 1] = (uint8_t) finish_len;
-
-            buffer_concatenate(hmac_data, handshake_finish, ARRAY_SIZE(handshake_finish));
             buffer_concatenate(hmac_data, rnd, finish_len - 10);
             free(rnd);
 
             tls12_sha1_hmac(obfs, client_id, hmac_data, hash);
-
             buffer_concatenate(hmac_data, hash, 10);
 
             obj_list_insert(local->data_sent_buffer, 0, &hmac_data, sizeof(hmac_data));
@@ -268,6 +270,7 @@ struct buffer_t * tls12_ticket_auth_client_encode(struct obfs_t *obfs, const str
         CSTR_DECL(tls_data1, tls_data1_len, "\xff\x01\x00\x01\x00");
         CSTR_DECL(tls_data2, tls_data2_len, "\x00\x17\x00\x00\x00\x23");
         CSTR_DECL(tls_data3, tls_data3_len, "\x00\x0d\x00\x16\x00\x14\x06\x01\x06\x03\x05\x01\x05\x03\x04\x01\x04\x03\x03\x01\x03\x03\x02\x01\x02\x03\x00\x05\x00\x05\x01\x00\x00\x00\x00\x00\x12\x00\x00\x75\x50\x00\x00\x00\x0b\x00\x02\x01\x00\x00\x0a\x00\x06\x00\x04\x00\x17\x00\x18");
+#undef CSTR_DECL
 
         char *hosts = NULL;
         char *param = NULL;
