@@ -228,7 +228,7 @@ bool obj_map_add(struct cstl_map *map, void *key, size_t k_size, void *value, si
     return CSTL_ERROR_SUCCESS == cstl_map_insert(map, key, k_size, value, v_size);
 }
 
-bool obj_map_exists(struct cstl_map *map, void *key) {
+bool obj_map_exists(struct cstl_map *map, const void *key) {
     return cstl_map_exists(map, key) != cstl_false;
 }
 
