@@ -232,11 +232,11 @@ bool obj_map_exists(struct cstl_map *map, const void *key) {
     return cstl_map_exists(map, key) != cstl_false;
 }
 
-bool obj_map_replace(struct cstl_map *map, void *key, void *value, size_t v_size) {
+bool obj_map_replace(struct cstl_map *map, const void *key, const void *value, size_t v_size) {
     return CSTL_ERROR_SUCCESS == cstl_map_replace(map, key, value, v_size);
 }
 
-void obj_map_remove(struct cstl_map *map, void *key) {
+void obj_map_remove(struct cstl_map *map, const void *key) {
     cstl_map_remove(map, key);
 }
 
