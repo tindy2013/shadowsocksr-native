@@ -836,8 +836,8 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
                 local->protocol = new_obfs_instance(server_env->protocol_name);
                 if (local->protocol) {
-                    server_info.overhead = local->protocol->get_overhead(local->protocol)
-                        + (local->obfs ? local->obfs->get_overhead(local->obfs) : 0);
+                    server_info.overhead = (uint16_t)(local->protocol->get_overhead(local->protocol)
+                        + (local->obfs ? local->obfs->get_overhead(local->obfs) : 0));
                     local->protocol->set_server_info(local->protocol, &server_info);
                 }
                 // SSR end

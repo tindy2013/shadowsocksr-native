@@ -21,7 +21,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pthreads", "..\depends\pthr
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libuv", "..\depends\libuv\win32\libuv.vcxproj", "{44EA013F-AD0F-4D53-8E06-0B4EF26F4B65}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ssr-old", "ssr-client\ssr-old.vcxproj", "{FF0C1545-CB8D-4AAD-9962-0AADAC37C456}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ssr-local", "ssr-client\ssr-local.vcxproj", "{FF0C1545-CB8D-4AAD-9962-0AADAC37C456}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C9840117-C1B9-43F1-9D18-A91AEB56F4C9} = {C9840117-C1B9-43F1-9D18-A91AEB56F4C9}
 		{46CF2D25-6A36-4189-B59C-E4815388E554} = {46CF2D25-6A36-4189-B59C-E4815388E554}

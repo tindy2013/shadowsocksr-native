@@ -30,12 +30,12 @@ struct server_info_t {
     char *param;
     void *g_data;
     const uint8_t *iv;
-    uint16_t iv_len;
+    size_t iv_len;
     uint8_t recv_iv[256];
     size_t recv_iv_len;
     uint8_t *key;
     uint16_t key_len;
-    int head_len;
+    size_t head_len;
     uint16_t tcp_mss;
     uint16_t overhead;
     uint32_t buffer_size;

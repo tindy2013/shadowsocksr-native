@@ -165,7 +165,7 @@ ss_mbedtls_cipher_name_by_type(enum ss_cipher_type index)
 #endif
 
 void dump(const char *tag, const uint8_t *text, size_t len) {
-    int i;
+    size_t i;
     printf("%s: ", tag);
     for (i = 0; i < len; i++) {
         printf("0x%02x ", text[i]);
@@ -762,7 +762,7 @@ ss_encrypt_all(struct cipher_env_t *env, struct buffer_t *plain, size_t capacity
         cipher = buffer_alloc(max(iv_len + plain->len, capacity));
         cipher->len = plain->len;
 
-        rand_bytes(iv, (int)iv_len);
+        rand_bytes(iv, iv_len);
         cipher_context_set_iv(env, &cipher_ctx, iv, iv_len, 1);
         memcpy(cipher->buffer, iv, iv_len);
 
@@ -1168,7 +1168,7 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
 #if defined(USE_CRYPTO_OPENSSL)
         cipher->core    = NULL;
         cipher->key_len = (size_t) ss_cipher_key_size(method);
-        cipher->iv_len  = (size_t) ss_cipher_iv_size(method);
+        cipher->iv_len  = ss_cipher_iv_size(method);
 #endif
 #if defined(USE_CRYPTO_MBEDTLS)
         // XXX: key_length changed to key_bitlen in mbed TLS 2.0.0

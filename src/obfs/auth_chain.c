@@ -648,7 +648,7 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
         uint8_t hash[16];
         int data_len;
         int rand_len;
-        int len;
+        size_t len;
         unsigned int pos;
         size_t out_len;
         uint8_t *recv_buffer = local->recv_buffer->buffer;

@@ -297,7 +297,7 @@ struct tunnel_cipher_ctx * tunnel_cipher_create(struct server_env_t *env, size_t
     }
     server_info.port = config->remote_port;
     server_info.iv = enc_ctx_get_iv(tc->e_ctx);
-    server_info.iv_len = (uint16_t) enc_get_iv_len(env->cipher);
+    server_info.iv_len = enc_get_iv_len(env->cipher);
     server_info.key = enc_get_key(env->cipher);
     server_info.key_len = (uint16_t) enc_get_key_len(env->cipher);
     server_info.tcp_mss = (uint16_t) tcp_mss;
@@ -519,7 +519,7 @@ tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc,
         }
         */
         if (protocol && protocol->server.recv_iv[0] == 0) {
-            size_t iv_len = (size_t) protocol->server.iv_len;
+            size_t iv_len = protocol->server.iv_len;
             memmove(protocol->server.recv_iv, ret->buffer, iv_len);
             protocol->server.recv_iv_len = iv_len;
         }
