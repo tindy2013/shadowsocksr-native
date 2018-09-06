@@ -636,7 +636,7 @@ ssize_t auth_chain_a_client_post_decrypt(struct obfs_t *obfs, char **pplaindata,
     if (local->recv_buffer->len + datalength > 16384) {
         return -1;
     }
-    buffer_concatenate(local->recv_buffer, plaindata, datalength);
+    buffer_concatenate(local->recv_buffer, (uint8_t *)plaindata, datalength);
 
     key_len = local->user_key->len + 4;
     key = (uint8_t*)malloc((size_t)key_len);
