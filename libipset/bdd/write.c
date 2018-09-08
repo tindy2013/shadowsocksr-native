@@ -136,7 +136,7 @@ save_visit_node(struct save_data *save_data,
         (save_data->serialized_ids, (void *) (uintptr_t) node_id, &is_new);
 
     if (!is_new) {
-        *dest = (intptr_t) entry->value;
+        *dest = (serialized_id) entry->value;
         return 0;
     } else {
         if (ipset_node_get_type(node_id) == IPSET_TERMINAL_NODE) {
@@ -335,7 +335,7 @@ write_header_v1(struct save_data *save_data,
     }
 
     rii_check(write_uint64(save_data->stream, set_size));
-    rii_check(write_uint32(save_data->stream, nonterminal_count));
+    rii_check(write_uint32(save_data->stream, (uint32_t)nonterminal_count));
     return 0;
 }
 

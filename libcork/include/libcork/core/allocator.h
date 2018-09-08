@@ -45,13 +45,13 @@ struct cork_alloc {
     const struct cork_alloc  *parent;
     void  *user_data;
     cork_free_f  free_user_data;
-    cork_alloc_calloc_f  calloc;
-    cork_alloc_malloc_f  malloc;
-    cork_alloc_realloc_f  realloc;
+    cork_alloc_calloc_f  cork_calloc;
+    cork_alloc_malloc_f  cork_malloc;
+    cork_alloc_realloc_f  cork_realloc;
     cork_alloc_calloc_f  xcalloc;
     cork_alloc_malloc_f  xmalloc;
     cork_alloc_realloc_f  xrealloc;
-    cork_alloc_free_f  free;
+    cork_alloc_free_f  cork_free;
 };
 
 /* NOT thread-safe; must be called before most other libcork functions.
@@ -105,7 +105,7 @@ CORK_ATTR_UNUSED
 static void *
 cork_alloc_calloc(const struct cork_alloc *alloc, size_t count, size_t size)
 {
-    return alloc->calloc(alloc, count, size);
+    return alloc->cork_calloc(alloc, count, size);
 }
 
 CORK_ATTR_MALLOC
@@ -113,7 +113,7 @@ CORK_ATTR_UNUSED
 static void *
 cork_alloc_malloc(const struct cork_alloc *alloc, size_t size)
 {
-    return alloc->malloc(alloc, size);
+    return alloc->cork_malloc(alloc, size);
 }
 
 CORK_ATTR_MALLOC
@@ -122,7 +122,7 @@ static void *
 cork_alloc_realloc(const struct cork_alloc *alloc, void *ptr,
                    size_t old_size, size_t new_size)
 {
-    return alloc->realloc(alloc, ptr, old_size, new_size);
+    return alloc->cork_realloc(alloc, ptr, old_size, new_size);
 }
 
 CORK_ATTR_MALLOC
@@ -158,7 +158,7 @@ cork_alloc_xreallocf(const struct cork_alloc *alloc, void *ptr,
 {
     void  *result = alloc->xrealloc(alloc, ptr, old_size, new_size);
     if (result == NULL) {
-        alloc->free(alloc, ptr, old_size);
+        alloc->cork_free(alloc, ptr, old_size);
         return NULL;
     } else {
         return result;
@@ -169,7 +169,7 @@ CORK_ATTR_UNUSED
 static void
 cork_alloc_free(const struct cork_alloc *alloc, void *ptr, size_t size)
 {
-    alloc->free(alloc, ptr, size);
+    alloc->cork_free(alloc, ptr, size);
 }
 
 CORK_ATTR_UNUSED
@@ -178,7 +178,7 @@ cork_alloc_cfree(const struct cork_alloc *alloc, void *ptr,
                  size_t count, size_t size)
 {
     assert(count < (SIZE_MAX / size));
-    alloc->free(alloc, ptr, count * size);
+    alloc->cork_free(alloc, ptr, count * size);
 }
 
 #define cork_alloc_new(alloc, type) \

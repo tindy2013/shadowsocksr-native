@@ -142,13 +142,13 @@ cork_alloc_new_alloc(const struct cork_alloc *parent)
     alloc->public.parent = parent;
     alloc->public.user_data = NULL;
     alloc->public.free_user_data = NULL;
-    alloc->public.calloc = cork_alloc__default_calloc;
-    alloc->public.malloc = cork_alloc__default_malloc;
-    alloc->public.realloc = cork_alloc__default_realloc;
+    alloc->public.cork_calloc = cork_alloc__default_calloc;
+    alloc->public.cork_malloc = cork_alloc__default_malloc;
+    alloc->public.cork_realloc = cork_alloc__default_realloc;
     alloc->public.xcalloc = cork_alloc__default_xcalloc;
     alloc->public.xmalloc = cork_alloc__default_xmalloc;
     alloc->public.xrealloc = cork_alloc__default_xrealloc;
-    alloc->public.free = cork_alloc__default_free;
+    alloc->public.cork_free = cork_alloc__default_free;
 
     cork_alloc_register_cleanup();
     alloc->next = all_allocs;
@@ -170,19 +170,19 @@ cork_alloc_set_user_data(struct cork_alloc *alloc,
 void
 cork_alloc_set_calloc(struct cork_alloc *alloc, cork_alloc_calloc_f calloc)
 {
-    alloc->calloc = calloc;
+    alloc->cork_calloc = calloc;
 }
 
 void
 cork_alloc_set_malloc(struct cork_alloc *alloc, cork_alloc_malloc_f malloc)
 {
-    alloc->malloc = malloc;
+    alloc->cork_malloc = malloc;
 }
 
 void
 cork_alloc_set_realloc(struct cork_alloc *alloc, cork_alloc_realloc_f realloc)
 {
-    alloc->realloc = realloc;
+    alloc->cork_realloc = realloc;
 }
 
 void
@@ -207,7 +207,7 @@ cork_alloc_set_xrealloc(struct cork_alloc *alloc,
 void
 cork_alloc_set_free(struct cork_alloc *alloc, cork_alloc_free_f free)
 {
-    alloc->free = free;
+    alloc->cork_free = free;
 }
 
 
