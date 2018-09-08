@@ -645,7 +645,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                         host[ret] = '\0';
                     }
 
-                    ss_free(hostname);
+                    safe_free(hostname);
                 } else {
                     strncpy(host, ip, sizeof(ip));
                 }
@@ -1118,9 +1118,9 @@ remote_destroy(struct remote_t *remote)
     if (remote->buf != NULL) {
         buffer_free(remote->buf);
     }
-    ss_free(remote->recv_ctx);
-    ss_free(remote->send_ctx);
-    ss_free(remote);
+    safe_free(remote->recv_ctx);
+    safe_free(remote->send_ctx);
+    safe_free(remote);
 }
 
 static void
@@ -1174,31 +1174,31 @@ static void
 listener_release(struct listener_t *listener)
 {
     size_t i = 0;
-    ss_free(listener->iface);
+    safe_free(listener->iface);
     for(i = 0; i < listener->server_num; i++) {
         struct server_env_t *server_env = &listener->servers[i];
 
-        ss_free(server_env->host);
+        safe_free(server_env->host);
 
         if(server_env->addr != server_env->addr_udp) {
-            ss_free(server_env->addr_udp);
+            safe_free(server_env->addr_udp);
         }
-        ss_free(server_env->addr);
+        safe_free(server_env->addr);
 
-        ss_free(server_env->psw);
+        safe_free(server_env->psw);
 
-        ss_free(server_env->protocol_name);
-        ss_free(server_env->obfs_name);
-        ss_free(server_env->protocol_param);
-        ss_free(server_env->obfs_param);
-        ss_free(server_env->protocol_global);
-        ss_free(server_env->obfs_global);
-        ss_free(server_env->id);
-        ss_free(server_env->group);
+        safe_free(server_env->protocol_name);
+        safe_free(server_env->obfs_name);
+        safe_free(server_env->protocol_param);
+        safe_free(server_env->obfs_param);
+        safe_free(server_env->protocol_global);
+        safe_free(server_env->obfs_global);
+        safe_free(server_env->id);
+        safe_free(server_env->group);
 
         cipher_env_release(server_env->cipher);
     }
-    ss_free(listener);
+    safe_free(listener);
 }
 
 static void
@@ -1234,7 +1234,7 @@ local_destroy(struct local_t *local)
     local->protocol = NULL;
     // SSR end
 
-    ss_free(local);
+    safe_free(local);
 }
 
 static void
@@ -1793,7 +1793,7 @@ int ssr_local_main_loop(const struct server_config *config, void(*feedback_state
             serv->cipher = (struct cipher_env_t *) cipher_env_new_instance(serv_cfg->password, serv_cfg->method);
             serv->psw = ss_strdup(serv_cfg->password);
             if (serv_cfg->protocol && strcmp(serv_cfg->protocol, "verify_sha1") == 0) {
-                ss_free(serv_cfg->protocol);
+                safe_free(serv_cfg->protocol);
             }
 
             // init obfs

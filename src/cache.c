@@ -120,15 +120,15 @@ cache_delete(struct cache *cache, int keep_data)
                 if (cache->free_cb) {
                     cache->free_cb(entry->key, entry->data);
                 } else {
-                    ss_free(entry->data);
+                    safe_free(entry->data);
                 }
             }
-            ss_free(entry->key);
-            ss_free(entry);
+            safe_free(entry->key);
+            safe_free(entry);
         }
     }
 
-    ss_free(cache);
+    safe_free(cache);
     return 0;
 }
 
@@ -160,11 +160,11 @@ cache_clear(struct cache *cache, ev_tstamp age)
                 if (cache->free_cb) {
                     cache->free_cb(entry->key, entry->data);
                 } else {
-                    ss_free(entry->data);
+                    safe_free(entry->data);
                 }
             }
-            ss_free(entry->key);
-            ss_free(entry);
+            safe_free(entry->key);
+            safe_free(entry);
         }
     }
 
@@ -201,11 +201,11 @@ cache_remove(struct cache *cache, char *key, size_t key_len)
             if (cache->free_cb) {
                 cache->free_cb(tmp->key, tmp->data);
             } else {
-                ss_free(tmp->data);
+                safe_free(tmp->data);
             }
         }
-        ss_free(tmp->key);
-        ss_free(tmp);
+        safe_free(tmp->key);
+        safe_free(tmp);
     }
 
     return 0;
@@ -321,11 +321,11 @@ cache_insert(struct cache *cache, char *key, size_t key_len, void *data)
                 if (cache->free_cb) {
                     cache->free_cb(entry->key, entry->data);
                 } else {
-                    ss_free(entry->data);
+                    safe_free(entry->data);
                 }
             }
-            ss_free(entry->key);
-            ss_free(entry);
+            safe_free(entry->key);
+            safe_free(entry);
             break;
         }
     }

@@ -207,7 +207,7 @@ int set_nofile(int nofile);
 
 size_t ss_memory_size(void *ptr);
 
-#define ss_free(ptr)        \
+#define safe_free(ptr)        \
     do {                    \
         if (ptr) {          \
             free(ptr);      \

@@ -252,8 +252,8 @@ merge(uint8_t *left, int llength, uint8_t *right,
         }
     }
 
-    ss_free(ltmp);
-    ss_free(rtmp);
+    safe_free(ltmp);
+    safe_free(rtmp);
 }
 
 static void
@@ -633,7 +633,7 @@ cipher_context_release(struct cipher_env_t *env, struct cipher_ctx_t *ctx)
     EVP_CIPHER_CTX_free(ctx->core_ctx);
 #elif defined(USE_CRYPTO_MBEDTLS)
     mbedtls_cipher_free(ctx->core_ctx);
-    ss_free(ctx->core_ctx);
+    safe_free(ctx->core_ctx);
 #endif
 }
 
@@ -1233,8 +1233,8 @@ cipher_env_release(struct cipher_env_t *env)
         return;
     }
     if (env->enc_method == ss_cipher_table) {
-        ss_free(env->enc_table);
-        ss_free(env->dec_table);
+        safe_free(env->enc_table);
+        safe_free(env->dec_table);
     } else {
         cache_delete(env->iv_cache, 0);
     }

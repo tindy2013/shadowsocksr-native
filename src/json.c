@@ -100,7 +100,7 @@ default_alloc(size_t size, int zero, void *user_data)
 static void
 default_free(void *ptr, void *user_data)
 {
-    ss_free(ptr);
+    safe_free(ptr);
 }
 
 static void *

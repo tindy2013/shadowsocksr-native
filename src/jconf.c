@@ -57,8 +57,8 @@ to_string(const json_value *value)
 void
 free_addr(struct ss_host_port *addr)
 {
-    ss_free(addr->host);
-    ss_free(addr->port);
+    safe_free(addr->host);
+    safe_free(addr->port);
 }
 
 void
@@ -222,7 +222,7 @@ read_jconf(const char *file)
                             v = value->u.array.values[j];
                             addr_str = to_string(v);
                             parse_addr(addr_str, conf.server_legacy.remote_addr + j);
-                            ss_free(addr_str);
+                            safe_free(addr_str);
                             conf.server_legacy.remote_num = j + 1;
                         }
                     } else if (value->type == json_string) {
@@ -320,7 +320,7 @@ read_jconf(const char *file)
                     } else {
                         LOGI("ignore unknown mode: %s, use tcp_only as fallback", mode_str);
                     }
-                    ss_free(mode_str);
+                    safe_free(mode_str);
                 } else if (strcmp(name, "mtu") == 0) {
                     check_json_value_type(value, json_integer,
                                           "invalid config file: option 'mtu' must be an integer");
@@ -340,7 +340,7 @@ read_jconf(const char *file)
         FATAL("Invalid config file");
     }
 
-    ss_free(buf);
+    safe_free(buf);
     json_value_free(obj);
     return &conf;
 }
@@ -354,10 +354,10 @@ free_jconf(jconf_t *conf)
         return;
     }
 
-    ss_free(conf->timeout);
-    ss_free(conf->user);
-    ss_free(conf->nameserver);
-    ss_free(conf->tunnel_address);
+    safe_free(conf->timeout);
+    safe_free(conf->user);
+    safe_free(conf->nameserver);
+    safe_free(conf->tunnel_address);
 
     if(conf->conf_ver == CONF_VER_LEGACY){
         ss_server_legacy_t *legacy = &conf->server_legacy;
@@ -365,32 +365,32 @@ free_jconf(jconf_t *conf)
             free_addr(&legacy->remote_addr[i]);
         }
         for(i = 0; i < legacy->port_password_num; i++){
-            ss_free(legacy->port_password[i].port);
-            ss_free(legacy->port_password[i].password);
+            safe_free(legacy->port_password[i].port);
+            safe_free(legacy->port_password[i].password);
         }
-        ss_free(legacy->remote_port);
-        ss_free(legacy->local_addr);
-        ss_free(legacy->local_port);
-        ss_free(legacy->password);
-        ss_free(legacy->protocol);
-        ss_free(legacy->protocol_param);
-        ss_free(legacy->method);
-        ss_free(legacy->obfs);
-        ss_free(legacy->obfs_param);
+        safe_free(legacy->remote_port);
+        safe_free(legacy->local_addr);
+        safe_free(legacy->local_port);
+        safe_free(legacy->password);
+        safe_free(legacy->protocol);
+        safe_free(legacy->protocol_param);
+        safe_free(legacy->method);
+        safe_free(legacy->obfs);
+        safe_free(legacy->obfs_param);
     } else {
         ss_server_new_1_t *ss_server_new_1 = &conf->server_new_1;
         for(i = 0; i < (int)ss_server_new_1->server_num; i++){
             ss_server_t *serv = &ss_server_new_1->servers[i];
 
-            ss_free(serv->server);
-            ss_free(serv->password);
-            ss_free(serv->method);
-            ss_free(serv->protocol);
-            ss_free(serv->protocol_param);
-            ss_free(serv->obfs);
-            ss_free(serv->obfs_param);
-            ss_free(serv->id);
-            ss_free(serv->group);
+            safe_free(serv->server);
+            safe_free(serv->password);
+            safe_free(serv->method);
+            safe_free(serv->protocol);
+            safe_free(serv->protocol_param);
+            safe_free(serv->obfs);
+            safe_free(serv->obfs_param);
+            safe_free(serv->id);
+            safe_free(serv->group);
         }
     }
 }

@@ -235,7 +235,7 @@ free_firewall_rule(void *key, void *element)
         return;
     char *addr = (char *)key;
     set_firewall_rule(addr, 0);
-    ss_free(element);
+    safe_free(element);
 }
 
 #endif
