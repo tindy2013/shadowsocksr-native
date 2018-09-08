@@ -306,7 +306,7 @@ cache_insert(struct cache *cache, char *key, size_t key_len, void *data)
         return ENOMEM;
     }
 
-    entry->key = ss_malloc(key_len + 1);
+    entry->key = (char *) calloc(key_len + 1, sizeof(char));
     memcpy(entry->key, key, key_len);
     entry->key[key_len] = 0;
 

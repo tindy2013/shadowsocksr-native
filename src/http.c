@@ -81,7 +81,7 @@ parse_http_header(const char *data, size_t data_len, char **hostname)
     if (data_len == 0)
         return 0;
 
-    result = get_header("Host:", data, data_len, hostname);
+    result = get_header("Host:", data, (int)data_len, hostname);
     if (result < 0)
         return result;
 
@@ -105,7 +105,7 @@ get_header(const char *header, const char *data, int data_len, char **value)
 {
     int len, header_len;
 
-    header_len = strlen(header);
+    header_len = (int)strlen(header);
 
     /* loop through headers stopping at first blank line */
     while ((len = next_header(&data, &data_len)) != 0) {

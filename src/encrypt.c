@@ -1102,8 +1102,8 @@ enc_table_init(struct cipher_env_t * env, enum ss_cipher_type method, const char
     uint64_t key = 0;
     uint8_t *digest;
 
-    env->enc_table = ss_malloc(256);
-    env->dec_table = ss_malloc(256);
+    env->enc_table = (uint8_t *) calloc(256, sizeof(uint8_t));
+    env->dec_table = (uint8_t *) calloc(256, sizeof(uint8_t));
 
     digest = enc_md5((const uint8_t *)pass, strlen(pass), NULL);
 

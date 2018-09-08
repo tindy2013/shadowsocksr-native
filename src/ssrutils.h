@@ -205,14 +205,14 @@ char *ss_strdup(const char *s);
 int set_nofile(int nofile);
 #endif
 
-void *ss_malloc(size_t size);
-void *ss_realloc(void *ptr, size_t new_size);
 size_t ss_memory_size(void *ptr);
 
-#define ss_free(ptr)     \
-    do {                 \
-        free(ptr);       \
-        ptr = NULL;      \
+#define ss_free(ptr)        \
+    do {                    \
+        if (ptr) {          \
+            free(ptr);      \
+            (ptr) = NULL;   \
+        }                   \
     } while (0)
 
 #endif // __SSR_UTILS_H__

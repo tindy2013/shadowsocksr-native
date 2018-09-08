@@ -308,7 +308,7 @@ update_block_list(char *addr, int err_level)
             (*count) += err_level;
         }
     } else if (err_level > 0) {
-        int *count = (int *)ss_malloc(sizeof(int));
+        int *count = (int *)calloc(1, sizeof(int));
         *count = 1;
         cache_insert(block_list, addr, addr_len, count);
 #ifdef __linux__
@@ -329,7 +329,7 @@ parse_addr_cidr(const char *str, char *host, int *cidr)
     pch = strchr(str, '/');
     while (pch != NULL) {
         n++;
-        ret = pch - str;
+        ret = (int)(pch - str);
         pch = strchr(pch + 1, '/');
     }
     if (ret == -1) {

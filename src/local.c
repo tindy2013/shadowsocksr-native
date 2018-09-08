@@ -460,7 +460,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 #endif
                 local_read_stop(local);
 
-                connect = (uv_connect_t *)ss_malloc(sizeof(uv_connect_t));
+                connect = (uv_connect_t *)calloc(1, sizeof(uv_connect_t));
                 connect->data = remote;
 
                 addr = (struct sockaddr*)&(remote->addr);
@@ -1064,7 +1064,7 @@ remote_send_data(struct remote_t *remote)
 {
     uv_buf_t tmp = uv_buf_init((char *)remote->buf->buffer, (unsigned int)remote->buf->len);
 
-    uv_write_t *write_req = (uv_write_t *)ss_malloc(sizeof(uv_write_t));
+    uv_write_t *write_req = (uv_write_t *)calloc(1, sizeof(uv_write_t));
     write_req->data = remote;
 
     uv_write(write_req, (uv_stream_t *)&remote->socket, &tmp, 1, remote_send_cb);
@@ -1076,7 +1076,7 @@ local_send_data(struct local_t *local, char *data, unsigned int size)
 {
     uv_buf_t buf = uv_buf_init(data, size);
 
-    uv_write_t *write_req = (uv_write_t *)ss_malloc(sizeof(uv_write_t));
+    uv_write_t *write_req = (uv_write_t *)calloc(1, sizeof(uv_write_t));
     write_req->data = local;
 
     uv_write(write_req, (uv_stream_t*)&local->socket, &buf, 1, local_send_cb);
@@ -1092,8 +1092,8 @@ remote_new_object(uv_loop_t *loop, int timeout)
     uv_tcp_init(loop, &remote->socket);
 
     remote->buf                 = buffer_alloc(SSR_BUFF_SIZE);
-    remote->recv_ctx            = ss_malloc(sizeof(struct remote_ctx_t));
-    remote->send_ctx            = ss_malloc(sizeof(struct remote_ctx_t));
+    remote->recv_ctx            = (struct remote_ctx_t *)calloc(1, sizeof(struct remote_ctx_t));
+    remote->send_ctx            = (struct remote_ctx_t *)calloc(1, sizeof(struct remote_ctx_t));
     remote->recv_ctx->remote    = remote;
     remote->send_ctx->remote    = remote;
 
@@ -1397,6 +1397,12 @@ main(int argc, char **argv)
             { "host",      required_argument, 0, 0 },
             { 0,           0,                 0, 0 },
     };
+
+#if defined(__MEM_CHECK__)
+    _CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
+    _CrtSetBreakAlloc(63);
+    _CrtSetBreakAlloc(64);
+#endif // __MEM_CHECK__
 
     opterr = 0;
 
@@ -1703,8 +1709,13 @@ main(int argc, char **argv)
         i = ssr_local_main_loop(local_config, NULL, NULL);
     
         config_release(local_config);
-        free_jconf(conf);
     }
+    free_jconf(conf);
+	
+#if __MEM_CHECK__
+    _CrtDumpMemoryLeaks();
+#endif // __MEM_CHECK__
+	
     return i;
 }
 
@@ -1733,7 +1744,7 @@ int ssr_local_main_loop(const struct server_config *config, void(*feedback_state
 #endif
 
     // Setup listeners
-    listener = (struct listener_t *)ss_malloc(sizeof(struct listener_t));
+    listener = (struct listener_t *)calloc(1, sizeof(struct listener_t));
 
     listener->timeout = config->idle_timeout * SECONDS_PER_MINUTE;
     //listener->iface = ss_strdup(config->iface);
@@ -1750,7 +1761,7 @@ int ssr_local_main_loop(const struct server_config *config, void(*feedback_state
             struct server_env_t *serv = &listener->servers[i];
             ss_server_t *serv_cfg = &servers->servers[i];
 
-            struct sockaddr_storage *storage = ss_malloc(sizeof(struct sockaddr_storage));
+            struct sockaddr_storage *storage = calloc(1, sizeof(struct sockaddr_storage));
 
             char *host = serv_cfg->server;
             snprintf(port, sizeof(port), "%d", serv_cfg->server_port);
@@ -1764,7 +1775,7 @@ int ssr_local_main_loop(const struct server_config *config, void(*feedback_state
 
             // set udp port
             if (serv_cfg->server_udp_port != 0 && serv_cfg->server_udp_port != serv_cfg->server_port) {
-                storage = ss_malloc(sizeof(struct sockaddr_storage));
+                storage = calloc(1, sizeof(struct sockaddr_storage));
                 snprintf(port, sizeof(port), "%d", serv_cfg->server_udp_port);
                 if (get_sockaddr(host, port, storage, 1, ipv6first) == -1) {
                     FATAL("failed to resolve the provided hostname");

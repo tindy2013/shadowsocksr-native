@@ -94,7 +94,7 @@ typedef struct {
 static void *
 default_alloc(size_t size, int zero, void *user_data)
 {
-    return /* zero ? calloc(1, size) : */ ss_malloc(size);
+    return /* zero ? calloc(1, size) : */ calloc(size, sizeof(char));
 }
 
 static void
@@ -152,9 +152,9 @@ new_value(json_state *state, json_value **top, json_value **root,
 
             if (!((*(void **)&value->u.object.values) = json_alloc
                                                             (state,
-                                                            values_size +
+                                                            (unsigned long)((size_t)values_size +
                                                             ((size_t)value->u.
-                                                             object.values),
+                                                             object.values)),
                                                             0))) {
                 return 0;
             }

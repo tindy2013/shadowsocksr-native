@@ -212,7 +212,7 @@ ss_strndup(const char *s, size_t n)
         return strdup(s);
     }
 
-    ret = ss_malloc(n + 1);
+    ret = (char *) calloc(n + 1, sizeof(char));
     strncpy(ret, s, n);
     ret[n] = '\0';
     return ret;
@@ -232,35 +232,6 @@ FATAL(const char *msg)
 {
     LOGE("%s", msg);
     exit(-1);
-}
-
-void *
-ss_malloc(size_t size)
-{
-    void *tmp = malloc(size);
-    if (tmp == NULL) {
-        exit(EXIT_FAILURE);
-    }
-    memset(tmp, 0, size);
-    return tmp;
-}
-
-void *
-ss_realloc(void *ptr, size_t new_size)
-{
-    size_t old_size = ss_memory_size(ptr);
-
-    void *new_ptr = realloc(ptr, new_size);
-    if (new_ptr == NULL) {
-        free(ptr);
-        exit(EXIT_FAILURE);
-    }
-
-    if (new_size > old_size) {
-        memset(((unsigned char *)new_ptr) + old_size, 0, new_size - old_size);
-    }
-
-    return new_ptr;
 }
 
 size_t

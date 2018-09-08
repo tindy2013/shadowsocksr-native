@@ -65,7 +65,7 @@ void
 parse_addr(const char *str, struct ss_host_port *addr)
 {
     int ipv6 = 0, ret = -1, n = 0;
-    char *pch;
+    const char *pch;
 
     struct cork_ip ip;
     if (cork_ip_init(&ip, str) != -1) {
@@ -77,7 +77,7 @@ parse_addr(const char *str, struct ss_host_port *addr)
     pch = strchr(str, ':');
     while (pch != NULL) {
         n++;
-        ret = pch - str;
+        ret = (int)(pch - str);
         pch = strchr(pch + 1, ':');
     }
     if (n > 1) {
@@ -182,12 +182,12 @@ read_jconf(const char *file)
         FATAL("Too large config file.");
     }
 
-    buf = (char *) ss_malloc(pos + 1);
+    buf = (char *) calloc(pos + 1, sizeof(char));
     if (buf == NULL) {
         FATAL("No enough memory.");
     }
 
-    nread = fread(buf, pos, 1, f);
+    nread = (int) fread(buf, pos, 1, f);
     if (!nread) {
         FATAL("Failed to read the config file.");
     }
