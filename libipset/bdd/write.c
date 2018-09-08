@@ -27,7 +27,7 @@
  * on.
  */
 
-typedef int  serialized_id;
+typedef ssize_t  serialized_id;
 
 
 /* forward declaration */
@@ -136,7 +136,7 @@ save_visit_node(struct save_data *save_data,
         (save_data->serialized_ids, (void *) (uintptr_t) node_id, &is_new);
 
     if (!is_new) {
-        *dest = (serialized_id) entry->value;
+        *dest = (serialized_id)((size_t) entry->value);
         return 0;
     } else {
         if (ipset_node_get_type(node_id) == IPSET_TERMINAL_NODE) {
@@ -374,8 +374,8 @@ write_nonterminal_v1(struct save_data *save_data,
                      serialized_id serialized_high)
 {
     rii_check(write_uint8(save_data->stream, variable));
-    rii_check(write_uint32(save_data->stream, serialized_low));
-    rii_check(write_uint32(save_data->stream, serialized_high));
+    rii_check(write_uint32(save_data->stream, (uint32_t)serialized_low));
+    rii_check(write_uint32(save_data->stream, (uint32_t)serialized_high));
     return 0;
 }
 
