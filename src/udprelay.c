@@ -661,6 +661,8 @@ static void query_resolve_cb(struct sockaddr *addr, void *data) {
 
 static void udp_send_done_cb(uv_udp_send_t* req, int status) {
     //struct udp_listener_ctx_t *server_ctx = (struct udp_listener_ctx_t *)req->data;
+    struct buffer_t *buf = (struct buffer_t *)req->data;
+    buffer_free(buf);
     free(req);
 }
 
@@ -853,10 +855,12 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
     {
     uv_buf_t tmp;
     uv_udp_send_t *req = (uv_udp_send_t *)calloc(1, sizeof(uv_udp_send_t));
-    req->data = server_ctx;
+    req->data = buf;
     tmp = uv_buf_init((char *)buf->buffer, (unsigned int) buf->len);
     uv_udp_send(req, &server_ctx->io, &tmp, 1, (const struct sockaddr *)&remote_ctx->src_addr, udp_send_done_cb);
     }
+    udp_remote_shutdown(remote_ctx);
+    return;
 #endif
 
 CLEAN_UP:
@@ -946,8 +950,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         goto CLEAN_UP;
     }
 
-    memcpy(buf->buffer, buf0->base, nread);
-    buf->len = (size_t) nread;
+    buffer_store(buf, (uint8_t *)buf0->base, nread);
 
     udp_uv_release_buffer((uv_buf_t *)buf0);
 #endif
@@ -1144,10 +1147,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
         uv_timer_start(&remote_ctx->watcher, udp_remote_timeout_cb, (uint64_t)server_ctx->timeout, 0);
     }
 
-    if (offset > 0) {
-        buf->len -= offset;
-        memmove(buf->buffer, buf->buffer + offset, buf->len);
-    }
+    buffer_shorten(buf, offset, buf->len - offset);
 
     // SSR beg
     if (server_ctx->protocol_plugin) {
@@ -1172,10 +1172,11 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
     {
     uv_buf_t tmp;
     uv_udp_send_t *req = (uv_udp_send_t *)calloc(1, sizeof(uv_udp_send_t));
-    req->data = server_ctx;
+    req->data = buf;
     tmp = uv_buf_init((char *)buf->buffer, (unsigned int) buf->len);
     uv_udp_send(req, &remote_ctx->io, &tmp, 1, remote_addr, udp_send_done_cb);
     }
+    return;
 #if !defined(MODULE_TUNNEL) && !defined(MODULE_REDIR)
 #ifdef ANDROID
     if (log_tx_rx)
