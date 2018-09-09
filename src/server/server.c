@@ -285,7 +285,7 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_is_in_streaming = &tunnel_is_in_streaming;
     tunnel->tunnel_extract_data = &tunnel_extract_data;
 
-    objects_container_add(ctx->env->tunnel_set, tunnel);
+    cstl_set_container_add(ctx->env->tunnel_set, tunnel);
 
     ctx->cipher = NULL;
     ctx->state = session_initial;
@@ -306,7 +306,7 @@ static void _do_shutdown_tunnel(void *obj, void *p) {
 }
 
 void server_shutdown(struct server_env_t *env) {
-    objects_container_traverse(env->tunnel_set, &_do_shutdown_tunnel, NULL);
+    cstl_set_container_traverse(env->tunnel_set, &_do_shutdown_tunnel, NULL);
 }
 
 void signal_quit_cb(uv_signal_t *handle, int signum) {
@@ -342,7 +342,7 @@ void tunnel_establish_init_cb(uv_stream_t *server, int status) {
 static void tunnel_dying(struct tunnel_ctx *tunnel) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
 
-    objects_container_remove(ctx->env->tunnel_set, tunnel);
+    cstl_set_container_remove(ctx->env->tunnel_set, tunnel);
     if (ctx->cipher) {
         tunnel_cipher_release(ctx->cipher);
     }

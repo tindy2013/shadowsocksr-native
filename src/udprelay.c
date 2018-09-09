@@ -522,7 +522,7 @@ static void udp_remote_shutdown(struct udp_remote_ctx_t *ctx) {
     if (ctx == NULL) {
         return;
     }
-    objects_container_remove(ctx->server_ctx->connections, ctx);
+    cstl_set_container_remove(ctx->server_ctx->connections, ctx);
 
     ctx->watcher.data = ctx;
     uv_timer_stop(&ctx->watcher);
@@ -1141,7 +1141,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 
         uv_timer_init(server_ctx->io.loop, &remote_ctx->watcher);
 
-        objects_container_add(server_ctx->connections, (void *)remote_ctx);
+        cstl_set_container_add(server_ctx->connections, (void *)remote_ctx);
 
         uv_udp_recv_start(&remote_ctx->io, udp_uv_alloc_buffer, udp_remote_recv_cb);
         uv_timer_start(&remote_ctx->watcher, udp_remote_timeout_cb, (uint64_t)server_ctx->timeout, 0);
@@ -1339,7 +1339,7 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
     //server_ctx->loop = loop;
 #endif
     server_ctx->timeout    = max(timeout, MIN_UDP_TIMEOUT);
-    server_ctx->connections = objects_container_create();
+    server_ctx->connections = cstl_set_container_create(tunnel_ctx_compare_for_c_set, NULL);
 #ifdef MODULE_LOCAL
     server_ctx->remote_addr     = *remote_addr;
     //SSR beg
@@ -1371,7 +1371,7 @@ udprelay_begin(uv_loop_t *loop, const char *server_host, uint16_t server_port,
 
 static void udp_local_listener_close_done_cb(uv_handle_t* handle) {
     struct udp_listener_ctx_t *server_ctx = CONTAINER_OF(handle, struct udp_listener_ctx_t, io);
-    objects_container_destroy(server_ctx->connections);
+    cstl_set_container_destroy(server_ctx->connections);
 
 #ifdef MODULE_LOCAL
     // SSR beg
@@ -1394,6 +1394,6 @@ void udprelay_shutdown(struct udp_listener_ctx_t *server_ctx) {
     if (server_ctx == NULL) {
         return;
     }
-    objects_container_traverse(server_ctx->connections, &connection_release, NULL);
+    cstl_set_container_traverse(server_ctx->connections, &connection_release, NULL);
     uv_close((uv_handle_t *)&server_ctx->io, udp_local_listener_close_done_cb);
 }

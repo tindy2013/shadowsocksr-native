@@ -109,7 +109,7 @@ static bool init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_is_in_streaming = &tunnel_is_in_streaming;
     tunnel->tunnel_extract_data = &tunnel_extract_data;
 
-    objects_container_add(ctx->env->tunnel_set, tunnel);
+    cstl_set_container_add(ctx->env->tunnel_set, tunnel);
 
     ctx->parser = (s5_ctx *)calloc(1, sizeof(s5_ctx));
     s5_init(ctx->parser);
@@ -132,7 +132,7 @@ static void _do_shutdown_tunnel(void *obj, void *p) {
 }
 
 void client_shutdown(struct server_env_t *env) {
-    objects_container_traverse(env->tunnel_set, &_do_shutdown_tunnel, NULL);
+    cstl_set_container_traverse(env->tunnel_set, &_do_shutdown_tunnel, NULL);
 }
 
 static struct buffer_t * initial_package_create(const s5_ctx *parser) {
@@ -667,7 +667,7 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
 static void tunnel_dying(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
 
-    objects_container_remove(ctx->env->tunnel_set, tunnel);
+    cstl_set_container_remove(ctx->env->tunnel_set, tunnel);
     if (ctx->cipher) {
         tunnel_cipher_release(ctx->cipher);
     }

@@ -89,15 +89,17 @@ struct server_config * config_create(void);
 void config_release(struct server_config *cf);
 void config_change_for_server(struct server_config *config);
 
+int tunnel_ctx_compare_for_c_set(const void *left, const void *right);
+
 struct server_env_t * ssr_cipher_env_create(struct server_config *config, void *data);
 void ssr_cipher_env_release(struct server_env_t *env);
 bool is_completed_package(struct server_env_t *env, const uint8_t *data, size_t size);
 
-struct cstl_set * objects_container_create(void);
-void objects_container_destroy(struct cstl_set *set);
-void objects_container_add(struct cstl_set *set, void *obj);
-void objects_container_remove(struct cstl_set *set, void *obj);
-void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p);
+struct cstl_set * cstl_set_container_create(int(*compare_objs)(const void*,const void*), void(*destroy_obj)(void*));
+void cstl_set_container_destroy(struct cstl_set *set);
+void cstl_set_container_add(struct cstl_set *set, void *obj);
+void cstl_set_container_remove(struct cstl_set *set, void *obj);
+void cstl_set_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p);
 
 struct cstl_list;
 struct cstl_list * obj_list_create(int(*compare_objs)(const void*,const void*), void(*destroy_obj)(void*));

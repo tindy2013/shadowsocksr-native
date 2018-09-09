@@ -104,7 +104,7 @@ void config_change_for_server(struct server_config *config) {
     config->remote_port = 0;
 }
 
-static int c_set_compare_element(const void *left, const void *right) {
+int tunnel_ctx_compare_for_c_set(const void *left, const void *right) {
     struct tunnel_ctx *l = *(struct tunnel_ctx **)left;
     struct tunnel_ctx *r = *(struct tunnel_ctx **)right;
     if ( l < r ) {
@@ -128,7 +128,7 @@ struct server_env_t * ssr_cipher_env_create(struct server_config *config, void *
     // init obfs
     init_obfs(env, config->protocol, config->obfs);
 
-    env->tunnel_set = objects_container_create();
+    env->tunnel_set = cstl_set_container_create(tunnel_ctx_compare_for_c_set, NULL);
     
     return env;
 }
@@ -141,7 +141,7 @@ void ssr_cipher_env_release(struct server_env_t *env) {
     object_safe_free(&env->obfs_global);
     cipher_env_release(env->cipher);
 
-    objects_container_destroy(env->tunnel_set);
+    cstl_set_container_destroy(env->tunnel_set);
     
     object_safe_free((void **)&env);
 }
@@ -151,26 +151,25 @@ bool is_completed_package(struct server_env_t *env, const uint8_t *data, size_t 
     return size > (size_t)(enc_get_iv_len(env->cipher) + 1);
 }
 
-struct cstl_set * objects_container_create(void) {
-    // https://github.com/davinash/cstl/blob/master/test/t_c_set.c#L93
-    return cstl_set_new(c_set_compare_element, NULL);
+struct cstl_set * cstl_set_container_create(int(*compare_objs)(const void*,const void*), void(*destroy_obj)(void*)) {
+    return cstl_set_new(compare_objs, destroy_obj);
 }
 
-void objects_container_destroy(struct cstl_set *set) {
+void cstl_set_container_destroy(struct cstl_set *set) {
     cstl_set_delete(set);
 }
 
-void objects_container_add(struct cstl_set *set, void *obj) {
+void cstl_set_container_add(struct cstl_set *set, void *obj) {
     ASSERT(set && obj);
     cstl_set_insert(set, &obj, sizeof(void *));
 }
 
-void objects_container_remove(struct cstl_set *set, void *obj) {
+void cstl_set_container_remove(struct cstl_set *set, void *obj) {
     ASSERT(cstl_true == cstl_set_exists(set, &obj));
     cstl_set_remove(set, &obj);
 }
 
-void objects_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p) {
+void cstl_set_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p) {
     struct cstl_iterator *iterator;
     struct cstl_object *element;
     if (set==NULL || fn==NULL) {
