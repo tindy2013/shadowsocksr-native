@@ -24,6 +24,7 @@
 #define __SSR_BUFFER_H__
 
 #include <stdint.h>
+#include <stddef.h>
 
 #if __MEM_CHECK__
 #define _CRTDBG_MAP_ALLOC

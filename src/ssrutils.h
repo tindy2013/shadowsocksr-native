@@ -23,6 +23,8 @@
 #ifndef __SSR_UTILS_H__
 #define __SSR_UTILS_H__
 
+#include "ssrbuffer.h"
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>

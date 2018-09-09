@@ -24,6 +24,8 @@
 #include "config.h"
 #endif
 
+#include "ssrutils.h"
+
 #include <stdlib.h>
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
@@ -41,8 +43,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-
-#include "ssrutils.h"
 
 #define INT_DIGITS 19           /* enough for 64 bit integer */
 
