@@ -30,14 +30,15 @@
 #include <stdlib.h>
 
 void
-cstl_for_each(struct cstl_iterator *pIterator, void(*fn)(const void*, void *p), void *p) {
+cstl_for_each(struct cstl_iterator *pIterator, void(*fn)(const void *value, const void *key, void *p), void *p) {
     struct cstl_object *pElement;
     if (pIterator==NULL || fn==NULL) {
         return;
     }
     while ((pElement = pIterator->get_next(pIterator)) != NULL) {
         const void *value = pIterator->get_value(pElement);
-        fn(value, p);
+        const void *key = pIterator->get_key ? pIterator->get_key(pIterator) : NULL;
+        fn(value, key, p);
     }
 }
 
@@ -45,6 +46,14 @@ cstl_for_each(struct cstl_iterator *pIterator, void(*fn)(const void*, void *p), 
 // c_array.c
 #include <string.h>
 #include <stdio.h>
+
+struct cstl_array {
+    size_t capacity; /* Number of maximum elements array can hold without reallocation */
+    size_t count;  /* Number of current elements in the array */
+    struct cstl_object** pElements; /* actual storage area */
+    cstl_compare compare_fn; /* Compare function pointer*/
+    cstl_destroy destruct_fn; /* Destructor function pointer*/
+};
 
 static struct cstl_array*
 cstl_array_check_and_grow(struct cstl_array* pArray) {
@@ -278,6 +287,16 @@ cstl_array_delete_iterator(struct cstl_iterator* pItr) {
 // c_deque.c
 #include <string.h>
 
+struct cstl_deque {
+    struct cstl_object**pElements;
+    size_t capacity;
+    size_t count;
+    size_t head;
+    size_t tail;
+    cstl_compare compare_fn;
+    cstl_destroy destruct_fn;
+};
+
 #define cstl_deque_INDEX(x)  ((char *)(pDeq)->pElements + (sizeof(struct cstl_object) * (x)))
 
 static cstl_error
@@ -320,6 +339,10 @@ cstl_deque_new(size_t deq_size, cstl_compare fn_c, cstl_destroy fn_d) {
     pDeq->count = 0;
 
     return pDeq;
+}
+
+size_t cstl_deque_count(struct cstl_deque *deque) {
+    return deque->count;
 }
 
 cstl_error
@@ -506,6 +529,10 @@ cstl_deque_delete_iterator(struct cstl_iterator* pItr) {
 // c_map.c
 #include <stdio.h>
 
+struct cstl_map {
+    struct cstl_rb* root;
+};
+
 struct cstl_map*
 cstl_map_new(cstl_compare fn_c_k, cstl_destroy fn_k_d, cstl_destroy fn_v_d) {
     struct cstl_map* pMap = (struct cstl_map*)calloc(1, sizeof(struct cstl_map));
@@ -639,6 +666,12 @@ cstl_map_get_next(struct cstl_iterator* pIterator) {
 }
 
 static const void*
+cstl_map_get_key(struct cstl_iterator *pIterator) {
+    struct cstl_rb_node *current = (struct cstl_rb_node*)pIterator->current_element;
+    return cstl_object_get_data(current->key);
+}
+
+static const void*
 cstl_map_get_value(void* pObject) {
     return cstl_object_get_data((struct cstl_object*)pObject);
 }
@@ -661,6 +694,7 @@ struct cstl_iterator*
 cstl_map_new_iterator(struct cstl_map* pMap) {
     struct cstl_iterator *itr = (struct cstl_iterator*)calloc(1, sizeof(struct cstl_iterator));
     itr->get_next = cstl_map_get_next;
+    itr->get_key = cstl_map_get_key;
     itr->get_value = cstl_map_get_value;
     itr->replace_value = cstl_map_replace_value;
     itr->pContainer = pMap;
@@ -1175,6 +1209,10 @@ void debug_verify_property_5_helper(struct cstl_rb* pTree, struct cstl_rb_node* 
 // c_set.c
 #include <stdio.h>
 
+struct cstl_set {
+    struct cstl_rb* root;
+};
+
 struct cstl_set*
 cstl_set_new(cstl_compare fn_c, cstl_destroy fn_d) {
     struct cstl_set* pSet = (struct cstl_set*)calloc(1, sizeof(struct cstl_set));
@@ -1276,6 +1314,12 @@ cstl_set_get_next(struct cstl_iterator* pIterator) {
 }
 
 static const void*
+cstl_set_get_key(struct cstl_iterator* pIterator) {
+    struct cstl_rb_node *current = (struct cstl_rb_node*)pIterator->current_element;
+    return cstl_object_get_data(current->key);
+}
+
+static const void*
 cstl_set_get_value(void* pObject) {
     return cstl_object_get_data((struct cstl_object*)pObject);
 }
@@ -1284,6 +1328,7 @@ struct cstl_iterator*
 cstl_set_new_iterator(struct cstl_set* pSet) {
     struct cstl_iterator *itr = (struct cstl_iterator*) calloc(1, sizeof(struct cstl_iterator));
     itr->get_next = cstl_set_get_next;
+    itr->get_key = cstl_set_get_key;
     itr->get_value = cstl_set_get_value;
     itr->pContainer = pSet;
     itr->current_index = 0;
@@ -1298,6 +1343,19 @@ cstl_set_delete_iterator(struct cstl_iterator* pItr) {
 
 
 // c_list.c
+
+struct cstl_list_node {
+    struct cstl_object* elem;
+    struct cstl_list_node *next;
+};
+
+struct cstl_list {
+    struct cstl_list_node* head;
+    cstl_destroy destruct_fn;
+    cstl_compare compare_key_fn;
+    size_t size;
+};
+
 struct cstl_list*
 cstl_list_new(cstl_destroy fn_d, cstl_compare fn_c) {
     struct cstl_list* pList = (struct cstl_list*)calloc(1, sizeof(struct cstl_list));
@@ -1306,6 +1364,10 @@ cstl_list_new(cstl_destroy fn_d, cstl_compare fn_c) {
     pList->compare_key_fn = fn_c;
     pList->size = 0;
     return pList;
+}
+
+size_t cstl_list_count(struct cstl_list* pList) {
+    return pList->size;
 }
 
 void
