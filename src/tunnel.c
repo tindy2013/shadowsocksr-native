@@ -163,6 +163,7 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
     if (tunnel_is_dead(tunnel) != false) {
         return;
     }
+    tunnel->terminated = true;
 
     /* Try to cancel the request. The callback still runs but if the
     * cancellation succeeded, it gets called with status=UV_ECANCELED.
@@ -173,8 +174,6 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
 
     socket_close(tunnel->incoming);
     socket_close(tunnel->outgoing);
-
-    tunnel->terminated = true;
 }
 
 void tunnel_process_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
