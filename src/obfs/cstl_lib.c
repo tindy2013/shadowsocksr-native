@@ -31,12 +31,12 @@
 
 void
 cstl_for_each(struct cstl_iterator *pIterator, void(*fn)(const void *value, const void *key, void *p), void *p) {
-    struct cstl_object *pElement;
+    const void *pElement;
     if (pIterator==NULL || fn==NULL) {
         return;
     }
     while ((pElement = pIterator->get_next(pIterator)) != NULL) {
-        const void *value = pIterator->get_value(pElement);
+        const void *value = pIterator->get_value(pIterator);
         const void *key = pIterator->get_key ? pIterator->get_key(pIterator) : NULL;
         fn(value, key, p);
     }
@@ -239,19 +239,20 @@ cstl_array_delete(struct cstl_array* pArray) {
     return rc;
 }
 
-static struct cstl_object*
+static const void *
 cstl_array_get_next(struct cstl_iterator* pIterator) {
     struct cstl_array *pArray = (struct cstl_array*)pIterator->pContainer;
     if (pIterator->current_index >= cstl_array_size(pArray)) {
-        return (struct cstl_object*)0;
+        return (const void *)0;
     }
     pIterator->current_element = pArray->pElements[pIterator->current_index++];
-    return (struct cstl_object *)pIterator->current_element;
+    return pIterator->current_element;
 }
 
 static const void*
-cstl_array_get_value(void* pObject) {
-    return cstl_object_get_data((struct cstl_object *)pObject);
+cstl_array_get_value(struct cstl_iterator *pIterator) {
+    struct cstl_object *element = (struct cstl_object *)pIterator->current_element;
+    return cstl_object_get_data(element);
 }
 
 static void
@@ -479,21 +480,22 @@ cstl_deque_delete(struct cstl_deque* pDeq) {
     return CSTL_ERROR_SUCCESS;
 }
 
-static struct cstl_object*
+static const void *
 cstl_deque_get_next(struct cstl_iterator* pIterator) {
     struct cstl_deque *pDeq = (struct cstl_deque*)pIterator->pContainer;
     size_t index = pIterator->current_index;
 
     if (index <= pDeq->head || index >= pDeq->tail) {
-        return (struct cstl_object*)0;
+        return (const void *)0;
     }
     pIterator->current_element = pDeq->pElements[pIterator->current_index++];
-    return (struct cstl_object*)pIterator->current_element;
+    return pIterator->current_element;
 }
 
 static const void*
-cstl_deque_get_value(void* pObject) {
-    return cstl_object_get_data((struct cstl_object *)pObject);
+cstl_deque_get_value(struct cstl_iterator *pIterator) {
+    struct cstl_object *element = (struct cstl_object *)pIterator->current_element;
+    return cstl_object_get_data(element);
 }
 
 static void
@@ -651,18 +653,20 @@ cstl_map_minimum(struct cstl_map *x) {
     return cstl_rb_minimum(x->root, x->root->root);
 }
 
-static struct cstl_object*
+static const void *
 cstl_map_get_next(struct cstl_iterator* pIterator) {
     struct cstl_map *x = (struct cstl_map*)pIterator->pContainer;
+    struct cstl_rb_node *ptr = NULL;
     if (!pIterator->current_element) {
         pIterator->current_element = cstl_map_minimum(x);
     } else {
         pIterator->current_element = cstl_rb_tree_successor(x->root, (struct cstl_rb_node*)pIterator->current_element);
     }
-    if (!pIterator->current_element) {
-        return (struct cstl_object*)0;
+    ptr = (struct cstl_rb_node*)pIterator->current_element;
+    if (ptr==NULL || ptr->key==NULL) {
+        return NULL;
     }
-    return ((struct cstl_rb_node*)pIterator->current_element)->value;
+    return ptr;
 }
 
 static const void*
@@ -672,8 +676,9 @@ cstl_map_get_key(struct cstl_iterator *pIterator) {
 }
 
 static const void*
-cstl_map_get_value(void* pObject) {
-    return cstl_object_get_data((struct cstl_object*)pObject);
+cstl_map_get_value(struct cstl_iterator *pIterator) {
+    struct cstl_rb_node* current = (struct cstl_rb_node*)pIterator->current_element;
+    return cstl_object_get_data(current->value);
 }
 
 static void
@@ -1299,18 +1304,20 @@ cstl_set_minimum(struct cstl_set *x) {
     return cstl_rb_minimum(x->root, x->root->root);
 }
 
-static struct cstl_object*
+static const void *
 cstl_set_get_next(struct cstl_iterator* pIterator) {
     struct cstl_set *x = (struct cstl_set*)pIterator->pContainer;
+    struct cstl_rb_node *ptr = NULL;
     if (!pIterator->current_element) {
         pIterator->current_element = cstl_set_minimum(x);
     } else {
         pIterator->current_element = cstl_rb_tree_successor(x->root, (struct cstl_rb_node*)pIterator->current_element);
     }
-    if (!pIterator->current_element) {
-        return (struct cstl_object*)0;
+    ptr = (struct cstl_rb_node*)pIterator->current_element;
+    if (ptr==NULL || ptr->key==NULL) {
+        return NULL;
     }
-    return ((struct cstl_rb_node*)pIterator->current_element)->key;
+    return ptr;
 }
 
 static const void*
@@ -1320,8 +1327,8 @@ cstl_set_get_key(struct cstl_iterator* pIterator) {
 }
 
 static const void*
-cstl_set_get_value(void* pObject) {
-    return cstl_object_get_data((struct cstl_object*)pObject);
+cstl_set_get_value(struct cstl_iterator *pIterator) {
+    return cstl_set_get_key(pIterator);
 }
 
 struct cstl_iterator*
@@ -1508,7 +1515,7 @@ size_t cstl_list_size(struct cstl_list* pList) {
     return pList ? pList->size : 0;
 }
 
-static struct cstl_object*
+static const void *
 cstl_list_get_next(struct cstl_iterator* pIterator) {
     struct cstl_list *pList = (struct cstl_list*)pIterator->pContainer;
     if (!pIterator->current_element) {
@@ -1516,15 +1523,13 @@ cstl_list_get_next(struct cstl_iterator* pIterator) {
     } else {
         pIterator->current_element = ((struct cstl_list_node*)pIterator->current_element)->next;
     }
-    if (!pIterator->current_element) {
-        return (struct cstl_object*)0;
-    }
-    return ((struct cstl_list_node*)pIterator->current_element)->elem;
+    return pIterator->current_element;
 }
 
 static const void*
-cstl_list_get_value(void* pObject) {
-    return cstl_object_get_data((struct cstl_object*)pObject);
+cstl_list_get_value(struct cstl_iterator *pIterator) {
+    struct cstl_object *pObj = ((struct cstl_list_node*)pIterator->current_element)->elem;
+    return cstl_object_get_data(pObj);
 }
 
 static void

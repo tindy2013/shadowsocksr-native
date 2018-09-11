@@ -126,7 +126,7 @@ void client_tunnel_initialize(uv_tcp_t *lx, unsigned int idle_timeout) {
     tunnel_initialize(lx, idle_timeout, &init_done_cb, env);
 }
 
-static void _do_shutdown_tunnel(void *obj, void *p) {
+static void _do_shutdown_tunnel(const void *obj, void *p) {
     tunnel_shutdown((struct tunnel_ctx *)obj);
     (void)p;
 }

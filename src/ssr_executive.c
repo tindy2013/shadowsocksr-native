@@ -169,18 +169,16 @@ void cstl_set_container_remove(struct cstl_set *set, void *obj) {
     cstl_set_remove(set, &obj);
 }
 
-void cstl_set_container_traverse(struct cstl_set *set, void(*fn)(void *obj, void *p), void *p) {
+void cstl_set_container_traverse(struct cstl_set *set, void(*fn)(const void *obj, void *p), void *p) {
     struct cstl_iterator *iterator;
-    struct cstl_object *element;
+    const void *element;
     if (set==NULL || fn==NULL) {
         return;
     }
     iterator = cstl_set_new_iterator(set);
     while( (element = iterator->get_next(iterator)) ) {
-        void **obj = (void **) iterator->get_value(element);
-        if (obj) {
-            fn(*obj, p);
-        }
+        const void *obj = *((const void **) iterator->get_value(iterator));
+        fn(obj, p);
     }
     cstl_set_delete_iterator(iterator);
 }
@@ -244,15 +242,14 @@ const void * obj_map_find(struct cstl_map *map, const void *key) {
 
 void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const void *value, void *p), void *p) {
     struct cstl_iterator *iterator;
-    struct cstl_object *element;
+    const void *element;
     if (map==NULL || fn==NULL) {
         return;
     }
     iterator = cstl_map_new_iterator(map);
     while( (element = iterator->get_next(iterator)) ) {
-        struct cstl_rb_node *current = (struct cstl_rb_node *)iterator->current_element;
-        const void *key = cstl_object_get_data(current->key);
-        const void *value = cstl_object_get_data(current->value);
+        const void *key = iterator->get_key(iterator);
+        const void *value = iterator->get_value(iterator);
         fn(key, value, p);
     }
     cstl_map_delete_iterator(iterator);

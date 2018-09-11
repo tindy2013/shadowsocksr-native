@@ -1385,7 +1385,7 @@ static void udp_local_listener_close_done_cb(uv_handle_t* handle) {
     free(server_ctx);
 }
 
-void connection_release(void *obj, void *p) {
+void connection_release(const void *obj, void *p) {
     (void)p;
     udp_remote_shutdown((struct udp_remote_ctx_t *)obj);
 }
