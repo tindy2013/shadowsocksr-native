@@ -35,9 +35,9 @@ cstl_for_each(struct cstl_iterator *pIterator, void(*fn)(const void *value, cons
     if (pIterator==NULL || fn==NULL) {
         return;
     }
-    while ((pElement = pIterator->get_next(pIterator)) != NULL) {
-        const void *value = pIterator->get_value(pIterator);
-        const void *key = pIterator->get_key ? pIterator->get_key(pIterator) : NULL;
+    while ((pElement = pIterator->next(pIterator)) != NULL) {
+        const void *value = pIterator->current_value(pIterator);
+        const void *key = pIterator->current_key ? pIterator->current_key(pIterator) : NULL;
         fn(value, key, p);
     }
 }
@@ -271,9 +271,9 @@ cstl_array_replace_value(struct cstl_iterator *pIterator, void* elem, size_t ele
 struct cstl_iterator*
 cstl_array_new_iterator(struct cstl_array* pArray) {
     struct cstl_iterator *itr = (struct cstl_iterator*) calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = cstl_array_get_next;
-    itr->get_value = cstl_array_get_value;
-    itr->replace_value = cstl_array_replace_value;
+    itr->next = cstl_array_get_next;
+    itr->current_value = cstl_array_get_value;
+    itr->replace_current_value = cstl_array_replace_value;
     itr->pContainer = pArray;
     itr->current_index = 0;
     return itr;
@@ -514,9 +514,9 @@ cstl_deque_replace_value(struct cstl_iterator *pIterator, void* elem, size_t ele
 struct cstl_iterator*
 cstl_deque_new_iterator(struct cstl_deque* pDeq) {
     struct cstl_iterator *itr = (struct cstl_iterator*) calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = cstl_deque_get_next;
-    itr->get_value = cstl_deque_get_value;
-    itr->replace_value = cstl_deque_replace_value;
+    itr->next = cstl_deque_get_next;
+    itr->current_value = cstl_deque_get_value;
+    itr->replace_current_value = cstl_deque_replace_value;
     itr->current_index = pDeq->head + 1;
     itr->pContainer = pDeq;
     return itr;
@@ -698,10 +698,10 @@ cstl_map_replace_value(struct cstl_iterator *pIterator, void* elem, size_t elem_
 struct cstl_iterator*
 cstl_map_new_iterator(struct cstl_map* pMap) {
     struct cstl_iterator *itr = (struct cstl_iterator*)calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = cstl_map_get_next;
-    itr->get_key = cstl_map_get_key;
-    itr->get_value = cstl_map_get_value;
-    itr->replace_value = cstl_map_replace_value;
+    itr->next = cstl_map_get_next;
+    itr->current_key = cstl_map_get_key;
+    itr->current_value = cstl_map_get_value;
+    itr->replace_current_value = cstl_map_replace_value;
     itr->pContainer = pMap;
     itr->current_index = 0;
     itr->current_element = (void*)0;
@@ -1334,9 +1334,9 @@ cstl_set_get_value(struct cstl_iterator *pIterator) {
 struct cstl_iterator*
 cstl_set_new_iterator(struct cstl_set* pSet) {
     struct cstl_iterator *itr = (struct cstl_iterator*) calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = cstl_set_get_next;
-    itr->get_key = cstl_set_get_key;
-    itr->get_value = cstl_set_get_value;
+    itr->next = cstl_set_get_next;
+    itr->current_key = cstl_set_get_key;
+    itr->current_value = cstl_set_get_value;
     itr->pContainer = pSet;
     itr->current_index = 0;
     itr->current_element = (void*)0;
@@ -1549,9 +1549,9 @@ cstl_list_replace_value(struct cstl_iterator *pIterator, void* elem, size_t elem
 struct cstl_iterator*
 cstl_list_new_iterator(struct cstl_list* pList) {
     struct cstl_iterator *itr = (struct cstl_iterator*) calloc(1, sizeof(struct cstl_iterator));
-    itr->get_next = cstl_list_get_next;
-    itr->get_value = cstl_list_get_value;
-    itr->replace_value = cstl_list_replace_value;
+    itr->next = cstl_list_get_next;
+    itr->current_value = cstl_list_get_value;
+    itr->replace_current_value = cstl_list_replace_value;
     itr->pContainer = pList;
     itr->current_element = (void*)0;
     itr->current_index = 0;
@@ -1577,6 +1577,19 @@ void
 cstl_get(void* destination, void* source, size_t size) {
     memcpy(destination, (char*)source, size);
 }
+
+char * cstl_strdup(const char *ptr) {
+#ifdef WIN32
+    return _strdup(ptr);
+#else
+    return strdup(ptr);
+#endif
+}
+
+struct cstl_object {
+    void* raw_data;
+    size_t size;
+};
 
 struct cstl_object*
 cstl_object_new(const void* inObject, size_t obj_size) {
@@ -1611,13 +1624,4 @@ cstl_object_delete(struct cstl_object* inObject) {
         free(inObject->raw_data);
         free(inObject);
     }
-}
-
-char*
-cstl_strdup(char *ptr) {
-#ifdef WIN32
-    return _strdup(ptr);
-#else
-    return strdup(ptr);
-#endif
 }

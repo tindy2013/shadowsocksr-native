@@ -176,8 +176,8 @@ void cstl_set_container_traverse(struct cstl_set *set, void(*fn)(const void *obj
         return;
     }
     iterator = cstl_set_new_iterator(set);
-    while( (element = iterator->get_next(iterator)) ) {
-        const void *obj = *((const void **) iterator->get_value(iterator));
+    while( (element = iterator->next(iterator)) ) {
+        const void *obj = *((const void **) iterator->current_value(iterator));
         fn(obj, p);
     }
     cstl_set_delete_iterator(iterator);
@@ -247,9 +247,9 @@ void obj_map_traverse(struct cstl_map *map, void(*fn)(const void *key, const voi
         return;
     }
     iterator = cstl_map_new_iterator(map);
-    while( (element = iterator->get_next(iterator)) ) {
-        const void *key = iterator->get_key(iterator);
-        const void *value = iterator->get_value(iterator);
+    while( (element = iterator->next(iterator)) ) {
+        const void *key = iterator->current_key(iterator);
+        const void *value = iterator->current_value(iterator);
         fn(key, value, p);
     }
     cstl_map_delete_iterator(iterator);

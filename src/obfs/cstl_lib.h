@@ -1,6 +1,7 @@
 /** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
  *  This file is part of cstl library
  *  Copyright (C) 2011 Avinash Dongre ( dongre.avinash@gmail.com )
+ *  Copyright (C) 2018 ssrlive ( ssrlivebox@gmail.com )
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -77,16 +78,11 @@ typedef int  cstl_bool;
 /*                            P  A  I   R                                  */
 /* ------------------------------------------------------------------------*/
 
-struct cstl_object {
-    void* raw_data;
-    size_t size;
-};
-
 struct cstl_iterator {
-    const void * (*get_next)(struct cstl_iterator *pIterator);
-    void (*replace_value)(struct cstl_iterator *pIterator, void *new_value, size_t size);
-    const void* (*get_key)(struct cstl_iterator *pIterator);
-    const void* (*get_value)(struct cstl_iterator *pIterator);
+    const void * (*next)(struct cstl_iterator *pIterator);
+    void (*replace_current_value)(struct cstl_iterator *pIterator, void *new_value, size_t size);
+    const void* (*current_key)(struct cstl_iterator *pIterator);
+    const void* (*current_value)(struct cstl_iterator *pIterator);
     void* pContainer;
     size_t current_index;
     void* current_element;
@@ -135,6 +131,9 @@ extern void cstl_deque_delete_iterator ( struct cstl_iterator* pItr);
 
 
 //#include "c_rb.h"
+
+struct cstl_object;
+
 struct cstl_rb_node {
     struct cstl_rb_node *left;
     struct cstl_rb_node *right;
@@ -221,7 +220,9 @@ extern void cstl_for_each(struct cstl_iterator *pIterator, void(*fn)(const void 
 
 extern void  cstl_copy(void* destination, void* source, size_t size);
 extern void  cstl_get(void* destination, void* source, size_t size);
-extern char* cstl_strdup(char *ptr);
+extern char* cstl_strdup(const char *ptr);
+
+struct cstl_object;
 
 extern struct cstl_object* cstl_object_new(const void* inObject, size_t obj_size);
 extern cstl_error cstl_object_get_raw(struct cstl_object *inObject, void**elem);
