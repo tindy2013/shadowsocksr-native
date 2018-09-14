@@ -40,6 +40,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ssr-server", "ssr-server\ss
 		{2E31B77F-BB1B-4294-8178-FCC0CEDD6D34} = {2E31B77F-BB1B-4294-8178-FCC0CEDD6D34}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ssr-local", "ssr-local\ssr-local.vcxproj", "{FF0C1545-CB8D-4AAD-9962-0AADAC37C456}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -120,6 +122,12 @@ Global
 		{756AF57D-970B-4DB5-B661-EA1ACFA75694}.Release|x64.Build.0 = Release|x64
 		{756AF57D-970B-4DB5-B661-EA1ACFA75694}.Release|x86.ActiveCfg = Release|Win32
 		{756AF57D-970B-4DB5-B661-EA1ACFA75694}.Release|x86.Build.0 = Release|Win32
+		{FF0C1545-CB8D-4AAD-9962-0AADAC37C456}.Debug|x64.ActiveCfg = Debug|x64
+		{FF0C1545-CB8D-4AAD-9962-0AADAC37C456}.Debug|x64.Build.0 = Debug|x64
+		{FF0C1545-CB8D-4AAD-9962-0AADAC37C456}.Debug|x86.ActiveCfg = Debug|x64
+		{FF0C1545-CB8D-4AAD-9962-0AADAC37C456}.Release|x64.ActiveCfg = Release|x64
+		{FF0C1545-CB8D-4AAD-9962-0AADAC37C456}.Release|x64.Build.0 = Release|x64
+		{FF0C1545-CB8D-4AAD-9962-0AADAC37C456}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -34,7 +34,7 @@ bool
 ipset_assignment_equal(const struct ipset_assignment *assignment1,
                        const struct ipset_assignment *assignment2)
 {
-    unsigned int  size1, size2, smaller_size;
+    size_t  size1, size2, smaller_size;
     unsigned int  i;
 
     /* Identical pointers are trivially equal. */
