@@ -140,13 +140,26 @@ The target binaries are `ssr-n/src/ssr-server`, `ssr-n/src/ssr-client` and `ssr-
 
 ### OS X
 
-For OS X, use [Homebrew](http://brew.sh) to install or build.
+For OS X, we must download/install/run [Xcode](https://developer.apple.com/xcode/) first. 
 
-Install Homebrew:
+Then use [Homebrew](http://brew.sh) to install or build.
 
+Install Homebrew and tools:
 ```bash
-
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+brew install git cmake automake libtool
 ```
+Now get source code and build it.
+```bash
+git clone https://github.com/ShadowsocksR-Live/shadowsocksr-native.git
+mv shadowsocksr-native ssr-n
+cd ssr-n
+git submodule update --init
+git submodule foreach -q 'git checkout $(git config -f $toplevel/.gitmodules submodule.$name.branch || echo master)'
+
+cmake . && make
+```
+
 The target binaries are `ssr-n/src/ssr-server`, `ssr-n/src/ssr-client` and `ssr-n/src/ssr-local`.
 
 ### Windows
