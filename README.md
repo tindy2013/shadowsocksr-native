@@ -78,7 +78,7 @@ progress of data flow
     + [Install from repository](#centos)
 - [CentOS](#centos)
     + [Install from repository](#centos)
-- [OS X](#os-x)
+- [macOS](#macos)
 - [Windows](#windows)
 
 * * *
@@ -138,9 +138,9 @@ cmake . && make
 
 The target binaries are `ssr-n/src/ssr-server`, `ssr-n/src/ssr-client` and `ssr-n/src/ssr-local`.
 
-### OS X
+### macOS
 
-For OS X, we must download/install/run [Xcode](https://developer.apple.com/xcode/) first. 
+For macOS, we must download/install/run [Xcode](https://developer.apple.com/xcode/) first. 
 
 Then use [Homebrew](http://brew.sh) to install or build.
 
