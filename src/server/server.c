@@ -62,7 +62,7 @@ struct address_timestamp {
 };
 
 static int ssr_server_run_loop(struct server_config *config);
-void ssr_server_run_loop_shutdown(struct ssr_server_state *state);
+void ssr_server_shutdown(struct ssr_server_state *state);
 
 void server_tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout);
 void server_shutdown(struct server_env_t *env);
@@ -237,7 +237,7 @@ static void listener_close_done_cb(uv_handle_t* handle) {
     free((void *)((uv_tcp_t *)handle));
 }
 
-void ssr_server_run_loop_shutdown(struct ssr_server_state *state) {
+void ssr_server_shutdown(struct ssr_server_state *state) {
     if (state == NULL) {
         return;
     }
@@ -322,7 +322,7 @@ void signal_quit_cb(uv_signal_t *handle, int signum) {
     {
     struct ssr_server_state *state = (struct ssr_server_state *)env->data;
         ASSERT(state);
-        ssr_server_run_loop_shutdown(state);
+        ssr_server_shutdown(state);
     }
     break;
     default:
