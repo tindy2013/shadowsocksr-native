@@ -1097,7 +1097,7 @@ remote_new_object(uv_loop_t *loop, int timeout)
     remote->recv_ctx->remote    = remote;
     remote->send_ctx->remote    = remote;
 
-    timeMax = min(MAX_CONNECT_TIMEOUT * SECONDS_PER_MINUTE, timeout);
+    timeMax = min(CONNECT_TIMEOUT_MAX * MILLISECONDS_PER_SECOND, timeout);
     uv_timer_init(loop, &remote->send_ctx->watcher);
     remote->send_ctx->watcher_interval = (uint64_t) timeMax;
 
@@ -1746,7 +1746,7 @@ int ssr_local_main_loop(const struct server_config *config, void(*feedback_state
     // Setup listeners
     listener = (struct listener_t *)calloc(1, sizeof(struct listener_t));
 
-    listener->timeout = config->idle_timeout * SECONDS_PER_MINUTE;
+    listener->timeout = config->idle_timeout * MILLISECONDS_PER_SECOND;
     //listener->iface = ss_strdup(config->iface);
     //listener->mptcp = config->mptcp;
     /*

@@ -74,11 +74,11 @@ struct buffer_t;
 void object_safe_free(void **obj);
 void string_safe_assign(char **target, const char *value);
 
-#define SECONDS_PER_MINUTE    1000
+#define MILLISECONDS_PER_SECOND 1000  // Milliseconds per second
 
 #define DEFAULT_BIND_HOST     "127.0.0.1"
 #define DEFAULT_BIND_PORT     1080
-#define DEFAULT_IDLE_TIMEOUT  (60 * SECONDS_PER_MINUTE)
+#define DEFAULT_IDLE_TIMEOUT  (60 * MILLISECONDS_PER_SECOND)
 #define DEFAULT_METHOD        "rc4-md5"
 
 #if !defined(TCP_BUF_SIZE_MAX)

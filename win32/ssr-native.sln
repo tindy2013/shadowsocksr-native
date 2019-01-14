@@ -52,6 +52,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ssr-local", "ssr-local\ssr-
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libipset", "libipset\libipset.vcxproj", "{AEDC5EB8-DF34-4A42-AB79-32B2FDFA0640}"
+	ProjectSection(ProjectDependencies) = postProject
+		{86BF073F-D15A-4952-A7DF-0F4C29C93EB4} = {86BF073F-D15A-4952-A7DF-0F4C29C93EB4}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pcre", "..\depends\pcre\win32\pcre.vcxproj", "{7B2F6734-4D74-4598-BABA-025A636057B5}"
 EndProject

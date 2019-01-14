@@ -126,7 +126,7 @@ bool parse_config_file(const char *file, struct server_config *config) {
                 continue;
             }
             if (json_iter_extract_int("timeout", &iter, &obj_int)) {
-                config->idle_timeout = obj_int * SECONDS_PER_MINUTE;
+                config->idle_timeout = obj_int * MILLISECONDS_PER_SECOND;
                 continue;
             }
             if (json_iter_extract_bool("udp", &iter, &obj_bool)) {

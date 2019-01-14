@@ -32,7 +32,7 @@
 
 #include "common.h"
 
-#define SECONDS_PER_MINUTE    1000
+#define MILLISECONDS_PER_SECOND 1000
 
 enum net_stage {
     STAGE_ERROR     = -1, /* Error detected                   */
