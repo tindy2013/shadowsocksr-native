@@ -546,7 +546,7 @@ void socket_dump_error_info(const char *title, struct socket_ctx *socket) {
     } else {
         union sockaddr_universal tmp;
         int len = sizeof(tmp);
-        uv_tcp_getsockname(&socket->handle.tcp, &tmp.addr, &len);
+        uv_tcp_getpeername(&socket->handle.tcp, &tmp.addr, &len);
         universal_address_to_string(&tmp, addr, sizeof(addr));
         from = "_client_";
     }
