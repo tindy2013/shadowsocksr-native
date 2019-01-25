@@ -4,6 +4,7 @@
 #include "obfsutil.h"
 #include "crc32.h"
 #include "obfs.h"
+#include "encrypt.h"
 
 static int verify_simple_pack_unit_size = 2000;
 
@@ -49,8 +50,9 @@ int verify_simple_pack_data(char *data, int datalength, char *outdata) {
     int out_size = rand_len + datalength + 6;
     outdata[0] = (char)(out_size >> 8);
     outdata[1] = (char)out_size;
+    rand_bytes((uint8_t *)outdata + 2, rand_len); // note: first byte is the length.
     outdata[2] = (char)rand_len;
-    memmove(outdata + rand_len + 2, data, datalength);
+    memmove(outdata + 2 + rand_len, data, datalength);
     fillcrc32((unsigned char *)outdata, (unsigned int)out_size);
     return out_size;
 }
