@@ -466,7 +466,7 @@ write_nonterminal_dot(struct save_data *save_data,
     /* Include a node for the nonterminal value. */
     cork_buffer_printf
         (&dot_data->scratch,
-         "    n%ld [shape=circle,label=%u];\n",
+         "    n%zd [shape=circle,label=%u];\n",
          (-serialized_node), variable);
 
     /* Include an edge for the low pointer. */
@@ -474,7 +474,7 @@ write_nonterminal_dot(struct save_data *save_data,
         /* The low pointer is a nonterminal. */
         cork_buffer_append_printf
             (&dot_data->scratch,
-             "    n%ld -> n%ld",
+             "    n%zd -> n%zd",
              (-serialized_node), (-serialized_low));
     } else {
         /* The low pointer is a terminal. */
@@ -485,14 +485,14 @@ write_nonterminal_dot(struct save_data *save_data,
              * terminal, connect this pointer to a dummy circle node. */
             cork_buffer_append_printf
                 (&dot_data->scratch,
-                 "    low%ld [shape=circle,label=\"\"]\n"
-                 "    n%ld -> low%ld",
+                 "    low%zd [shape=circle,label=\"\"]\n"
+                 "    n%zd -> low%zd",
                  (-serialized_node), (-serialized_node), (-serialized_node));
         } else {
             /* The terminal isn't a default, so go ahead and output it. */
             cork_buffer_append_printf
                 (&dot_data->scratch,
-                 "    n%ld -> t%ld",
+                 "    n%zd -> t%zd",
                  (-serialized_node), serialized_low);
         }
     }
@@ -505,7 +505,7 @@ write_nonterminal_dot(struct save_data *save_data,
         /* The high pointer is a nonterminal. */
         cork_buffer_append_printf
             (&dot_data->scratch,
-             "    n%ld -> n%ld",
+             "    n%zd -> n%zd",
              (-serialized_node), (-serialized_high));
     } else {
         /* The high pointer is a terminal. */
@@ -516,19 +516,19 @@ write_nonterminal_dot(struct save_data *save_data,
              * terminal, connect this pointer to a dummy circle node. */
             cork_buffer_append_printf
                 (&dot_data->scratch,
-                 "    high%ld "
+                 "    high%zd "
                  "[shape=circle,"
                  "fixedsize=true,"
                  "height=0.25,"
                  "width=0.25,"
                  "label=\"\"]\n"
-                 "    n%ld -> high%ld",
+                 "    n%zd -> high%zd",
                  (-serialized_node), (-serialized_node), (-serialized_node));
         } else {
             /* The terminal isn't a default, so go ahead and output it. */
             cork_buffer_append_printf
                 (&dot_data->scratch,
-                 "    n%ld -> t%ld",
+                 "    n%zd -> t%zd",
                  (-serialized_node), serialized_high);
         }
     }
