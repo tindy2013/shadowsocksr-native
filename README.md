@@ -122,7 +122,7 @@ Before build `ssr-Native`, we must install `cmake` 3.x first. following [this](#
 # CentOS / Fedora / RHEL
 sudo su
 yum install wget git gcc gcc-c++ autoconf automake libtool make asciidoc xmlto -y
-curl https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o a.sh
+curl https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh -o a.sh
 sh a.sh --prefix=/usr/ --exclude-subdir && rm -rf a.sh
 cd /
 git clone https://github.com/ShadowsocksR-Live/shadowsocksr-native.git
@@ -215,7 +215,7 @@ So we must install it by ourselves.
 ```bash
 sudo su
 cd /
-curl https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o a.sh
+curl https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh -o a.sh
 sh a.sh  --prefix=/usr/ --exclude-subdir
 rm -rf a.sh
 cmake --version
@@ -223,7 +223,7 @@ cmake --version
 
 It will spend about 30 minites. And the `cmake --version` command will output message likes:
 ```
-cmake version 3.11.4
+cmake version 3.14.0
 CMake suite maintained and supported by Kitware (kitware.com/cmake).
 ```
 
