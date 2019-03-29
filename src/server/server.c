@@ -34,22 +34,22 @@ struct ssr_server_state {
     struct cstl_map *resolved_ips;
 };
 
-enum session_state {
-    session_initial = 0,  /* Initial stage                    */
-    session_receipt_done,
-    session_client_feedback,
-    session_confirm_done,
-    session_resolve_host = 4,  /* Resolve the hostname             */
-    session_connect_host,
-    session_launch_streaming,
-    session_streaming,  /* Stream between client and server */
+enum tunnel_stage {
+    tunnel_stage_initial = 0,  /* Initial stage                    */
+    tunnel_stage_receipt_done,
+    tunnel_stage_client_feedback,
+    tunnel_stage_confirm_done,
+    tunnel_stage_resolve_host = 4,  /* Resolve the hostname             */
+    tunnel_stage_connect_host,
+    tunnel_stage_launch_streaming,
+    tunnel_stage_streaming,  /* Stream between client and server */
 };
 
 struct server_ctx {
     struct server_env_t *env; // __weak_ptr
     struct tunnel_cipher_ctx *cipher;
     struct buffer_t *init_pkg;
-    enum session_state state;
+    enum tunnel_stage stage;
     size_t _tcp_mss;
     size_t _overhead;
     size_t _recv_buffer_size;
@@ -288,7 +288,7 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     cstl_set_container_add(ctx->env->tunnel_set, tunnel);
 
     ctx->cipher = NULL;
-    ctx->state = session_initial;
+    ctx->stage = tunnel_stage_initial;
 
     return is_incoming_ip_legal(tunnel);
 }
@@ -354,42 +354,42 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     bool done = false;
     struct server_ctx *ctx = (struct server_ctx *)tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
-    switch (ctx->state) {
-    case session_initial:
+    switch (ctx->stage) {
+    case tunnel_stage_initial:
         ASSERT(incoming->rdstate == socket_done);
         ASSERT(incoming->wrstate == socket_stop);
         incoming->rdstate = socket_stop;
         do_init_package(tunnel, socket);
         break;
-    case session_receipt_done:
+    case tunnel_stage_receipt_done:
         ASSERT(incoming->rdstate == socket_stop);
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
         socket_read(socket);
-        ctx->state = session_client_feedback;
+        ctx->stage = tunnel_stage_client_feedback;
         break;
-    case session_client_feedback:
+    case tunnel_stage_client_feedback:
         ASSERT(incoming->rdstate == socket_done);
         ASSERT(incoming->wrstate == socket_stop);
         incoming->rdstate = socket_stop;
         do_client_feedback(tunnel, socket);
         break;
-    case session_confirm_done:
+    case tunnel_stage_confirm_done:
         ASSERT(incoming->rdstate == socket_stop);
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
         do_prepare_parse(tunnel, socket);
         break;
-    case session_resolve_host:
+    case tunnel_stage_resolve_host:
         do_resolve_host_done(tunnel, socket);
         break;
-    case session_connect_host:
+    case tunnel_stage_connect_host:
         do_connect_host_done(tunnel, socket);
         break;
-    case session_launch_streaming:
+    case tunnel_stage_launch_streaming:
         do_launch_streaming(tunnel, socket);
         break;
-    case session_streaming:
+    case tunnel_stage_streaming:
         tunnel_traditional_streaming(tunnel, socket);
         break;
     default:
@@ -402,7 +402,7 @@ static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
     struct socket_ctx *incoming = tunnel->incoming;
     if (incoming == socket) {
-        if (ctx->state < session_resolve_host) {
+        if (ctx->stage < tunnel_stage_resolve_host) {
             // report_addr(server->fd, SUSPICIOUS); // collect MALICIOUS IPs.
         }
     }
@@ -438,7 +438,7 @@ static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, struct socket_ctx
 
 static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel) {
     // struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-    // return (ctx->state == session_streaming);
+    // return (ctx->stage == tunnel_stage_streaming);
     return false;
 }
 
@@ -530,7 +530,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         if (receipt) {
             ASSERT(confirm == NULL);
             socket_write(incoming, receipt->buffer, receipt->len);
-            ctx->state = session_receipt_done;
+            ctx->stage = tunnel_stage_receipt_done;
             break;
         }
 
@@ -540,7 +540,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         if (confirm) {
             ASSERT(receipt == NULL);
             socket_write(incoming, confirm->buffer, confirm->len);
-            ctx->state = session_confirm_done;
+            ctx->stage = tunnel_stage_confirm_done;
             break;
         }
 
@@ -616,7 +616,7 @@ static void do_client_feedback(struct tunnel_ctx *tunnel, struct socket_ctx *soc
 
         if (confirm) {
             socket_write(incoming, confirm->buffer, confirm->len);
-            ctx->state = session_confirm_done;
+            ctx->stage = tunnel_stage_confirm_done;
             break;
         }
 
@@ -705,7 +705,7 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
             tunnel_shutdown(tunnel);
             return;
         }
-        ctx->state = session_resolve_host;
+        ctx->stage = tunnel_stage_resolve_host;
         outgoing->addr.addr4.sin_port = htons(s5addr->port);
         socket_getaddrinfo(outgoing, host);
     } else {
@@ -762,7 +762,7 @@ static void do_connect_host_start(struct tunnel_ctx *tunnel, struct socket_ctx *
     ASSERT(outgoing->rdstate == socket_stop);
     ASSERT(outgoing->wrstate == socket_stop);
 
-    ctx->state = session_connect_host;
+    ctx->stage = tunnel_stage_connect_host;
     err = socket_connect(outgoing);
 
     if (err != 0) {
@@ -790,7 +790,7 @@ static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
     if (outgoing->result == 0) {
         if (ctx->init_pkg->len > 0) {
             socket_write(outgoing, ctx->init_pkg->buffer, ctx->init_pkg->len);
-            ctx->state = session_launch_streaming;
+            ctx->stage = tunnel_stage_launch_streaming;
         } else {
             outgoing->wrstate = socket_done;
             do_launch_streaming(tunnel, socket);
@@ -826,7 +826,7 @@ static void do_launch_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *so
 
     socket_read(incoming);
     socket_read(outgoing);
-    ctx->state = session_streaming;
+    ctx->stage = tunnel_stage_streaming;
 }
 
 static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)(size_t size), size_t *size) {

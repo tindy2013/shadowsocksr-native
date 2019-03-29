@@ -42,20 +42,20 @@
  */
 
  /* Session states. */
-enum session_state {
-    session_handshake,        /* Wait for client handshake. */
-    session_handshake_auth,   /* Wait for client authentication data. */
-    session_handshake_replied,        /* Start waiting for request data. */
-    session_s5_request,        /* Wait for request data. */
-    session_s5_udp_accoc,
-    session_resolve_ssr_server_host,       /* Wait for upstream hostname DNS lookup to complete. */
-    session_connect_ssr_server,      /* Wait for uv_tcp_connect() to complete. */
-    session_ssr_auth_sent,
-    session_ssr_waiting_feedback,
-    session_ssr_receipt_of_feedback_sent,
-    session_auth_complition_done,      /* Connected. Start piping data. */
-    session_streaming,            /* Connected. Pipe data back and forth. */
-    session_kill,             /* Tear down session. */
+enum tunnel_stage {
+    tunnel_stage_handshake,        /* Wait for client handshake. */
+    tunnel_stage_handshake_auth,   /* Wait for client authentication data. */
+    tunnel_stage_handshake_replied,        /* Start waiting for request data. */
+    tunnel_stage_s5_request,        /* Wait for request data. */
+    tunnel_stage_s5_udp_accoc,
+    tunnel_stage_resolve_ssr_server_host,       /* Wait for upstream hostname DNS lookup to complete. */
+    tunnel_stage_connecting_ssr_server,      /* Wait for uv_tcp_connect() to complete. */
+    tunnel_stage_ssr_auth_sent,
+    tunnel_stage_ssr_waiting_feedback,
+    tunnel_stage_ssr_receipt_of_feedback_sent,
+    tunnel_stage_auth_complition_done,      /* Connected. Start piping data. */
+    tunnel_stage_streaming,            /* Connected. Pipe data back and forth. */
+    tunnel_stage_kill,             /* Tear down session. */
 };
 
 struct client_ctx {
@@ -63,7 +63,7 @@ struct client_ctx {
     struct tunnel_cipher_ctx *cipher;
     struct buffer_t *init_pkg;
     s5_ctx *parser;  /* The SOCKS protocol parser. */
-    enum session_state state;
+    enum tunnel_stage stage;
 };
 
 static struct buffer_t * initial_package_create(const s5_ctx *parser);
@@ -114,7 +114,7 @@ static bool init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     ctx->parser = (s5_ctx *)calloc(1, sizeof(s5_ctx));
     s5_init(ctx->parser);
     ctx->cipher = NULL;
-    ctx->state = session_handshake;
+    ctx->stage = tunnel_stage_handshake;
 
     return true;
 }
@@ -181,62 +181,62 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
 
-    switch (ctx->state) {
-    case session_handshake:
+    switch (ctx->stage) {
+    case tunnel_stage_handshake:
         ASSERT(incoming->rdstate == socket_done);
         incoming->rdstate = socket_stop;
         do_handshake(tunnel);
         break;
-    case session_handshake_auth:
+    case tunnel_stage_handshake_auth:
         do_handshake_auth(tunnel);
         break;
-    case session_handshake_replied:
+    case tunnel_stage_handshake_replied:
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
         do_wait_s5_request(tunnel);
         break;
-    case session_s5_request:
+    case tunnel_stage_s5_request:
         ASSERT(incoming->rdstate == socket_done);
         incoming->rdstate = socket_stop;
         do_parse_s5_request(tunnel);
         break;
-    case session_s5_udp_accoc:
+    case tunnel_stage_s5_udp_accoc:
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
         tunnel_shutdown(tunnel);
         break;
-    case session_resolve_ssr_server_host:
+    case tunnel_stage_resolve_ssr_server_host:
         do_resolve_ssr_server_host(tunnel);
         break;
-    case session_connect_ssr_server:
+    case tunnel_stage_connecting_ssr_server:
         do_connect_ssr_server_done(tunnel);
         break;
-    case session_ssr_auth_sent:
+    case tunnel_stage_ssr_auth_sent:
         ASSERT(outgoing->wrstate == socket_done);
         outgoing->wrstate = socket_stop;
         do_ssr_auth_sent(tunnel);
         break;
-    case session_ssr_waiting_feedback:
+    case tunnel_stage_ssr_waiting_feedback:
         ASSERT(outgoing->rdstate == socket_done);
         outgoing->rdstate = socket_stop;
         if (do_ssr_receipt_for_feedback(tunnel) == false) {
             do_socks5_reply_success(tunnel);
         }
         break;
-    case session_ssr_receipt_of_feedback_sent:
+    case tunnel_stage_ssr_receipt_of_feedback_sent:
         ASSERT(outgoing->wrstate == socket_done);
         outgoing->wrstate = socket_stop;
         do_socks5_reply_success(tunnel);
         break;
-    case session_auth_complition_done:
+    case tunnel_stage_auth_complition_done:
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
         do_launch_streaming(tunnel);
         break;
-    case session_streaming:
+    case tunnel_stage_streaming:
         tunnel_traditional_streaming(tunnel, socket);
         break;
-    case session_kill:
+    case tunnel_stage_kill:
         tunnel_shutdown(tunnel);
         break;
     default:
@@ -267,7 +267,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
     err = s5_parse(parser, &data, &size);
     if (err == s5_ok) {
         socket_read(incoming);
-        ctx->state = session_handshake;  /* Need more data. */
+        ctx->stage = tunnel_stage_handshake;  /* Need more data. */
         return;
     }
 
@@ -291,7 +291,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
     if ((methods & s5_auth_none) && can_auth_none(tunnel->listener, tunnel)) {
         s5_select_auth(parser, s5_auth_none);
         socket_write(incoming, "\5\0", 2);  /* No auth required. */
-        ctx->state = session_handshake_replied;
+        ctx->stage = tunnel_stage_handshake_replied;
         return;
     }
 
@@ -302,7 +302,7 @@ static void do_handshake(struct tunnel_ctx *tunnel) {
     }
 
     socket_write(incoming, "\5\377", 2);  /* No acceptable auth. */
-    ctx->state = session_kill;
+    ctx->stage = tunnel_stage_kill;
 }
 
 /* TODO(bnoordhuis) Implement username/password auth. */
@@ -325,7 +325,7 @@ static void do_wait_s5_request(struct tunnel_ctx *tunnel) {
     }
 
     socket_read(incoming);
-    ctx->state = session_s5_request;
+    ctx->stage = tunnel_stage_s5_request;
 }
 
 static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
@@ -358,7 +358,7 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
     err = s5_parse(parser, &data, &size);
     if (err == s5_ok) {
         socket_read(incoming);
-        ctx->state = session_s5_request;  /* Need more data. */
+        ctx->stage = tunnel_stage_s5_request;  /* Need more data. */
         return;
     }
 
@@ -387,7 +387,7 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
         uint8_t *buf = build_udp_assoc_package(config->udp, config->listen_host, config->listen_port,
             (uint8_t *)incoming->buf->base, &len);
         socket_write(incoming, buf, len);
-        ctx->state = session_s5_udp_accoc;
+        ctx->stage = tunnel_stage_s5_udp_accoc;
         return;
     }
 
@@ -410,7 +410,7 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
         union sockaddr_universal remote_addr = { 0 };
         if (convert_universal_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
             socket_getaddrinfo(outgoing, config->remote_host);
-            ctx->state = session_resolve_ssr_server_host;
+            ctx->stage = tunnel_stage_resolve_ssr_server_host;
             return;
         }
 
@@ -438,7 +438,7 @@ static void do_resolve_ssr_server_host(struct tunnel_ctx *tunnel) {
             uv_strerror((int)outgoing->result));
         /* Send back a 'Host unreachable' reply. */
         socket_write(incoming, "\5\4\0\1\0\0\0\0\0\0", 10);
-        ctx->state = session_kill;
+        ctx->stage = tunnel_stage_kill;
         return;
     }
 
@@ -473,7 +473,7 @@ static void do_connect_ssr_server(struct tunnel_ctx *tunnel) {
         pr_warn("connection not allowed by ruleset");
         /* Send a 'Connection not allowed by ruleset' reply. */
         socket_write(incoming, "\5\2\0\1\0\0\0\0\0\0", 10);
-        ctx->state = session_kill;
+        ctx->stage = tunnel_stage_kill;
         return;
     }
 
@@ -484,7 +484,7 @@ static void do_connect_ssr_server(struct tunnel_ctx *tunnel) {
         return;
     }
 
-    ctx->state = session_connect_ssr_server;
+    ctx->stage = tunnel_stage_connecting_ssr_server;
 }
 
 static void do_connect_ssr_server_done(struct tunnel_ctx *tunnel) {
@@ -507,13 +507,13 @@ static void do_connect_ssr_server_done(struct tunnel_ctx *tunnel) {
         socket_write(outgoing, tmp->buffer, tmp->len);
         buffer_free(tmp);
 
-        ctx->state = session_ssr_auth_sent;
+        ctx->stage = tunnel_stage_ssr_auth_sent;
         return;
     } else {
         socket_dump_error_info("upstream connection", outgoing);
         /* Send a 'Connection refused' reply. */
         socket_write(incoming, "\5\5\0\1\0\0\0\0\0\0", 10);
-        ctx->state = session_kill;
+        ctx->stage = tunnel_stage_kill;
         return;
     }
 
@@ -539,7 +539,7 @@ static void do_ssr_auth_sent(struct tunnel_ctx *tunnel) {
 
     if (tunnel_cipher_client_need_feedback(ctx->cipher)) {
         socket_read(outgoing);
-        ctx->state = session_ssr_waiting_feedback;
+        ctx->stage = tunnel_stage_ssr_waiting_feedback;
     } else {
         do_socks5_reply_success(tunnel);
     }
@@ -573,7 +573,7 @@ static bool do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel) {
 
     if (feedback) {
         socket_write(outgoing, feedback->buffer, feedback->len);
-        ctx->state = session_ssr_receipt_of_feedback_sent;
+        ctx->stage = tunnel_stage_ssr_receipt_of_feedback_sent;
         buffer_free(feedback);
         done = true;
     }
@@ -601,7 +601,7 @@ static void do_socks5_reply_success(struct tunnel_ctx *tunnel) {
     memcpy(buf + 3, init_pkg->buffer, init_pkg->len);
     socket_write(incoming, buf, 3 + init_pkg->len);
     free(buf);
-    ctx->state = session_auth_complition_done;
+    ctx->stage = tunnel_stage_auth_complition_done;
 }
 
 static void do_launch_streaming(struct tunnel_ctx *tunnel) {
@@ -622,7 +622,7 @@ static void do_launch_streaming(struct tunnel_ctx *tunnel) {
 
     socket_read(incoming);
     socket_read(outgoing);
-    ctx->state = session_streaming;
+    ctx->stage = tunnel_stage_streaming;
 }
 
 static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)(size_t size), size_t *size) {
@@ -706,7 +706,7 @@ static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, struct socket_ctx
 
 static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel) {
     // struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-    // return (ctx->state == session_streaming);
+    // return (ctx->stage == tunnel_stage_streaming);
     return false;
 }
 
