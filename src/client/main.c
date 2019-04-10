@@ -141,7 +141,8 @@ void feedback_state(struct ssr_client_state *state, void *p) {
 }
 
 static void usage(void) {
-    printf("ShadowsocksR native client\n"
+    printf(""
+        "ShadowsocksR native client\n"
         "\n"
         "Usage:\n"
         "\n"
@@ -155,5 +156,4 @@ static void usage(void) {
         "  -h                     Show this help message.\n"
         "",
         get_app_name());
-    exit(1);
 }
