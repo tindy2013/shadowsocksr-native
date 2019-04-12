@@ -3,6 +3,27 @@
 #include "config_json.h"
 #include "ssr_executive.h"
 
+bool json_iter_extract_object(const char *key, const struct json_object_iter *iter, const struct json_object **value) {
+    bool result = false;
+    do {
+        struct json_object *val;
+        if (key == NULL || iter == NULL || value == NULL) {
+            break;
+        }
+        *value = NULL;
+        if (strcmp(iter->key, key) != 0) {
+            break;
+        }
+        val = iter->val;
+        if (json_type_object != json_object_get_type(val)) {
+            break;
+        }
+        *value = val; // json_object_get(val);
+        result = true;
+    } while (0);
+    return result;
+}
+
 bool json_iter_extract_string(const char *key, const struct json_object_iter *iter, const char **value) {
     bool result = false;
     do {
@@ -71,7 +92,7 @@ bool parse_config_file(const char *file, struct server_config *config) {
     bool result = false;
     json_object *jso = NULL;
     do {
-        struct json_object_iter iter;
+        struct json_object_iter iter = { NULL };
 
         jso = json_object_from_file(file);
         if (jso == NULL) {
@@ -81,6 +102,7 @@ bool parse_config_file(const char *file, struct server_config *config) {
             int obj_int = 0;
             bool obj_bool = false;
             const char *obj_str = NULL;
+            const struct json_object *obj_obj = NULL;
             if (json_iter_extract_string("local_address", &iter, &obj_str)) {
                 string_safe_assign(&config->listen_host, obj_str);
                 continue;
@@ -123,6 +145,25 @@ bool parse_config_file(const char *file, struct server_config *config) {
             }
             if (json_iter_extract_string("obfs_param", &iter, &obj_str)) {
                 string_safe_assign(&config->obfs_param, obj_str);
+                continue;
+            }
+            if (json_iter_extract_bool("over_tls_enable", &iter, &obj_bool)) {
+                config->over_tls_enable = obj_bool;
+                continue;
+            }
+            if (json_iter_extract_object("over_tls_settings", &iter, &obj_obj)) {
+                struct json_object_iter iter2 = { NULL };
+                json_object_object_foreachC(obj_obj, iter2) {
+                    const char *obj_str2 = NULL;
+                    if (json_iter_extract_string("server", &iter2, &obj_str2)) {
+                        string_safe_assign(&config->over_tls_server, obj_str2);
+                        continue;
+                    }
+                    if (json_iter_extract_string("path", &iter2, &obj_str2)) {
+                        string_safe_assign(&config->over_tls_path, obj_str2);
+                        continue;
+                    }
+                }
                 continue;
             }
             if (json_iter_extract_int("timeout", &iter, &obj_int)) {
