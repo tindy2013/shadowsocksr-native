@@ -70,6 +70,8 @@ set(SOURCE_FILES_CLIENT
         tunnel.c
         tunnel.h
         client/client.c
+        text_in_color.c
+        text_in_color.h
         dump_info.c
         dump_info.h
         cmd_line_parser.c
@@ -90,6 +92,8 @@ set(SOURCE_FILES_TUNNEL
         tunnel.c)
 
 set(SOURCE_FILES_SERVER
+        text_in_color.c
+        text_in_color.h
         dump_info.c
         dump_info.h
         ssrutils.h

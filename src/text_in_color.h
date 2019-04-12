@@ -1,6 +1,8 @@
 #ifndef __TEXT_IN_COLOR_H__ 
 #define __TEXT_IN_COLOR_H__ 1
 
+#include <stdio.h>
+
 #define ANSI_COLOR_RESET   "\x1b[0m"
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
@@ -33,6 +35,6 @@ enum text_color {
     text_color_max,
 };
 
-void print_text_in_color(const char *text, enum text_color color);
+void print_text_in_color(FILE *file, const char *text, enum text_color color);
 
 #endif // __TEXT_IN_COLOR_H__
