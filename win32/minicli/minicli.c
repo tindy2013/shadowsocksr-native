@@ -32,7 +32,7 @@ static void my_debug(void *ctx, int level, const char *file, int line, const cha
 int main(int argc, char *argv[]) {
     struct cmd_line_info *cmd_line;
     int ret = 0, len, tail_len, written, frags, retry_left, proto;
-    mbedtls_net_context server_fd;
+    mbedtls_net_context connect_ctx;
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
     mbedtls_entropy_context entropy;
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
         return usage(argc, argv);
     }
 
-    mbedtls_net_init( &server_fd );
+    mbedtls_net_init( &connect_ctx );
     mbedtls_ssl_init( &ssl );
     mbedtls_ssl_config_init( &conf );
     mbedtls_ctr_drbg_init( &ctr_drbg );
@@ -97,13 +97,13 @@ int main(int argc, char *argv[]) {
     fflush( stdout );
 
     proto = (transport == MBEDTLS_SSL_TRANSPORT_STREAM) ? MBEDTLS_NET_PROTO_TCP : MBEDTLS_NET_PROTO_UDP;
-    ret = mbedtls_net_connect(&server_fd, cmd_line->server_addr, cmd_line->server_port, proto);
+    ret = mbedtls_net_connect(&connect_ctx, cmd_line->server_addr, cmd_line->server_port, proto);
     if (ret != 0) {
         mbedtls_printf(" failed\n  ! mbedtls_net_connect returned -0x%x\n\n", -ret);
         goto exit;
     }
 
-    if((ret = mbedtls_net_set_nonblock(&server_fd)) != 0) {
+    if((ret = mbedtls_net_set_nonblock(&connect_ctx)) != 0) {
         mbedtls_printf(" failed\n  ! net_set_(non)block() returned -0x%x\n\n", -ret);
         goto exit;
     }
@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+    mbedtls_ssl_set_bio(&ssl, &connect_ctx, mbedtls_net_send, mbedtls_net_recv, NULL);
 
 #if defined(MBEDTLS_TIMING_C)
     mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
@@ -365,7 +365,7 @@ exit:
     }
 #endif
 
-    mbedtls_net_free( &server_fd );
+    mbedtls_net_free( &connect_ctx );
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_x509_crt_free( &clicert );
