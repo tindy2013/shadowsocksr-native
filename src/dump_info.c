@@ -31,8 +31,8 @@ void set_dump_info_callback(void(*callback)(const char *info, void *p), void *p)
 }
 
 #define DUMP_LEVEL_MAP(V)                                   \
-    V( dump_level_info,     "info",     text_color_white)   \
-    V( dump_level_warn,     "warn",     text_color_yellow)  \
+    V( dump_level_info,     " info",    text_color_white)   \
+    V( dump_level_warn,     " warn",    text_color_yellow)  \
     V( dump_level_error,    "error",    text_color_red)     \
 
 typedef enum dump_level {
@@ -81,10 +81,12 @@ static void pr_do(FILE *stream, dump_level level, const char *fmt, va_list ap) {
     }
 #undef DUMP_LEVEL_ENUM
 
-    sprintf(p, "%s:%s: %s\n", get_app_name(), label, fmtbuf);
     if (info_callback) {
+        sprintf(p, "%s:%s: %s\n", get_app_name(), label, fmtbuf);
         info_callback(p, info_callback_p);
     } else {
+        fprintf(stream, "%s:%s: ", get_app_name(), label);
+        sprintf(p, "%s\n", fmtbuf);
         print_text_in_color(stream, p, color);
     }
     free(p);

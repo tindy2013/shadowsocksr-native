@@ -91,7 +91,7 @@ void config_release(struct server_config *cf) {
     object_safe_free((void **)&cf->protocol_param);
     object_safe_free((void **)&cf->obfs);
     object_safe_free((void **)&cf->obfs_param);
-    object_safe_free((void **)&cf->over_tls_server);
+    object_safe_free((void **)&cf->over_tls_server_domain);
     object_safe_free((void **)&cf->over_tls_path);
     object_safe_free((void **)&cf->remarks);
 

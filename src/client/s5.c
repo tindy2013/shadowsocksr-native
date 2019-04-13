@@ -269,7 +269,7 @@ const char *s5_strerror(s5_err err) {
 
 #include <sockaddr_universal.h>
 uint8_t * build_udp_assoc_package(bool allow, const char *addr_str, int port, uint8_t *buf, size_t *buf_len) {
-    union sockaddr_universal addr;
+    union sockaddr_universal addr = { 0 };
     bool ipV6;
     size_t in6_addr_w;
     size_t in4_addr_w;

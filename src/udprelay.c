@@ -312,7 +312,7 @@ udprelay_parse_header(const char *buf, size_t buf_len,
         if ((size_t)(name_len + 4) <= buf_len) {
             if (storage != NULL) {
                 char tmp[257] = { 0 };
-                union sockaddr_universal addr_u;
+                union sockaddr_universal addr_u = { 0 };
                 memcpy(tmp, buf + offset + 1, name_len);
 
                 if (convert_universal_address(tmp, 80, &addr_u) == 0) {
@@ -1032,7 +1032,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
     if (server_ctx->tunnel_addr.host && server_ctx->tunnel_addr.port) {
         uint16_t port_num;
         uint16_t port_net_num;
-        union sockaddr_universal addr;
+        union sockaddr_universal addr = { 0 };
 
         strncpy(host, server_ctx->tunnel_addr.host, 256);
         strncpy(port, server_ctx->tunnel_addr.port, 64);

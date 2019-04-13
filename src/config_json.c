@@ -155,8 +155,8 @@ bool parse_config_file(const char *file, struct server_config *config) {
                 struct json_object_iter iter2 = { NULL };
                 json_object_object_foreachC(obj_obj, iter2) {
                     const char *obj_str2 = NULL;
-                    if (json_iter_extract_string("server", &iter2, &obj_str2)) {
-                        string_safe_assign(&config->over_tls_server, obj_str2);
+                    if (json_iter_extract_string("server_domain", &iter2, &obj_str2)) {
+                        string_safe_assign(&config->over_tls_server_domain, obj_str2);
                         continue;
                     }
                     if (json_iter_extract_string("path", &iter2, &obj_str2)) {

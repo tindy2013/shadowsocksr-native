@@ -195,7 +195,7 @@ static void getaddrinfo_done_cb(uv_getaddrinfo_t *req, int status, struct addrin
     uv_loop_t *loop;
     unsigned int n;
     int err;
-    union sockaddr_universal s;
+    union sockaddr_universal s = { 0 };
 
     loop = req->loop;
 
