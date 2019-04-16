@@ -163,6 +163,10 @@ bool parse_config_file(const char *file, struct server_config *config) {
                         string_safe_assign(&config->over_tls_path, obj_str2);
                         continue;
                     }
+                    if (json_iter_extract_string("root_cert_file", &iter2, &obj_str2)) {
+                        string_safe_assign(&config->over_tls_root_cert_file, obj_str2);
+                        continue;
+                    }
                 }
                 continue;
             }

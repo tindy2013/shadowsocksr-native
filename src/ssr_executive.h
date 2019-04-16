@@ -28,6 +28,7 @@ struct server_config {
     bool over_tls_enable;
     char *over_tls_server_domain;
     char *over_tls_path;
+    char *over_tls_root_cert_file;
     bool udp;
     unsigned int idle_timeout; /* Connection idle timeout in ms. */
     char *remarks;

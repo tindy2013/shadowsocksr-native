@@ -93,6 +93,7 @@ void config_release(struct server_config *cf) {
     object_safe_free((void **)&cf->obfs_param);
     object_safe_free((void **)&cf->over_tls_server_domain);
     object_safe_free((void **)&cf->over_tls_path);
+    object_safe_free((void **)&cf->over_tls_root_cert_file);
     object_safe_free((void **)&cf->remarks);
 
     object_safe_free((void **)&cf);
