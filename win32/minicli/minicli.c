@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
     struct cmd_line_info *cmd_line;
     int ret = 0, len, tail_len, written, frags, retry_left, proto;
     mbedtls_net_context connect_ctx;
-    mbedtls_ssl_context ssl;
+    mbedtls_ssl_context ssl_ctx;
     mbedtls_ssl_config conf;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     }
 
     mbedtls_net_init( &connect_ctx );
-    mbedtls_ssl_init( &ssl );
+    mbedtls_ssl_init( &ssl_ctx );
     mbedtls_ssl_config_init( &conf );
     mbedtls_ctr_drbg_init( &ctr_drbg );
 
@@ -147,25 +147,25 @@ int main(int argc, char *argv[]) {
         mbedtls_ssl_conf_ca_chain( &conf, &cacert, NULL );
     }
 
-    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0) {
+    if ((ret = mbedtls_ssl_setup(&ssl_ctx, &conf)) != 0) {
         mbedtls_printf(" failed\n  ! mbedtls_ssl_setup returned -0x%x\n\n", -ret);
         goto exit;
     }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-    if ((ret = mbedtls_ssl_set_hostname(&ssl, cmd_line->server_addr)) != 0) {
+    if ((ret = mbedtls_ssl_set_hostname(&ssl_ctx, cmd_line->server_addr)) != 0) {
         mbedtls_printf(" failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n", ret);
         goto exit;
     }
 #endif
 
-    mbedtls_ssl_set_bio(&ssl, &connect_ctx, mbedtls_net_send, mbedtls_net_recv, NULL);
+    mbedtls_ssl_set_bio(&ssl_ctx, &connect_ctx, mbedtls_net_send, mbedtls_net_recv, NULL);
 
 #if defined(MBEDTLS_TIMING_C)
-    mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
+    mbedtls_ssl_set_timer_cb(&ssl_ctx, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 #endif
 
-    while ((ret = mbedtls_ssl_handshake(&ssl)) != 0) {
+    while ((ret = mbedtls_ssl_handshake(&ssl_ctx)) != 0) {
         if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
             ret != MBEDTLS_ERR_SSL_WANT_WRITE &&
             ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS )
@@ -191,24 +191,24 @@ int main(int argc, char *argv[]) {
     }
 
     mbedtls_printf(" ok\n    [ Protocol is %s ]\n    [ Ciphersuite is %s ]\n",
-        mbedtls_ssl_get_version(&ssl),
-        mbedtls_ssl_get_ciphersuite(&ssl));
+        mbedtls_ssl_get_version(&ssl_ctx),
+        mbedtls_ssl_get_ciphersuite(&ssl_ctx));
 
-    if ((ret = mbedtls_ssl_get_record_expansion(&ssl)) >= 0) {
+    if ((ret = mbedtls_ssl_get_record_expansion(&ssl_ctx)) >= 0) {
         mbedtls_printf("    [ Record expansion is %d ]\n", ret );
     } else {
         mbedtls_printf("    [ Record expansion is unknown (compression) ]\n");
     }
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     mbedtls_printf("    [ Maximum fragment length is %u ]\n",
-        (unsigned int)mbedtls_ssl_get_max_frag_len(&ssl));
+        (unsigned int)mbedtls_ssl_get_max_frag_len(&ssl_ctx));
 #endif
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /* 5. Verify the server certificate */
     mbedtls_printf("  . Verifying peer X.509 certificate...");
 
-    if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0) {
+    if ((flags = mbedtls_ssl_get_verify_result(&ssl_ctx)) != 0) {
         char vrfy_buf[512] = { 0 };
         mbedtls_printf(" failed\n");
         mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "  ! ", flags);
@@ -216,10 +216,10 @@ int main(int argc, char *argv[]) {
     } else {
         mbedtls_printf(" ok\n");
     }
-    if (mbedtls_ssl_get_peer_cert(&ssl) != NULL) {
+    if (mbedtls_ssl_get_peer_cert(&ssl_ctx) != NULL) {
         mbedtls_printf( "  . Peer certificate information    ...\n" );
         mbedtls_x509_crt_info( (char *) buf, sizeof( buf ) - 1, "      ",
-                       mbedtls_ssl_get_peer_cert( &ssl ) );
+                       mbedtls_ssl_get_peer_cert( &ssl_ctx ) );
         mbedtls_printf( "%s\n", buf );
     }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
@@ -256,7 +256,7 @@ send_request:
         frags = 0;
 
         do {
-            while ((ret = mbedtls_ssl_write(&ssl, buf + written, len - written)) < 0) {
+            while ((ret = mbedtls_ssl_write(&ssl_ctx, buf + written, len - written)) < 0) {
                 if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
                     ret != MBEDTLS_ERR_SSL_WANT_WRITE &&
                     ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS )
@@ -291,7 +291,7 @@ send_request:
         do {
             len = sizeof(buf) - 1;
             memset(buf, 0, sizeof(buf));
-            ret = mbedtls_ssl_read(&ssl, buf, len);
+            ret = mbedtls_ssl_read(&ssl_ctx, buf, len);
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
             if (ret == MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS) {
@@ -347,7 +347,7 @@ close_notify:
 
     /* No error checking, the connection might be closed already */
     do {
-        ret = mbedtls_ssl_close_notify(&ssl);
+        ret = mbedtls_ssl_close_notify(&ssl_ctx);
     } while(ret == MBEDTLS_ERR_SSL_WANT_WRITE);
     ret = 0;
 
@@ -372,7 +372,7 @@ exit:
     mbedtls_x509_crt_free( &cacert );
     mbedtls_pk_free( &pkey );
 #endif
-    mbedtls_ssl_free( &ssl );
+    mbedtls_ssl_free( &ssl_ctx );
     mbedtls_ssl_config_free( &conf );
     mbedtls_ctr_drbg_free( &ctr_drbg );
     mbedtls_entropy_free( &entropy );
