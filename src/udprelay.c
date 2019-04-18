@@ -503,7 +503,7 @@ static void close_and_free_query(struct query_ctx *ctx) {
             resolv_cancel(ctx->query);
             ctx->query = NULL;
         }
-        buffer_free(ctx->buf);
+        buffer_release(ctx->buf);
         free(ctx);
     }
 }
@@ -662,7 +662,7 @@ static void query_resolve_cb(struct sockaddr *addr, void *data) {
 static void udp_send_done_cb(uv_udp_send_t* req, int status) {
     //struct udp_listener_ctx_t *server_ctx = (struct udp_listener_ctx_t *)req->data;
     struct buffer_t *buf = (struct buffer_t *)req->data;
-    buffer_free(buf);
+    buffer_release(buf);
     free(req);
 }
 
@@ -694,7 +694,7 @@ udp_remote_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, const 
         goto CLEAN_UP;
     }
 
-    buf = buffer_alloc(max((size_t)buf_size, (size_t)nread));
+    buf = buffer_create(max((size_t)buf_size, (size_t)nread));
     memcpy(buf->buffer, buf0->base, (size_t)nread);
     buf->len = (size_t)nread;
 
@@ -867,7 +867,7 @@ CLEAN_UP:
 
     udp_remote_shutdown(remote_ctx);
 
-    buffer_free(buf);
+    buffer_release(buf);
 }
 
 static void 
@@ -898,7 +898,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 
     src_addr = *(struct sockaddr_storage *)addr;
 
-    buf = buffer_alloc(max((size_t)buf_size, (size_t)nread));
+    buf = buffer_create(max((size_t)buf_size, (size_t)nread));
 
     src_addr_len = sizeof(src_addr);
     offset    = 0;
@@ -1301,7 +1301,7 @@ udp_listener_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf0, cons
 #endif
 
 CLEAN_UP:
-    buffer_free(buf);
+    buffer_release(buf);
 }
 
 struct udp_listener_ctx_t *

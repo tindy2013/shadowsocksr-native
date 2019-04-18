@@ -397,7 +397,7 @@ enum ssr_error tunnel_cipher_client_encrypt(struct tunnel_cipher_ctx *tc, struct
     obfs_plugin = tc->obfs;
     if (obfs_plugin && obfs_plugin->client_encode) {
         struct buffer_t *tmp = obfs_plugin->client_encode(tc->obfs, buf);
-        buffer_replace(buf, tmp); buffer_free(tmp);
+        buffer_replace(buf, tmp); buffer_release(tmp);
     }
     // SSR end
     return ssr_ok;
@@ -419,7 +419,7 @@ enum ssr_error tunnel_cipher_client_decrypt(struct tunnel_cipher_ctx *tc, struct
         if (result == NULL) {
             return ssr_error_client_decode;
         }
-        buffer_replace(buf, result); buffer_free(result);
+        buffer_replace(buf, result); buffer_release(result);
         if (needsendback && obfs_plugin->client_encode) {
             BUFFER_CONSTANT_INSTANCE(empty, "", 0);
             struct buffer_t *sendback = obfs_plugin->client_encode(tc->obfs, empty);
@@ -464,12 +464,12 @@ struct buffer_t * tunnel_cipher_server_encrypt(struct tunnel_cipher_ctx *tc, con
         err = ss_encrypt(env->cipher, ret, tc->e_ctx, SSR_BUFF_SIZE);
         if (err != 0) {
             ASSERT(false);
-            buffer_free(ret); ret = NULL;
+            buffer_release(ret); ret = NULL;
             break;
         }
         if (obfs && obfs->server_encode) {
             struct buffer_t *tmp = obfs->server_encode(obfs, ret);
-            buffer_free(ret); ret = tmp;
+            buffer_release(ret); ret = tmp;
         }
     } while (0);
     return ret;
@@ -512,7 +512,7 @@ tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc,
         /*
         // TODO: check IV
         if (is_completed_package(env, ret->buffer, ret->len) == false) {
-            buffer_free(ret);
+            buffer_release(ret);
             return NULL;
         }
         */
@@ -530,7 +530,7 @@ tunnel_cipher_server_decrypt(struct tunnel_cipher_ctx *tc,
     if (protocol && protocol->server_post_decrypt) {
         bool feedback = false;
         struct buffer_t *tmp = protocol->server_post_decrypt(protocol, ret, &feedback);
-        buffer_free(ret); ret = tmp;
+        buffer_release(ret); ret = tmp;
         if (feedback) {
             if (confirm) {
                 *confirm  = tunnel_cipher_server_encrypt(tc, empty);

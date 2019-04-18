@@ -312,7 +312,7 @@ int _tunnel_encrypt(struct local_t *local, struct buffer_t *buf) {
     obfs_plugin = local->obfs;
     if (obfs_plugin && obfs_plugin->client_encode) {
         struct buffer_t *tmp = obfs_plugin->client_encode(local->obfs, buf);
-        buffer_replace(buf, tmp); buffer_free(tmp);
+        buffer_replace(buf, tmp); buffer_release(tmp);
     }
     // SSR end
     return 0;
@@ -336,7 +336,7 @@ int _tunnel_decrypt(struct local_t *local, struct buffer_t *buf, struct buffer_t
         if (tmp == NULL) {
             return -1;
         }
-        buffer_replace(buf, tmp); buffer_free(tmp);
+        buffer_replace(buf, tmp); buffer_release(tmp);
         if (needsendback && obfs_plugin->client_encode) {
             BUFFER_CONSTANT_INSTANCE(empty, "", 0);
             struct buffer_t *sendback = obfs_plugin->client_encode(local->obfs, empty);
@@ -404,7 +404,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
         char *host = local->listener->tunnel_addr.host;
         char *port = local->listener->tunnel_addr.port;
         if (host && port) {
-            struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
+            struct buffer_t *buffer = buffer_create(SSR_BUFF_SIZE);
             size_t header_len = 0;
             struct socks5_request *hdr =
                     build_socks5_request(host, (uint16_t)atoi(port), buffer->buffer, buffer->capacity, &header_len);
@@ -413,7 +413,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             memmove(buf->buffer, hdr, header_len);
             buf->len += header_len;
 
-            buffer_free(buffer);
+            buffer_release(buffer);
 
             local->stage = STAGE_PARSE;
         }
@@ -480,13 +480,13 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             int off;
             struct method_select_request *request = (struct method_select_request *)buf->buffer;
 
-            struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
+            struct buffer_t *buffer = buffer_create(SSR_BUFF_SIZE);
             struct method_select_response *response =
                     build_socks5_method_select_response(SOCKS5_METHOD_NOAUTH, (char *)buffer->buffer, buffer->capacity);
 
             local_send_data(local, (char *)response, sizeof(*response));
 
-            buffer_free(buffer);
+            buffer_release(buffer);
 
             local->stage = STAGE_HANDSHAKE;
 
@@ -522,7 +522,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     LOGI("udp assc request accepted");
                 }
             } else if (request->cmd != SOCKS5_COMMAND_CONNECT) {
-                struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
+                struct buffer_t *buffer = buffer_create(SSR_BUFF_SIZE);
                 size_t size = 0;
                 struct socks5_response *response =
                         build_socks5_response(SOCKS5_REPLY_CMDUNSUPP, SOCKS5_ADDRTYPE__IPV4,
@@ -532,7 +532,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
                 local_send_data(local, (char *)response, (unsigned int)size);
 
-                buffer_free(buffer);
+                buffer_release(buffer);
 
                 tunnel_close_and_free(remote, local);
                 return;
@@ -540,7 +540,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
             // Fake reply
             if (local->stage == STAGE_HANDSHAKE) {
-                struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
+                struct buffer_t *buffer = buffer_create(SSR_BUFF_SIZE);
                 size_t size = 0;
                 struct socks5_response *response =
                         build_socks5_response(SOCKS5_REPLY_SUCCESS, SOCKS5_ADDRTYPE__IPV4,
@@ -548,7 +548,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
 
                 local_send_data(local, (char *)response, (unsigned int)size);
 
-                buffer_free(buffer);
+                buffer_release(buffer);
 
                 if (udp_assc) {
                     // Wait until client closes the connection
@@ -556,7 +556,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 }
             }
 
-            abuf = buffer_alloc(SSR_BUFF_SIZE);
+            abuf = buffer_create(SSR_BUFF_SIZE);
 
             addr_type = request->addr_type;
 
@@ -601,7 +601,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                     sprintf(port, "%d", p);
                 }
             } else {
-                buffer_free(abuf);
+                buffer_release(abuf);
                 LOGE("unsupported addrtype: 0x%02X", (uint8_t)addr_type);
                 tunnel_close_and_free(remote, local);
                 return;
@@ -625,7 +625,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
                 }
                 if (ret == -1 && buf->len < SSR_BUFF_SIZE) {
                     local->stage = STAGE_PARSE;
-                    buffer_free(abuf);
+                    buffer_release(abuf);
                     return;
                 } else if (ret > 0) {
                     sni_detected = 1;
@@ -785,7 +785,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             }
 
             if (remote == NULL) {
-                buffer_free(abuf);
+                buffer_release(abuf);
                 LOGE("invalid remote addr");
                 tunnel_close_and_free(remote, local);
                 return;
@@ -855,7 +855,7 @@ local_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
             local->remote = remote;
             remote->local = local;
 
-            buffer_free(abuf);
+            buffer_release(abuf);
             continue; // return;
         }
     } // while (1)
@@ -1013,7 +1013,7 @@ remote_recv_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf0)
         r = _tunnel_decrypt(local, local->buf, &feedback);
         if (feedback != NULL) {
             buffer_store(remote->buf, feedback->buffer, feedback->len);
-            buffer_free(feedback);
+            buffer_release(feedback);
 
             remote_send_data(remote);
             local_read_start(local);
@@ -1091,7 +1091,7 @@ remote_new_object(uv_loop_t *loop, int timeout)
 
     uv_tcp_init(loop, &remote->socket);
 
-    remote->buf                 = buffer_alloc(SSR_BUFF_SIZE);
+    remote->buf                 = buffer_create(SSR_BUFF_SIZE);
     remote->recv_ctx            = (struct remote_ctx_t *)calloc(1, sizeof(struct remote_ctx_t));
     remote->send_ctx            = (struct remote_ctx_t *)calloc(1, sizeof(struct remote_ctx_t));
     remote->recv_ctx->remote    = remote;
@@ -1116,7 +1116,7 @@ remote_destroy(struct remote_t *remote)
         remote->local->remote = NULL;
     }
     if (remote->buf != NULL) {
-        buffer_free(remote->buf);
+        buffer_release(remote->buf);
     }
     safe_free(remote->recv_ctx);
     safe_free(remote->send_ctx);
@@ -1164,7 +1164,7 @@ local_new_object(struct listener_t *listener)
     local = (struct local_t *) calloc(1, sizeof(struct local_t));
 
     local->listener = listener;
-    local->buf = buffer_alloc(SSR_BUFF_SIZE);
+    local->buf = buffer_create(SSR_BUFF_SIZE);
     local->stage = STAGE_INIT;
 
     return local;
@@ -1214,7 +1214,7 @@ local_destroy(struct local_t *local)
         local->remote->local = NULL;
     }
     if (local->buf != NULL) {
-        buffer_free(local->buf);
+        buffer_release(local->buf);
     }
 
     if(server_env) {

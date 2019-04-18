@@ -36,14 +36,17 @@ struct buffer_t {
     size_t len;
     size_t capacity;
     uint8_t *buffer;
+    int ref_count;
 };
 
 #define BUFFER_CONSTANT_INSTANCE(ptrName, data, data_len) \
     struct buffer_t obj##ptrName = {(size_t)(data_len), (size_t)(data_len), (uint8_t *)(data)}; \
     struct buffer_t *(ptrName) = & obj##ptrName
 
-struct buffer_t * buffer_alloc(size_t capacity);
+struct buffer_t * buffer_create(size_t capacity);
 struct buffer_t * buffer_create_from(const uint8_t *data, size_t len);
+void buffer_add_ref(struct buffer_t *ptr);
+void buffer_release(struct buffer_t *ptr);
 int buffer_compare(const struct buffer_t *ptr1, const struct buffer_t *ptr2, size_t size);
 void buffer_reset(struct buffer_t *ptr);
 struct buffer_t * buffer_clone(const struct buffer_t *ptr);
@@ -55,6 +58,5 @@ void buffer_replace(struct buffer_t *dst, const struct buffer_t *src);
 size_t buffer_concatenate(struct buffer_t *ptr, const uint8_t *data, size_t size);
 size_t buffer_concatenate2(struct buffer_t *dst, const struct buffer_t *src);
 void buffer_shorten(struct buffer_t *ptr, size_t begin, size_t len);
-void buffer_free(struct buffer_t *ptr);
 
 #endif // __SSR_BUFFER_H__

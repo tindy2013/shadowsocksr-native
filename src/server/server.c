@@ -271,7 +271,7 @@ bool _init_done_cb(struct tunnel_ctx *tunnel, void *p) {
 
     struct server_ctx *ctx = (struct server_ctx *) calloc(1, sizeof(*ctx));
     ctx->env = env;
-    ctx->init_pkg = buffer_alloc(SSR_BUFF_SIZE);
+    ctx->init_pkg = buffer_create(SSR_BUFF_SIZE);
     ctx->_recv_buffer_size = TCP_BUF_SIZE_MAX;
     tunnel->data = ctx;
 
@@ -346,7 +346,7 @@ static void tunnel_dying(struct tunnel_ctx *tunnel) {
     if (ctx->cipher) {
         tunnel_cipher_release(ctx->cipher);
     }
-    buffer_free(ctx->init_pkg);
+    buffer_release(ctx->init_pkg);
     free(ctx);
 }
 
@@ -548,9 +548,9 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         break;
     } while (0);
 
-    buffer_free(receipt);
-    buffer_free(confirm);
-    buffer_free(result);
+    buffer_release(receipt);
+    buffer_release(confirm);
+    buffer_release(result);
 }
 
 static void do_prepare_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
@@ -623,9 +623,9 @@ static void do_client_feedback(struct tunnel_ctx *tunnel, struct socket_ctx *soc
         do_prepare_parse(tunnel, socket);
         break;
     } while(0);
-    buffer_free(result);
-    buffer_free(receipt);
-    buffer_free(confirm);
+    buffer_release(result);
+    buffer_release(receipt);
+    buffer_release(confirm);
 }
 
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
@@ -863,7 +863,7 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
         result = (uint8_t *)allocator(len + 1);
         memcpy(result, buf->buffer, len);
 
-        buffer_free(buf);
+        buffer_release(buf);
     }
 
     return result;

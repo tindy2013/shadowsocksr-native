@@ -136,7 +136,7 @@ void client_shutdown(struct server_env_t *env) {
 }
 
 static struct buffer_t * initial_package_create(const s5_ctx *parser) {
-    struct buffer_t *buffer = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *buffer = buffer_create(SSR_BUFF_SIZE);
 
     uint8_t *iter = buffer->buffer;
     uint8_t len;
@@ -460,6 +460,7 @@ static void do_resolve_ssr_server_host(struct tunnel_ctx *tunnel) {
 /* Assumes that cx->outgoing.t.sa contains a valid AF_INET/AF_INET6 address. */
 static void do_connect_ssr_server(struct tunnel_ctx *tunnel) {
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
+    struct server_config *config = ctx->env->config;
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
     int err;
@@ -474,6 +475,12 @@ static void do_connect_ssr_server(struct tunnel_ctx *tunnel) {
         /* Send a 'Connection not allowed by ruleset' reply. */
         socket_write(incoming, "\5\2\0\1\0\0\0\0\0\0", 10);
         ctx->stage = tunnel_stage_kill;
+        return;
+    }
+
+    if (config->over_tls_enable) {
+        uv_loop_t *loop = tunnel->listener->loop;
+
         return;
     }
 
@@ -500,12 +507,12 @@ static void do_connect_ssr_server_done(struct tunnel_ctx *tunnel) {
     if (outgoing->result == 0) {
         struct buffer_t *tmp = buffer_clone(ctx->init_pkg);
         if (ssr_ok != tunnel_cipher_client_encrypt(ctx->cipher, tmp)) {
-            buffer_free(tmp);
+            buffer_release(tmp);
             tunnel_shutdown(tunnel);
             return;
         }
         socket_write(outgoing, tmp->buffer, tmp->len);
-        buffer_free(tmp);
+        buffer_release(tmp);
 
         ctx->stage = tunnel_stage_ssr_auth_sent;
         return;
@@ -574,11 +581,11 @@ static bool do_ssr_receipt_for_feedback(struct tunnel_ctx *tunnel) {
     if (feedback) {
         socket_write(outgoing, feedback->buffer, feedback->len);
         ctx->stage = tunnel_stage_ssr_receipt_of_feedback_sent;
-        buffer_free(feedback);
+        buffer_release(feedback);
         done = true;
     }
 
-    buffer_free(buf);
+    buffer_release(buf);
     return done;
 }
 
@@ -647,7 +654,7 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
         error = tunnel_cipher_client_decrypt(cipher_ctx, buf, &feedback);
         if (feedback) {
             ASSERT(false);
-            buffer_free(feedback);
+            buffer_release(feedback);
         }
     } else {
         ASSERT(false);
@@ -660,7 +667,7 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
         memcpy(result, buf->buffer, len);
     }
 
-    buffer_free(buf);
+    buffer_release(buf);
     return result;
 }
 
@@ -671,7 +678,7 @@ static void tunnel_dying(struct tunnel_ctx *tunnel) {
     if (ctx->cipher) {
         tunnel_cipher_release(ctx->cipher);
     }
-    buffer_free(ctx->init_pkg);
+    buffer_release(ctx->init_pkg);
     free(ctx->parser);
     free(ctx);
 }

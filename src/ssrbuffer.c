@@ -43,15 +43,22 @@ void check_memory_content(struct buffer_t *buf) {
 #endif // __MEM_CHECK__
 }
 
-struct buffer_t * buffer_alloc(size_t capacity) {
+struct buffer_t * buffer_create(size_t capacity) {
     struct buffer_t *ptr = (struct buffer_t *) calloc(1, sizeof(struct buffer_t));
     ptr->buffer = (uint8_t *) calloc(capacity + 1, sizeof(uint8_t));
     ptr->capacity = capacity;
+    ptr->ref_count = 1;
     return ptr;
 }
 
+void buffer_add_ref(struct buffer_t *ptr) {
+    if (ptr) {
+        ptr->ref_count++;
+    }
+}
+
 struct buffer_t * buffer_create_from(const uint8_t *data, size_t len) {
-    struct buffer_t *result = buffer_alloc(2048);
+    struct buffer_t *result = buffer_create(2048);
     buffer_store(result, data, len);
     return result;
 }
@@ -87,7 +94,7 @@ struct buffer_t * buffer_clone(const struct buffer_t *ptr) {
     if (ptr == NULL) {
         return result;
     }
-    result = buffer_alloc( max(ptr->capacity, ptr->len) );
+    result = buffer_create( max(ptr->capacity, ptr->len) );
     result->len = ptr->len;
     memmove(result->buffer, ptr->buffer, ptr->len);
     check_memory_content(result);
@@ -175,8 +182,12 @@ void buffer_shorten(struct buffer_t *ptr, size_t begin, size_t len) {
     check_memory_content(ptr);
 }
 
-void buffer_free(struct buffer_t *ptr) {
+void buffer_release(struct buffer_t *ptr) {
     if (ptr == NULL) {
+        return;
+    }
+    ptr->ref_count--;
+    if (ptr->ref_count > 0) {
         return;
     }
     ptr->len = 0;

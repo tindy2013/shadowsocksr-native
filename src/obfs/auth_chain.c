@@ -208,11 +208,11 @@ struct auth_chain_a_context {
 void auth_chain_a_context_init(struct obfs_t *obfs, struct auth_chain_a_context *local) {
     local->obfs = obfs;
     local->has_sent_header = 0;
-    local->recv_buffer = buffer_alloc(16384);
+    local->recv_buffer = buffer_create(16384);
     local->recv_id = 1;
     local->pack_id = 1;
     local->salt = "";
-    local->user_key = buffer_alloc(SSR_BUFF_SIZE);
+    local->user_key = buffer_create(SSR_BUFF_SIZE);
     memset(&local->random_client, 0, sizeof(local->random_client));
     memset(&local->random_server, 0, sizeof(local->random_server));
     local->encrypt_ctx = NULL;
@@ -272,8 +272,8 @@ size_t auth_chain_a_get_overhead(struct obfs_t *obfs) {
 
 void auth_chain_a_dispose(struct obfs_t *obfs) {
     struct auth_chain_a_context *local = (struct auth_chain_a_context*)obfs->l_data;
-    buffer_free(local->recv_buffer);
-    buffer_free(local->user_key);
+    buffer_release(local->recv_buffer);
+    buffer_release(local->user_key);
     if (local->cipher) {
         enc_ctx_release_instance(local->cipher, local->encrypt_ctx);
         enc_ctx_release_instance(local->cipher, local->decrypt_ctx);
@@ -317,7 +317,7 @@ struct buffer_t * auth_chain_a_rnd_data(struct obfs_t * obfs,
     struct auth_chain_a_context *local = (struct auth_chain_a_context *) obfs->l_data;
     struct server_info_t *server = &obfs->server;
     size_t rand_len = local->get_tcp_rand_len(local, (int) buf->len, random, last_hash);
-    struct buffer_t *rnd_data_buf = buffer_alloc(rand_len);
+    struct buffer_t *rnd_data_buf = buffer_create(rand_len);
     struct buffer_t *ret = NULL;
 
     rand_bytes(rnd_data_buf->buffer, (int)rand_len);
@@ -339,7 +339,7 @@ struct buffer_t * auth_chain_a_rnd_data(struct obfs_t * obfs,
             break;
         }
     } while(0);
-    buffer_free(rnd_data_buf);
+    buffer_release(rnd_data_buf);
     return ret;
 }
 
@@ -460,8 +460,8 @@ struct buffer_t * auth_chain_a_pack_server_data(struct obfs_t *obfs, const struc
     ss_md5_hmac_with_key(local->last_server_hash, data, mac_key);
     buffer_concatenate(data, local->last_server_hash, 2);
 
-    buffer_free(mac_key);
-    buffer_free(in_buf);
+    buffer_release(mac_key);
+    buffer_release(in_buf);
 
     local->pack_id += 1;
     return data;
@@ -763,7 +763,7 @@ ssize_t auth_chain_a_client_udp_pre_encrypt(struct obfs_t *obfs, char **pplainda
         BUFFER_CONSTANT_INSTANCE(in_obj, plaindata, datalength);
         struct buffer_t *ret = cipher_simple_update_data(password, "rc4", true, in_obj);
         memcpy(out_buffer, ret->buffer, ret->len);
-        buffer_free(ret);
+        buffer_release(ret);
 #else
         struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");
         struct enc_ctx *ctx = enc_ctx_new_instance(cipher, true);
@@ -834,7 +834,7 @@ ssize_t auth_chain_a_client_udp_post_decrypt(struct obfs_t *obfs, char **pplaind
         BUFFER_CONSTANT_INSTANCE(in_obj, plaindata, outlength);
         struct buffer_t *ret = cipher_simple_update_data(password, "rc4", false, in_obj);
         memcpy(plaindata, ret->buffer, ret->len);
-        buffer_free(ret);
+        buffer_release(ret);
 #else
         struct cipher_env_t *cipher = cipher_env_new_instance(password, "rc4");
         struct enc_ctx *ctx = enc_ctx_new_instance(cipher, false);
@@ -854,7 +854,7 @@ struct buffer_t * auth_chain_a_server_pre_encrypt(struct obfs_t *obfs, const str
     struct auth_chain_a_context *local = (struct auth_chain_a_context*)obfs->l_data;
     struct buffer_t *tmp_buf = NULL;
     struct buffer_t *swap = NULL;
-    struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *ret = buffer_create(SSR_BUFF_SIZE);
     if (local->pack_id == 1) {
         uint16_t tcp_mss = server->tcp_mss; // TODO: htons
         tmp_buf = buffer_create_from((const uint8_t *)&tcp_mss, sizeof(uint16_t));
@@ -868,15 +868,15 @@ struct buffer_t * auth_chain_a_server_pre_encrypt(struct obfs_t *obfs, const str
 
         swap = auth_chain_a_pack_server_data(obfs, iter);
         buffer_concatenate2(ret, swap);
-        buffer_free(swap);
+        buffer_release(swap);
 
         buffer_shorten(tmp_buf, local->unit_len, tmp_buf->len - local->unit_len);
     }
     swap = auth_chain_a_pack_server_data(obfs, tmp_buf);
     buffer_concatenate2(ret, swap);
-    buffer_free(swap);
+    buffer_release(swap);
 
-    buffer_free(tmp_buf);
+    buffer_release(tmp_buf);
 
     return ret;
 }
@@ -884,7 +884,7 @@ struct buffer_t * auth_chain_a_server_pre_encrypt(struct obfs_t *obfs, const str
 struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct buffer_t *buf, bool *need_feedback) {
     struct server_info_t *server = (struct server_info_t *)&obfs->server;
     struct auth_chain_a_context *local = (struct auth_chain_a_context*)obfs->l_data;
-    struct buffer_t *out_buf = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *out_buf = buffer_create(SSR_BUFF_SIZE);
     struct buffer_t *mac_key2 = NULL;
 
     if (need_feedback) { *need_feedback = false; }
@@ -910,7 +910,7 @@ struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct b
                 BUFFER_CONSTANT_INSTANCE(_msg, local->recv_buffer->buffer, 4);
                 ss_md5_hmac_with_key(md5data, _msg, mac_key);
             }
-            buffer_free(mac_key);
+            buffer_release(mac_key);
             if (memcmp(md5data, local->recv_buffer->buffer+4, recv_len-4) != 0) {
                 return out_buf;
             }
@@ -979,7 +979,7 @@ struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct b
         free(password);
     }
 
-    mac_key2 = buffer_alloc(SSR_BUFF_SIZE);
+    mac_key2 = buffer_create(SSR_BUFF_SIZE);
 
     while (local->recv_buffer->len) {
         uint16_t data_len = 0;
@@ -1001,7 +1001,7 @@ struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct b
             if (local->recv_id == 0) {
                 buffer_reset(out_buf);
             } else {
-                buffer_free(out_buf); out_buf = NULL;
+                buffer_release(out_buf); out_buf = NULL;
             }
             break;
         }
@@ -1018,7 +1018,7 @@ struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct b
             if (local->recv_id == 0) {
                 buffer_reset(out_buf);
             } else {
-                buffer_free(out_buf); out_buf = NULL;
+                buffer_release(out_buf); out_buf = NULL;
             }
             break;
         }
@@ -1047,7 +1047,7 @@ struct buffer_t * auth_chain_a_server_post_decrypt(struct obfs_t *obfs, struct b
             if (need_feedback) { *need_feedback = true; }
         }
     }
-    buffer_free(mac_key2);
+    buffer_release(mac_key2);
     return out_buf;
 }
 

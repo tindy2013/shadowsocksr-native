@@ -57,8 +57,8 @@ struct http_simple_local_data {
 void http_simple_local_data_init(struct http_simple_local_data *local) {
     local->has_sent_header = 0;
     local->has_recv_header = 0;
-    local->encode_buffer = buffer_alloc(SSR_BUFF_SIZE);
-    local->recv_buffer = buffer_alloc(SSR_BUFF_SIZE);
+    local->encode_buffer = buffer_create(SSR_BUFF_SIZE);
+    local->recv_buffer = buffer_create(SSR_BUFF_SIZE);
 
     if (g_useragent_index == -1) {
         g_useragent_index = xorshift128plus() % (sizeof(g_useragent) / sizeof(*g_useragent));
@@ -99,8 +99,8 @@ struct obfs_t * http_mix_new_obfs(void) {
 
 void http_simple_dispose(struct obfs_t *obfs) {
     struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
-    buffer_free(local->encode_buffer);
-    buffer_free(local->recv_buffer);
+    buffer_release(local->encode_buffer);
+    buffer_release(local->recv_buffer);
     free(local);
     dispose_obfs(obfs);
 }
@@ -116,7 +116,7 @@ uint8_t from_hex(uint8_t ch) {
 }
 
 struct buffer_t * get_data_from_http_header(const uint8_t *buf) {
-    struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *ret = buffer_create(SSR_BUFF_SIZE);
     const uint8_t *iter = (uint8_t *) strchr((char *)buf, '%');
     uint8_t *target = ret->buffer;
     while(iter) {
@@ -133,7 +133,7 @@ struct buffer_t * get_data_from_http_header(const uint8_t *buf) {
 void get_host_from_http_header(const uint8_t *buf, char host_port[128]) {
     static const char *hoststr = "Host: ";
     static const char *crlf = "\r\n";
-    struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *ret = buffer_create(SSR_BUFF_SIZE);
     const uint8_t *iter = (uint8_t *) strstr((char *)buf, hoststr);
     if(iter) {
         const uint8_t *end = NULL;
@@ -162,7 +162,7 @@ void http_simple_encode_head(struct http_simple_local_data *local, const uint8_t
 }
 
 struct buffer_t * fake_request_data(const char *url_encoded_data) {
-    struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *ret = buffer_create(SSR_BUFF_SIZE);
     size_t arr_size = sizeof(request_path)/sizeof(request_path[0]);
     size_t index = 0;
     const char *ptr;
@@ -288,7 +288,7 @@ struct buffer_t * http_simple_client_encode(struct obfs_t *obfs, const struct bu
     free(out_buffer);
     if (body_buffer != NULL)
         free(body_buffer);
-    buffer_free(fake_path);
+    buffer_release(fake_path);
     return result;
 }
 
@@ -317,7 +317,7 @@ struct buffer_t * http_simple_client_decode(struct obfs_t *obfs, const struct bu
 
 struct buffer_t * http_simple_server_encode(struct obfs_t *obfs, const struct buffer_t *buf) {
     struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
-    struct buffer_t *header = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *header = buffer_create(SSR_BUFF_SIZE);
     static const char *header1 = "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Encoding: gzip\r\nContent-Type: text/html\r\nDate: ";
     static const char *header2 = "\r\nServer: nginx\r\nVary: Accept-Encoding\r\n\r\n";
     do {
@@ -365,7 +365,7 @@ bool match_http_header(struct buffer_t *buf) {
 struct buffer_t * http_simple_server_decode(struct obfs_t *obfs, const struct buffer_t *buf, bool *need_decrypt, bool *need_feedback) {
     struct http_simple_local_data *local = (struct http_simple_local_data*)obfs->l_data;
     static const char *crlfcrlf = "\r\n\r\n";
-    struct buffer_t *ret = buffer_alloc(SSR_BUFF_SIZE);
+    struct buffer_t *ret = buffer_create(SSR_BUFF_SIZE);
     struct buffer_t *in_buf = NULL;
     uint8_t *real_data = NULL;
     size_t len = 0;
@@ -403,7 +403,7 @@ struct buffer_t * http_simple_server_decode(struct obfs_t *obfs, const struct bu
         *real_data = 0;
         real_data += strlen(crlfcrlf);
 
-        buffer_free(ret);
+        buffer_release(ret);
         ret = get_data_from_http_header(in_buf->buffer);
         get_host_from_http_header(in_buf->buffer, host_port);
 
@@ -423,7 +423,7 @@ struct buffer_t * http_simple_server_decode(struct obfs_t *obfs, const struct bu
         }
 
     } while(0);
-    buffer_free(in_buf);
+    buffer_release(in_buf);
     return ret;
 }
 
@@ -552,7 +552,7 @@ struct buffer_t * http_post_client_encode(struct obfs_t *obfs, const struct buff
     free(out_buffer);
     if (body_buffer != NULL)
         free(body_buffer);
-    buffer_free(fake_path);
+    buffer_release(fake_path);
     return result;
 }
 
