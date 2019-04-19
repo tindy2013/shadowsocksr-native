@@ -27,11 +27,12 @@
 #define DFL_REQUEST_SIZE        -1
 #define DFL_TRANSPORT           MBEDTLS_SSL_TRANSPORT_STREAM
 
+static bool tls_cli_send_data(mbedtls_ssl_context *ssl_ctx, const char *url_path);
 static void my_debug(void *ctx, int level, const char *file, int line, const char *str);
 
 int main(int argc, char *argv[]) {
     struct cmd_line_info *cmd_line;
-    int ret = 0, len, tail_len, written, frags, retry_left, proto;
+    int ret = 0, len, proto;
     mbedtls_net_context connect_ctx;
     mbedtls_ssl_context ssl_ctx;
     mbedtls_ssl_config conf;
@@ -53,7 +54,6 @@ int main(int argc, char *argv[]) {
     unsigned char buf[MAX_REQUEST_SIZE + 1];
     int request_size = DFL_REQUEST_SIZE;
     int transport = DFL_TRANSPORT;
-    int exchanges = 1;
 
     cmd_line = cmd_line_info_create(argc, argv);
     if (cmd_line->help_flag) {
@@ -224,62 +224,8 @@ int main(int argc, char *argv[]) {
     }
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
-    /* 6. Write the GET request */
-    retry_left = 0;
-send_request:
-    mbedtls_printf( "  > Write to server:" );
-    fflush( stdout );
-
-    len = mbedtls_snprintf((char *)buf, sizeof(buf)-1, GET_REQUEST, cmd_line->request_page);
-    tail_len = (int) strlen(GET_REQUEST_END);
-
-    /* Add padding to GET request to reach request_size in length */
-    if ((request_size != DFL_REQUEST_SIZE) && ((len + tail_len) < request_size)) {
-        memset(buf + len, 'A', request_size - len - tail_len);
-        len += request_size - len - tail_len;
-    }
-
-    strncpy((char *)buf + len, GET_REQUEST_END, sizeof(buf) - len - 1);
-    len += tail_len;
-
-    /* Truncate if request size is smaller than the "natural" size */
-    if ((request_size != DFL_REQUEST_SIZE) && (len > request_size)) {
-        len = request_size;
-
-        /* Still end with \r\n unless that's really not possible */
-        if( len >= 2 ) buf[len - 2] = '\r';
-        if( len >= 1 ) buf[len - 1] = '\n';
-    }
-
-    if (transport == MBEDTLS_SSL_TRANSPORT_STREAM) {
-        written = 0;
-        frags = 0;
-
-        do {
-            while ((ret = mbedtls_ssl_write(&ssl_ctx, buf + written, len - written)) < 0) {
-                if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
-                    ret != MBEDTLS_ERR_SSL_WANT_WRITE &&
-                    ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS )
-                {
-                    mbedtls_printf(" failed\n  ! mbedtls_ssl_write returned -0x%x\n\n", -ret);
-                    goto exit;
-                }
-            }
-            frags++;
-            written += ret;
-        } while (written < len);
-    }
-    else {
-        /* Not stream, so datagram, omitted for us */
-    }
-
-    buf[written] = '\0';
-    mbedtls_printf(" %d bytes written in %d fragments\n\n%s\n", written, frags, (char *)buf);
-
-    /* Send a non-empty request if request_size == 0 */
-    if (len == 0) {
-        request_size = DFL_REQUEST_SIZE;
-        goto send_request;
+    if (tls_cli_send_data(&ssl_ctx, cmd_line->request_page) == false) {
+        goto exit;
     }
 
     /* 7. Read the HTTP response */
@@ -335,11 +281,6 @@ send_request:
         /* Not stream, so datagram, omitted by us */
     }
 
-    /* 7c. Continue doing data exchanges? */
-    if (--exchanges > 0) {
-        goto send_request;
-    }
-
     /* 8. Done, cleanly close the connection */
 close_notify:
     mbedtls_printf("  . Closing the connection...");
@@ -387,6 +328,41 @@ exit:
         ret = 1;
     }
     return ret;
+}
+
+static bool tls_cli_send_data(mbedtls_ssl_context *ssl_ctx, const char *url_path) {
+    int len, written, frags, ret;
+    uint8_t *buf = (uint8_t *)calloc(MAX_REQUEST_SIZE + 1, sizeof(*buf));
+    bool result = false;
+
+    len = mbedtls_snprintf((char *)buf, MAX_REQUEST_SIZE, GET_REQUEST GET_REQUEST_END,
+        url_path);
+
+    {
+        written = 0;
+        frags = 0;
+
+        do {
+            while ((ret = mbedtls_ssl_write(ssl_ctx, buf + written, len - written)) < 0) {
+                if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
+                    ret != MBEDTLS_ERR_SSL_WANT_WRITE &&
+                    ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS )
+                {
+                    mbedtls_printf(" failed\n  ! mbedtls_ssl_write returned -0x%x\n\n", -ret);
+                    goto exit;
+                }
+            }
+            frags++;
+            written += ret;
+        } while (written < len);
+        result = true;
+    }
+
+    buf[written] = '\0';
+    mbedtls_printf(" %d bytes written in %d fragments\n\n%s\n", written, frags, (char *)buf);
+exit:
+    free(buf);
+    return result;
 }
 
 static void my_debug(void *ctx, int level, const char *file, int line, const char *str) {
