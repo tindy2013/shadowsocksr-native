@@ -176,30 +176,6 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
     socket_close(tunnel->outgoing);
 }
 
-/*
-void tunnel_process_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
-    struct socket_ctx *incoming = tunnel->incoming;
-    struct socket_ctx *outgoing = tunnel->outgoing;
-    struct socket_ctx *write_target = NULL;
-    struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-    uint8_t *buffer = NULL;
-    size_t len = 0;
-
-    ASSERT(socket == incoming || socket == outgoing);
-
-    socket->rdstate = socket_stop;
-
-    write_target = ((socket == incoming) ? outgoing : incoming);
-
-    ASSERT(tunnel->tunnel_extract_data);
-    buffer = tunnel->tunnel_extract_data(socket, &malloc, &len);
-    if (buffer && (len > 0)) {
-        socket_write(write_target, buffer, len);
-    }
-    free(buffer);
-}
-*/
-
 //
 // The logic is as follows: read when we don't write and write when we don't read.
 // That gives us back-pressure handling for free because if the peer
