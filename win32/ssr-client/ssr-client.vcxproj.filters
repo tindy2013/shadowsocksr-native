@@ -227,5 +227,8 @@
     <ClInclude Include="..\..\src\text_in_color.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\client\tls_cli.h">
+      <Filter>client</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

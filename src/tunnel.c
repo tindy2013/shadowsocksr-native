@@ -176,6 +176,7 @@ void tunnel_shutdown(struct tunnel_ctx *tunnel) {
     socket_close(tunnel->outgoing);
 }
 
+/*
 void tunnel_process_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
@@ -197,6 +198,7 @@ void tunnel_process_streaming(struct tunnel_ctx *tunnel, struct socket_ctx *sock
     }
     free(buffer);
 }
+*/
 
 //
 // The logic is as follows: read when we don't write and write when we don't read.

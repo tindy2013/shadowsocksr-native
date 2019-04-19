@@ -8,6 +8,7 @@
 #include "encrypt.h"
 #include "tunnel.h"
 #include "obfsutil.h"
+#include "tls_cli.h"
 
 /* A connection is modeled as an abstraction on top of two simple state
  * machines, one for reading and one for writing.  Either state machine
@@ -88,6 +89,8 @@ static void tunnel_getaddrinfo_done(struct tunnel_ctx *tunnel, struct socket_ctx
 static void tunnel_write_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, struct socket_ctx *socket, size_t suggested_size);
 static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel);
+static void tunnel_tls_on_data_coming(struct tunnel_ctx *tunnel, struct buffer_t *data);
+
 static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 static bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 static bool can_access(const uv_tcp_t *lx, const struct tunnel_ctx *cx, const struct sockaddr *addr);
@@ -108,6 +111,7 @@ static bool init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_get_alloc_size = &tunnel_get_alloc_size;
     tunnel->tunnel_is_in_streaming = &tunnel_is_in_streaming;
     tunnel->tunnel_extract_data = &tunnel_extract_data;
+    tunnel->tunnel_tls_on_data_coming = &tunnel_tls_on_data_coming;
 
     cstl_set_container_add(ctx->env->tunnel_set, tunnel);
 
@@ -480,7 +484,7 @@ static void do_connect_ssr_server(struct tunnel_ctx *tunnel) {
 
     if (config->over_tls_enable) {
         uv_loop_t *loop = tunnel->listener->loop;
-
+        tls_client_launch(tunnel, config);
         return;
     }
 
@@ -715,6 +719,10 @@ static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel) {
     // struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
     // return (ctx->stage == tunnel_stage_streaming);
     return false;
+}
+
+static void tunnel_tls_on_data_coming(struct tunnel_ctx *tunnel, struct buffer_t *data) {
+    ASSERT(false);
 }
 
 static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {

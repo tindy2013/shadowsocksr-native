@@ -14,12 +14,16 @@
 #include "cmd_line_parser.h"
 #include "dump_info.h"
 #include "ssr_executive.h"
+#include "tunnel.h"
+#include "tls_cli.h"
+#include "ssrbuffer.h"
+#include <uv.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define GET_REQUEST ""                                                                      \
+#define GET_REQUEST_FORMAT ""                                                               \
     "POST %s HTTP/1.1\r\n"                                                                  \
     "Host: %s:%d\r\n"                                                                       \
     "User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:52.0) Gecko/20100101 Firefox/52.0\r\n"     \
@@ -40,7 +44,57 @@
 #define DFL_REQUEST_SIZE        -1
 #define DFL_TRANSPORT           MBEDTLS_SSL_TRANSPORT_STREAM
 
-int main_cli(struct server_config *config) {
+struct tls_cli_ctx {
+    struct uv_work_s *req;
+    struct uv_async_s *async;
+    struct tunnel_ctx *tunnel; /* weak pointer */
+    struct server_config *config; /* weak pointer */
+};
+
+struct tls_cli_ctx * create_tls_cli_ctx(struct tunnel_ctx *tunnel, struct server_config *config);
+void destroy_tls_cli_ctx(struct tls_cli_ctx *ctx);
+
+
+struct tls_cli_ctx * create_tls_cli_ctx(struct tunnel_ctx *tunnel, struct server_config *config) {
+    struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)calloc(1, sizeof(*ctx));
+    ctx->req = (struct uv_work_s *)calloc(1, sizeof(*ctx->req));
+    ctx->req->data = ctx;
+    ctx->async = (struct uv_async_s *)calloc(1, sizeof(*ctx->async));
+    ctx->tunnel = tunnel;
+    ctx->config = config;
+    return ctx;
+}
+
+void destroy_tls_cli_ctx(struct tls_cli_ctx *ctx) {
+    if (ctx) {
+        free(ctx->req);
+        free(ctx->async);
+        free(ctx);
+    }
+}
+
+void tls_cli_main_callback(uv_work_t *req);
+static void tls_cli_remote_data_coming_cb(uv_async_t *handle);
+static void tls_cli_after_cb(uv_work_t *req, int status);
+static void tls_async_send_incoming_data(struct tls_cli_ctx *ctx, const uint8_t *buf, size_t len);
+
+struct tls_data_arrival {
+    struct buffer_t *data;
+    struct tls_cli_ctx *ctx;
+};
+
+void tls_client_launch(struct tunnel_ctx *tunnel, struct server_config *config) {
+    uv_loop_t *loop = tunnel->listener->loop;
+    struct tls_cli_ctx *ctx = create_tls_cli_ctx(tunnel, config);
+
+    uv_async_init(loop, ctx->async, tls_cli_remote_data_coming_cb);
+    uv_queue_work(loop, ctx->req, tls_cli_main_callback, tls_cli_after_cb);
+}
+
+void tls_cli_main_callback(uv_work_t* req) {
+    struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)req->data;
+    struct server_config *config = ctx->config;
+
     int ret = 0, len, tail_len, written, frags, retry_left, proto;
     mbedtls_net_context connect_ctx;
     mbedtls_ssl_context ssl_ctx;
@@ -62,7 +116,7 @@ int main_cli(struct server_config *config) {
     uint32_t flags;
     unsigned char buf[MAX_REQUEST_SIZE + 1];
     int request_size = DFL_REQUEST_SIZE;
-    int transport = DFL_TRANSPORT; /* TCP only, on UDP */
+    int transport = DFL_TRANSPORT; /* TCP only, UDP not supported */
     int exchanges = 1;
     char *port = NULL;
 
@@ -237,7 +291,7 @@ send_request:
     mbedtls_printf( "  > Write to server:" );
     fflush( stdout );
 
-    len = mbedtls_snprintf((char *)buf, sizeof(buf)-1, GET_REQUEST,
+    len = mbedtls_snprintf((char *)buf, sizeof(buf)-1, GET_REQUEST_FORMAT,
         config->over_tls_path, 
         config->over_tls_server_domain, 
         config->remote_port, 
@@ -332,8 +386,11 @@ send_request:
 
             len = ret;
             buf[len] = '\0';
+#if 0
             mbedtls_printf(" %d bytes read\n\n%s", len, (char *)buf);
-
+#else
+            tls_async_send_incoming_data(ctx, buf, len);
+#endif
             /* End of message should be detected according to the syntax of the
              * application protocol (eg HTTP), just use a dummy test here. */
             if (ret > 0 && buf[len-1] == '\n') {
@@ -397,5 +454,39 @@ exit:
     if (ret < 0) {
         ret = 1;
     }
-    return ret;
+    // return ret;
+}
+
+static void tls_cli_remote_data_coming_cb(uv_async_t *handle) {
+    /* this point is in event-loop thread */
+    struct tls_data_arrival *data_arrival = (struct tls_data_arrival *)handle->data;
+    struct buffer_t *data = data_arrival->data;
+    struct tls_cli_ctx *ctx = data_arrival->ctx;
+    struct tunnel_ctx *tunnel = ctx->tunnel;
+
+    free(data_arrival);
+    if (tunnel->tunnel_tls_on_data_coming) {
+        tunnel->tunnel_tls_on_data_coming(tunnel, data);
+    }
+    buffer_release(data);
+}
+
+static void tls_async_close_cb(uv_handle_t *handle) {
+    struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)handle->data;
+    destroy_tls_cli_ctx(ctx);
+    PRINT_INFO("outgoing connection closed.");
+}
+
+static void tls_cli_after_cb(uv_work_t *req, int status) {
+    struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)req->data;
+    ctx->async->data = ctx;
+    uv_close((uv_handle_t*) ctx->async, tls_async_close_cb);
+}
+
+static void tls_async_send_incoming_data(struct tls_cli_ctx *ctx, const uint8_t *buf, size_t len) {
+    struct tls_data_arrival *ptr = (struct tls_data_arrival *)calloc(1, sizeof(*ptr));
+    ptr->ctx = ctx;
+    ptr->data = buffer_create_from(buf, (size_t)len);
+    ctx->async->data = (void*) ptr;
+    uv_async_send(ctx->async);
 }
