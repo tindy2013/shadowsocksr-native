@@ -57,6 +57,7 @@ struct tunnel_ctx {
     size_t(*tunnel_get_alloc_size)(struct tunnel_ctx *tunnel, struct socket_ctx *socket, size_t suggested_size);
     uint8_t*(*tunnel_extract_data)(struct socket_ctx *socket, void*(*allocator)(size_t size), size_t *size);
     bool(*tunnel_is_in_streaming)(struct tunnel_ctx *tunnel);
+    void(*tunnel_tls_on_connection_established)(struct tunnel_ctx *tunnel);
     void(*tunnel_tls_send_data)(struct tunnel_ctx *tunnel, struct buffer_t *data);
     void(*tunnel_tls_on_data_coming)(struct tunnel_ctx *tunnel, struct buffer_t *data);
 };

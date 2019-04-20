@@ -11,7 +11,6 @@
 #include <mbedtls/debug.h>
 #include <mbedtls/timing.h>
 
-#include "cmd_line_parser.h"
 #include "dump_info.h"
 #include "ssr_executive.h"
 #include "tunnel.h"
@@ -22,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #define GET_REQUEST_FORMAT ""                                                               \
     "POST %s HTTP/1.1\r\n"                                                                  \
@@ -43,6 +43,13 @@
 #define MAX_REQUEST_SIZE      20000
 #define DFL_REQUEST_SIZE        -1
 #define DFL_TRANSPORT           MBEDTLS_SSL_TRANSPORT_STREAM
+
+enum tls_cli_state {
+    tls_state_stopped,
+    tls_state_connected,
+    tls_state_data_coming,
+    tls_state_shuttingdown,
+};
 
 struct tls_cli_ctx {
     struct uv_work_s *req;
@@ -80,24 +87,27 @@ void tls_cli_main_callback(uv_work_t *req);
 static bool tls_cli_send_data(mbedtls_ssl_context *ssl_ctx,
     const char *url_path, const char *domain, unsigned short domain_port,
     uint8_t *data, size_t size);
-static void tls_cli_remote_data_coming_cb(uv_async_t *handle);
+static void tls_cli_state_changed_notice_cb(uv_async_t *handle);
 static void tls_cli_after_cb(uv_work_t *req, int status);
-static void tls_async_send_incoming_data(struct tls_cli_ctx *ctx, const uint8_t *buf, size_t len);
+static void tls_state_changed_async_send(struct tls_cli_ctx *ctx, enum tls_cli_state state, const uint8_t *buf, size_t len);
 
-struct tls_data_arrival {
+struct tls_cli_state_ctx {
     struct buffer_t *data;
-    struct tls_cli_ctx *ctx;
+    struct tls_cli_ctx *ctx; /* weak ptr */
+    enum tls_cli_state state;
 };
 
 void tls_client_launch(struct tunnel_ctx *tunnel, struct server_config *config) {
     uv_loop_t *loop = tunnel->listener->loop;
     struct tls_cli_ctx *ctx = create_tls_cli_ctx(tunnel, config);
 
-    uv_async_init(loop, ctx->async, tls_cli_remote_data_coming_cb);
+    uv_async_init(loop, ctx->async, tls_cli_state_changed_notice_cb);
     uv_queue_work(loop, ctx->req, tls_cli_main_callback, tls_cli_after_cb);
 }
 
 void tls_cli_main_callback(uv_work_t* req) {
+    /* this function is in work thread, NOT in event-loop thread */
+
     struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)req->data;
     struct server_config *config = ctx->config;
 
@@ -291,9 +301,13 @@ void tls_cli_main_callback(uv_work_t* req) {
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     /* 6. Write the GET request */
+#if 0
     if (tls_cli_send_data(ssl_ctx, config->over_tls_path, config->over_tls_server_domain, config->remote_port, buf, 0) == false) {
         goto exit;
     }
+#else
+    tls_state_changed_async_send(ctx, tls_state_connected, NULL, 0);
+#endif
 
     /* 7. Read the HTTP response */
     mbedtls_printf("  < Read from server:");
@@ -337,7 +351,7 @@ void tls_cli_main_callback(uv_work_t* req) {
 #if 0
             mbedtls_printf(" %d bytes read\n\n%s", len, (char *)buf);
 #else
-            tls_async_send_incoming_data(ctx, buf, len);
+            tls_state_changed_async_send(ctx, tls_state_data_coming, buf, len);
 #endif
             /* End of message should be detected according to the syntax of the
              * application protocol (eg HTTP), just use a dummy test here. */
@@ -375,6 +389,8 @@ exit:
         mbedtls_printf("Last error was: -0x%X - %s\n\n", -ret, error_buf);
     }
 #endif
+
+    tls_state_changed_async_send(ctx, tls_state_shuttingdown, NULL, 0);
 
     mbedtls_net_free( &connect_ctx );
 
@@ -445,16 +461,32 @@ exit:
     return result;
 }
 
-static void tls_cli_remote_data_coming_cb(uv_async_t *handle) {
+static void tls_cli_state_changed_notice_cb(uv_async_t *handle) {
     /* this point is in event-loop thread */
-    struct tls_data_arrival *data_arrival = (struct tls_data_arrival *)handle->data;
+    struct tls_cli_state_ctx *data_arrival = (struct tls_cli_state_ctx *)handle->data;
     struct buffer_t *data = data_arrival->data;
     struct tls_cli_ctx *ctx = data_arrival->ctx;
+    enum tls_cli_state state = data_arrival->state;
     struct tunnel_ctx *tunnel = ctx->tunnel;
 
     free(data_arrival);
-    if (tunnel->tunnel_tls_on_data_coming) {
-        tunnel->tunnel_tls_on_data_coming(tunnel, data);
+    switch (state) {
+    case tls_state_connected:
+        if (tunnel->tunnel_tls_on_connection_established) {
+            tunnel->tunnel_tls_on_connection_established(tunnel);
+        }
+        break;
+    case tls_state_data_coming:
+        if (tunnel->tunnel_tls_on_data_coming) {
+            tunnel->tunnel_tls_on_data_coming(tunnel, data);
+        }
+        break;
+    case tls_state_shuttingdown:
+        assert(false);
+        break;
+    default:
+        assert(false);
+        break;
     }
     buffer_release(data);
 }
@@ -471,10 +503,13 @@ static void tls_cli_after_cb(uv_work_t *req, int status) {
     uv_close((uv_handle_t*) ctx->async, tls_async_close_cb);
 }
 
-static void tls_async_send_incoming_data(struct tls_cli_ctx *ctx, const uint8_t *buf, size_t len) {
-    struct tls_data_arrival *ptr = (struct tls_data_arrival *)calloc(1, sizeof(*ptr));
+static void tls_state_changed_async_send(struct tls_cli_ctx *ctx, enum tls_cli_state state, const uint8_t *buf, size_t len) {
+    struct tls_cli_state_ctx *ptr = (struct tls_cli_state_ctx *)calloc(1, sizeof(*ptr));
     ptr->ctx = ctx;
-    ptr->data = buffer_create_from(buf, (size_t)len);
+    ptr->state = state;
+    if (buf && len) {
+        ptr->data = buffer_create_from(buf, (size_t)len);
+    }
     ctx->async->data = (void*) ptr;
     uv_async_send(ctx->async);
 }
