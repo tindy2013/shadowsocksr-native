@@ -91,6 +91,7 @@ static size_t tunnel_get_alloc_size(struct tunnel_ctx *tunnel, struct socket_ctx
 static bool tunnel_is_in_streaming(struct tunnel_ctx *tunnel);
 static void tunnel_tls_on_connection_established(struct tunnel_ctx *tunnel);
 static void tunnel_tls_on_data_coming(struct tunnel_ctx *tunnel, struct buffer_t *data);
+static void tunnel_tls_on_shuttingdown(struct tunnel_ctx *tunnel);
 
 static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
 static bool can_auth_passwd(const uv_tcp_t *lx, const struct tunnel_ctx *cx);
@@ -114,6 +115,7 @@ static bool init_done_cb(struct tunnel_ctx *tunnel, void *p) {
     tunnel->tunnel_extract_data = &tunnel_extract_data;
     tunnel->tunnel_tls_on_connection_established = &tunnel_tls_on_connection_established;
     tunnel->tunnel_tls_on_data_coming = &tunnel_tls_on_data_coming;
+    tunnel->tunnel_tls_on_shuttingdown = &tunnel_tls_on_shuttingdown;
 
     cstl_set_container_add(ctx->env->tunnel_set, tunnel);
 
@@ -728,6 +730,10 @@ static void tunnel_tls_on_connection_established(struct tunnel_ctx *tunnel) {
 
 static void tunnel_tls_on_data_coming(struct tunnel_ctx *tunnel, struct buffer_t *data) {
     ASSERT(false);
+}
+
+static void tunnel_tls_on_shuttingdown(struct tunnel_ctx *tunnel) {
+    tunnel_shutdown(tunnel);
 }
 
 static bool can_auth_none(const uv_tcp_t *lx, const struct tunnel_ctx *cx) {

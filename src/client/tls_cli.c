@@ -496,7 +496,9 @@ static void tls_cli_state_changed_notice_cb(uv_async_t *handle) {
         }
         break;
     case tls_state_shuttingdown:
-        assert(false);
+        if (tunnel->tunnel_tls_on_shuttingdown) {
+            tunnel->tunnel_tls_on_shuttingdown(tunnel);
+        }
         break;
     default:
         assert(false);
