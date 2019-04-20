@@ -23,6 +23,8 @@
 #include <string.h>
 #include <assert.h>
 
+#define TLS_DUMP_INFO   0
+
 #define GET_REQUEST_FORMAT ""                                                               \
     "POST %s HTTP/1.1\r\n"                                                                  \
     "Host: %s:%d\r\n"                                                                       \
@@ -59,7 +61,7 @@ struct tls_cli_ctx {
 struct tls_cli_ctx * create_tls_cli_ctx(struct tunnel_ctx *tunnel, struct server_config *config);
 void destroy_tls_cli_ctx(struct tls_cli_ctx *ctx);
 
-static void tls_cli_main_callback(uv_work_t *req);
+static void tls_cli_main_work_thread(uv_work_t *req);
 static void tunnel_tls_send_data(struct tunnel_ctx *tunnel, struct buffer_t *data);
 static bool tls_cli_send_data(mbedtls_ssl_context *ssl_ctx,
     const char *url_path, const char *domain, unsigned short domain_port,
@@ -79,7 +81,7 @@ void tls_client_launch(struct tunnel_ctx *tunnel, struct server_config *config) 
     struct tls_cli_ctx *ctx = create_tls_cli_ctx(tunnel, config);
 
     uv_async_init(loop, ctx->async, tls_cli_state_changed_notice_cb);
-    uv_queue_work(loop, ctx->req, tls_cli_main_callback, tls_cli_after_cb);
+    uv_queue_work(loop, ctx->req, tls_cli_main_work_thread, tls_cli_after_cb);
 }
 
 struct tls_cli_ctx * create_tls_cli_ctx(struct tunnel_ctx *tunnel, struct server_config *config) {
@@ -106,7 +108,7 @@ void destroy_tls_cli_ctx(struct tls_cli_ctx *ctx) {
     }
 }
 
-static void tls_cli_main_callback(uv_work_t* req) {
+static void tls_cli_main_work_thread(uv_work_t* req) {
     /* this function is in work thread, NOT in event-loop thread */
 
     struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)req->data;
@@ -168,10 +170,12 @@ static void tls_cli_main_callback(uv_work_t* req) {
 
 
     port = itoa(config->remote_port, (char *)buf, 10);
+#if TLS_DUMP_INFO
     mbedtls_printf("  . Connecting to %s/%s/%s...",
         transport == MBEDTLS_SSL_TRANSPORT_STREAM ? "tcp" : "udp",
         config->remote_host, port);
     fflush( stdout );
+#endif /* TLS_DUMP_INFO */
 
     proto = (transport == MBEDTLS_SSL_TRANSPORT_STREAM) ? MBEDTLS_NET_PROTO_TCP : MBEDTLS_NET_PROTO_UDP;
     ret = mbedtls_net_connect(&connect_ctx, config->remote_host, port, proto);
@@ -267,6 +271,7 @@ static void tls_cli_main_callback(uv_work_t* req) {
 #endif
     }
 
+#if TLS_DUMP_INFO
     mbedtls_printf(" ok\n    [ Protocol is %s ]\n    [ Ciphersuite is %s ]\n",
         mbedtls_ssl_get_version(ssl_ctx),
         mbedtls_ssl_get_ciphersuite(ssl_ctx));
@@ -280,9 +285,11 @@ static void tls_cli_main_callback(uv_work_t* req) {
     mbedtls_printf("    [ Maximum fragment length is %u ]\n",
         (unsigned int)mbedtls_ssl_get_max_frag_len(ssl_ctx));
 #endif
+#endif /* TLS_DUMP_INFO */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /* 5. Verify the server certificate */
+#if TLS_DUMP_INFO
     mbedtls_printf("  . Verifying peer X.509 certificate...");
 
     if ((flags = mbedtls_ssl_get_verify_result(ssl_ctx)) != 0) {
@@ -299,6 +306,7 @@ static void tls_cli_main_callback(uv_work_t* req) {
                        mbedtls_ssl_get_peer_cert( ssl_ctx ) );
         mbedtls_printf( "%s\n", buf );
     }
+#endif /* TLS_DUMP_INFO */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     /* 6. Write the GET request */
@@ -311,8 +319,10 @@ static void tls_cli_main_callback(uv_work_t* req) {
 #endif
 
     /* 7. Read the HTTP response */
+#if TLS_DUMP_INFO
     mbedtls_printf("  < Read from server:");
     fflush( stdout );
+#endif /* TLS_DUMP_INFO */
 
     /* TLS and DTLS need different reading styles (stream vs datagram) */
     if (transport == MBEDTLS_SSL_TRANSPORT_STREAM) {
@@ -333,16 +343,22 @@ static void tls_cli_main_callback(uv_work_t* req) {
             if (ret <= 0) {
                 switch (ret){
                 case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+#if TLS_DUMP_INFO
                     mbedtls_printf(" connection was closed gracefully\n");
+#endif /* TLS_DUMP_INFO */
                     ret = 0;
                     goto close_notify;
                 case 0:
                 case MBEDTLS_ERR_NET_CONN_RESET:
+#if TLS_DUMP_INFO
                     mbedtls_printf(" connection was reset by peer\n");
+#endif /* TLS_DUMP_INFO */
                     ret = 0;
                     goto reconnect;
                 default:
+#if TLS_DUMP_INFO
                     mbedtls_printf(" mbedtls_ssl_read returned -0x%x\n", -ret);
+#endif /* TLS_DUMP_INFO */
                     goto exit;
                 }
             }
@@ -368,8 +384,10 @@ static void tls_cli_main_callback(uv_work_t* req) {
 
     /* 8. Done, cleanly close the connection */
 close_notify:
+#if TLS_DUMP_INFO
     mbedtls_printf("  . Closing the connection...");
     fflush(stdout);
+#endif /* TLS_DUMP_INFO */
 
     /* No error checking, the connection might be closed already */
     do {
@@ -377,7 +395,9 @@ close_notify:
     } while(ret == MBEDTLS_ERR_SSL_WANT_WRITE);
     ret = 0;
 
+#if TLS_DUMP_INFO
     mbedtls_printf( " done\n" );
+#endif /* TLS_DUMP_INFO */
 
     /* 9. Reconnect? */
 reconnect: ;
@@ -466,8 +486,10 @@ static bool tls_cli_send_data(mbedtls_ssl_context *ssl_ctx,
         result = true;
     }
 
+#if TLS_DUMP_INFO
     buf[written] = '\0';
     mbedtls_printf(" %d bytes written in %d fragments\n\n%s\n", written, frags, (char *)buf);
+#endif /* TLS_DUMP_INFO */
 exit:
     free(buf);
     return result;
