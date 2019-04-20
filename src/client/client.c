@@ -485,7 +485,6 @@ static void do_connect_ssr_server(struct tunnel_ctx *tunnel) {
     }
 
     if (config->over_tls_enable) {
-        uv_loop_t *loop = tunnel->listener->loop;
         tls_client_launch(tunnel, config);
         return;
     }

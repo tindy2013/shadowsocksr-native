@@ -167,7 +167,7 @@ static void tls_cli_main_callback(uv_work_t* req) {
         mbedtls_test_cli_key_len, NULL, 0 );
 
 
-    port = itoa(config->remote_port, (char *)buf, sizeof(buf));
+    port = itoa(config->remote_port, (char *)buf, 10);
     mbedtls_printf("  . Connecting to %s/%s/%s...",
         transport == MBEDTLS_SSL_TRANSPORT_STREAM ? "tcp" : "udp",
         config->remote_host, port);
@@ -405,7 +405,7 @@ exit:
     mbedtls_ctr_drbg_free( &ctr_drbg );
     mbedtls_entropy_free( &entropy );
 
-#if defined(_WIN32)
+#if 0 //defined(_WIN32)
     mbedtls_printf("  + Press Enter to exit this program.\n");
     fflush(stdout); getchar();
 #endif
@@ -482,6 +482,8 @@ static void tls_cli_state_changed_notice_cb(uv_async_t *handle) {
     struct tunnel_ctx *tunnel = ctx->tunnel;
 
     free(data_arrival);
+    handle->data = NULL;
+
     switch (state) {
     case tls_state_connected:
         if (tunnel->tunnel_tls_on_connection_established) {
@@ -511,6 +513,7 @@ static void tls_async_close_cb(uv_handle_t *handle) {
 
 static void tls_cli_after_cb(uv_work_t *req, int status) {
     struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)req->data;
+    assert(ctx->async->data == NULL);
     ctx->async->data = ctx;
     uv_close((uv_handle_t*) ctx->async, tls_async_close_cb);
 }
@@ -524,6 +527,7 @@ static void tls_cli_state_changed_async_send(struct tls_cli_ctx *ctx,
     if (buf && len) {
         ptr->data = buffer_create_from(buf, (size_t)len);
     }
+    assert(ctx->async->data == NULL);
     ctx->async->data = (void*) ptr;
     uv_async_send(ctx->async);
 }
