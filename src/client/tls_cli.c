@@ -89,7 +89,7 @@ static bool tls_cli_send_data(mbedtls_ssl_context *ssl_ctx,
     uint8_t *data, size_t size);
 static void tls_cli_state_changed_notice_cb(uv_async_t *handle);
 static void tls_cli_after_cb(uv_work_t *req, int status);
-static void tls_state_changed_async_send(struct tls_cli_ctx *ctx, enum tls_cli_state state, const uint8_t *buf, size_t len);
+static void tls_cli_state_changed_async_send(struct tls_cli_ctx *ctx, enum tls_cli_state state, const uint8_t *buf, size_t len);
 
 struct tls_cli_state_ctx {
     struct buffer_t *data;
@@ -306,7 +306,7 @@ void tls_cli_main_callback(uv_work_t* req) {
         goto exit;
     }
 #else
-    tls_state_changed_async_send(ctx, tls_state_connected, NULL, 0);
+    tls_cli_state_changed_async_send(ctx, tls_state_connected, NULL, 0);
 #endif
 
     /* 7. Read the HTTP response */
@@ -351,7 +351,7 @@ void tls_cli_main_callback(uv_work_t* req) {
 #if 0
             mbedtls_printf(" %d bytes read\n\n%s", len, (char *)buf);
 #else
-            tls_state_changed_async_send(ctx, tls_state_data_coming, buf, len);
+            tls_cli_state_changed_async_send(ctx, tls_state_data_coming, buf, len);
 #endif
             /* End of message should be detected according to the syntax of the
              * application protocol (eg HTTP), just use a dummy test here. */
@@ -390,7 +390,7 @@ exit:
     }
 #endif
 
-    tls_state_changed_async_send(ctx, tls_state_shuttingdown, NULL, 0);
+    tls_cli_state_changed_async_send(ctx, tls_state_shuttingdown, NULL, 0);
 
     mbedtls_net_free( &connect_ctx );
 
@@ -503,7 +503,9 @@ static void tls_cli_after_cb(uv_work_t *req, int status) {
     uv_close((uv_handle_t*) ctx->async, tls_async_close_cb);
 }
 
-static void tls_state_changed_async_send(struct tls_cli_ctx *ctx, enum tls_cli_state state, const uint8_t *buf, size_t len) {
+static void tls_cli_state_changed_async_send(struct tls_cli_ctx *ctx,
+    enum tls_cli_state state, const uint8_t *buf, size_t len)
+{
     struct tls_cli_state_ctx *ptr = (struct tls_cli_state_ctx *)calloc(1, sizeof(*ptr));
     ptr->ctx = ctx;
     ptr->state = state;
