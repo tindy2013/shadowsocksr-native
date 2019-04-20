@@ -35,9 +35,6 @@
     "Content-Type: application/octet-stream\r\n"                                            \
     "Content-Length: %d\r\n\r\n"                                                            \
 
-
-#define GET_REQUEST_END "\r\n\r\n"
-
 #define ALPN_LIST_SIZE  10
 #define DFL_PSK_IDENTITY "Client_identity"
 #define MAX_REQUEST_SIZE      20000
@@ -62,28 +59,8 @@ struct tls_cli_ctx {
 struct tls_cli_ctx * create_tls_cli_ctx(struct tunnel_ctx *tunnel, struct server_config *config);
 void destroy_tls_cli_ctx(struct tls_cli_ctx *ctx);
 
-
-struct tls_cli_ctx * create_tls_cli_ctx(struct tunnel_ctx *tunnel, struct server_config *config) {
-    struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)calloc(1, sizeof(*ctx));
-    ctx->req = (struct uv_work_s *)calloc(1, sizeof(*ctx->req));
-    ctx->req->data = ctx;
-    ctx->async = (struct uv_async_s *)calloc(1, sizeof(*ctx->async));
-    ctx->ssl_ctx = (mbedtls_ssl_context *)calloc(1, sizeof(mbedtls_ssl_context));
-    ctx->tunnel = tunnel;
-    ctx->config = config;
-    return ctx;
-}
-
-void destroy_tls_cli_ctx(struct tls_cli_ctx *ctx) {
-    if (ctx) {
-        free(ctx->req);
-        free(ctx->async);
-        free(ctx->ssl_ctx);
-        free(ctx);
-    }
-}
-
-void tls_cli_main_callback(uv_work_t *req);
+static void tls_cli_main_callback(uv_work_t *req);
+static void tunnel_tls_send_data(struct tunnel_ctx *tunnel, struct buffer_t *data);
 static bool tls_cli_send_data(mbedtls_ssl_context *ssl_ctx,
     const char *url_path, const char *domain, unsigned short domain_port,
     uint8_t *data, size_t size);
@@ -105,7 +82,31 @@ void tls_client_launch(struct tunnel_ctx *tunnel, struct server_config *config) 
     uv_queue_work(loop, ctx->req, tls_cli_main_callback, tls_cli_after_cb);
 }
 
-void tls_cli_main_callback(uv_work_t* req) {
+struct tls_cli_ctx * create_tls_cli_ctx(struct tunnel_ctx *tunnel, struct server_config *config) {
+    struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)calloc(1, sizeof(*ctx));
+    ctx->req = (struct uv_work_s *)calloc(1, sizeof(*ctx->req));
+    ctx->req->data = ctx;
+    ctx->async = (struct uv_async_s *)calloc(1, sizeof(*ctx->async));
+    ctx->ssl_ctx = (mbedtls_ssl_context *)calloc(1, sizeof(mbedtls_ssl_context));
+    ctx->tunnel = tunnel;
+    ctx->config = config;
+
+    tunnel->tls_ctx = ctx;
+    tunnel->tunnel_tls_send_data = &tunnel_tls_send_data;
+
+    return ctx;
+}
+
+void destroy_tls_cli_ctx(struct tls_cli_ctx *ctx) {
+    if (ctx) {
+        free(ctx->req);
+        free(ctx->async);
+        free(ctx->ssl_ctx);
+        free(ctx);
+    }
+}
+
+static void tls_cli_main_callback(uv_work_t* req) {
     /* this function is in work thread, NOT in event-loop thread */
 
     struct tls_cli_ctx *ctx = (struct tls_cli_ctx *)req->data;
@@ -414,6 +415,17 @@ exit:
         ret = 1;
     }
     // return ret;
+}
+
+static void tunnel_tls_send_data(struct tunnel_ctx *tunnel, struct buffer_t *data) {
+    struct tls_cli_ctx *ctx = tunnel->tls_ctx;
+    mbedtls_ssl_context *ssl_ctx = ctx->ssl_ctx;
+    struct server_config *config = ctx->config;
+    const char *url_path = config->over_tls_path;
+    const char *domain = config->over_tls_server_domain;
+    unsigned short domain_port = config->remote_port;
+
+    tls_cli_send_data(ssl_ctx, url_path, domain, domain_port, data->buffer, data->len);
 }
 
 static bool tls_cli_send_data(mbedtls_ssl_context *ssl_ctx,
