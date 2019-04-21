@@ -133,7 +133,7 @@ static void tls_cli_main_work_thread(uv_work_t* req) {
     mbedtls_timing_delay_context timer = { 0 };
 #endif
     uint32_t flags;
-    unsigned char buf[MAX_REQUEST_SIZE + 1];
+    unsigned char *buf = (unsigned char *)calloc(MAX_REQUEST_SIZE + 1, sizeof(*buf));
     int request_size = DFL_REQUEST_SIZE;
     int transport = DFL_TRANSPORT; /* TCP only, UDP not supported */
     char *port = NULL;
@@ -302,7 +302,7 @@ static void tls_cli_main_work_thread(uv_work_t* req) {
     }
     if (mbedtls_ssl_get_peer_cert(ssl_ctx) != NULL) {
         mbedtls_printf( "  . Peer certificate information    ...\n" );
-        mbedtls_x509_crt_info( (char *) buf, sizeof( buf ) - 1, "      ",
+        mbedtls_x509_crt_info( (char *) buf, MAX_REQUEST_SIZE, "      ",
                        mbedtls_ssl_get_peer_cert( ssl_ctx ) );
         mbedtls_printf( "%s\n", buf );
     }
@@ -327,8 +327,8 @@ static void tls_cli_main_work_thread(uv_work_t* req) {
     /* TLS and DTLS need different reading styles (stream vs datagram) */
     if (transport == MBEDTLS_SSL_TRANSPORT_STREAM) {
         do {
-            len = sizeof(buf) - 1;
-            memset(buf, 0, sizeof(buf));
+            len = MAX_REQUEST_SIZE;
+            memset(buf, 0, MAX_REQUEST_SIZE+1);
             ret = mbedtls_ssl_read(ssl_ctx, buf, len);
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
@@ -424,6 +424,8 @@ exit:
     mbedtls_ssl_config_free( &conf );
     mbedtls_ctr_drbg_free( &ctr_drbg );
     mbedtls_entropy_free( &entropy );
+
+    free(buf);
 
 #if 0 //defined(_WIN32)
     mbedtls_printf("  + Press Enter to exit this program.\n");
