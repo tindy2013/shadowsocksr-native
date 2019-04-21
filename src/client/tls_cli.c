@@ -156,7 +156,7 @@ static void tls_cli_main_work_thread(uv_work_t* req) {
         mbedtls_printf(" failed\n  ! mbedtls_ctr_drbg_seed returned -0x%x\n", -ret);
         goto exit;
     }
-    if (config->over_tls_root_cert_file) {
+    if (config->over_tls_root_cert_file && strlen(config->over_tls_root_cert_file)) {
         ret = mbedtls_x509_crt_parse_file(&cacert, config->over_tls_root_cert_file);
     }
 
@@ -224,7 +224,7 @@ static void tls_cli_main_work_thread(uv_work_t* req) {
     }
 #endif
 
-    if (config->over_tls_root_cert_file) {
+    if (config->over_tls_root_cert_file && strlen(config->over_tls_root_cert_file)) {
         mbedtls_ssl_conf_ca_chain( &conf, &cacert, NULL );
     }
 
@@ -234,9 +234,11 @@ static void tls_cli_main_work_thread(uv_work_t* req) {
     }
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
-    if ((ret = mbedtls_ssl_set_hostname(ssl_ctx, config->remote_host)) != 0) {
-        mbedtls_printf(" failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n", ret);
-        goto exit;
+    if (config->over_tls_server_domain && strlen(config->over_tls_server_domain)) {
+        if ((ret = mbedtls_ssl_set_hostname(ssl_ctx, config->over_tls_server_domain)) != 0) {
+            mbedtls_printf(" failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n", ret);
+            goto exit;
+        }
     }
 #endif
 
