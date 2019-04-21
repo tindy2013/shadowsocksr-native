@@ -63,7 +63,7 @@ struct tunnel_ctx {
     void(*tunnel_tls_on_connection_established)(struct tunnel_ctx *tunnel);
     void(*tunnel_tls_send_data)(struct tunnel_ctx *tunnel, struct buffer_t *data);
     void(*tunnel_tls_on_data_coming)(struct tunnel_ctx *tunnel, struct buffer_t *data);
-    void(*tunnel_tls_on_shuttingdown)(struct tunnel_ctx *tunnel);
+    void(*tunnel_tls_on_shutting_down)(struct tunnel_ctx *tunnel);
 };
 
 int uv_stream_fd(const uv_tcp_t *handle);

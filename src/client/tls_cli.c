@@ -47,7 +47,7 @@ enum tls_cli_state {
     tls_state_stopped,
     tls_state_connected,
     tls_state_data_coming,
-    tls_state_shuttingdown,
+    tls_state_shutting_down,
 };
 
 struct tls_cli_ctx {
@@ -132,7 +132,6 @@ static void tls_cli_main_work_thread(uv_work_t* req) {
 #if defined(MBEDTLS_TIMING_C)
     mbedtls_timing_delay_context timer = { 0 };
 #endif
-    uint32_t flags;
     unsigned char *buf = (unsigned char *)calloc(MAX_REQUEST_SIZE + 1, sizeof(*buf));
     int request_size = DFL_REQUEST_SIZE;
     int transport = DFL_TRANSPORT; /* TCP only, UDP not supported */
@@ -413,7 +412,7 @@ exit:
     }
 #endif
 
-    tls_cli_state_changed_async_send(ctx, tls_state_shuttingdown, NULL, 0);
+    tls_cli_state_changed_async_send(ctx, tls_state_shutting_down, NULL, 0);
 
     mbedtls_net_free( &connect_ctx );
 
@@ -521,9 +520,9 @@ static void tls_cli_state_changed_notice_cb(uv_async_t *handle) {
             tunnel->tunnel_tls_on_data_coming(tunnel, data);
         }
         break;
-    case tls_state_shuttingdown:
-        if (tunnel->tunnel_tls_on_shuttingdown) {
-            tunnel->tunnel_tls_on_shuttingdown(tunnel);
+    case tls_state_shutting_down:
+        if (tunnel->tunnel_tls_on_shutting_down) {
+            tunnel->tunnel_tls_on_shutting_down(tunnel);
         }
         break;
     default:
