@@ -49,7 +49,7 @@ enum tunnel_stage {
     tunnel_stage_handshake_replied,        /* Start waiting for request data. */
     tunnel_stage_s5_request,        /* Wait for request data. */
     tunnel_stage_s5_udp_accoc,
-    tunnel_stage_resolve_ssr_server_host,       /* Wait for upstream hostname DNS lookup to complete. */
+    tunnel_stage_resolve_ssr_server_host_done,       /* Wait for upstream hostname DNS lookup to complete. */
     tunnel_stage_connecting_ssr_server,      /* Wait for uv_tcp_connect() to complete. */
     tunnel_stage_ssr_auth_sent,
     tunnel_stage_ssr_waiting_feedback,
@@ -73,7 +73,7 @@ static void do_handshake(struct tunnel_ctx *tunnel);
 static void do_handshake_auth(struct tunnel_ctx *tunnel);
 static void do_wait_s5_request(struct tunnel_ctx *tunnel);
 static void do_parse_s5_request(struct tunnel_ctx *tunnel);
-static void do_resolve_ssr_server_host(struct tunnel_ctx *tunnel);
+static void do_resolve_ssr_server_host_aftercare(struct tunnel_ctx *tunnel);
 static void do_connect_ssr_server(struct tunnel_ctx *tunnel);
 static void do_connect_ssr_server_done(struct tunnel_ctx *tunnel);
 static void do_ssr_auth_sent(struct tunnel_ctx *tunnel);
@@ -213,8 +213,8 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         incoming->wrstate = socket_stop;
         tunnel_shutdown(tunnel);
         break;
-    case tunnel_stage_resolve_ssr_server_host:
-        do_resolve_ssr_server_host(tunnel);
+    case tunnel_stage_resolve_ssr_server_host_done:
+        do_resolve_ssr_server_host_aftercare(tunnel);
         break;
     case tunnel_stage_connecting_ssr_server:
         do_connect_ssr_server_done(tunnel);
@@ -418,7 +418,7 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
         union sockaddr_universal remote_addr = { 0 };
         if (convert_universal_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
             socket_getaddrinfo(outgoing, config->remote_host);
-            ctx->stage = tunnel_stage_resolve_ssr_server_host;
+            ctx->stage = tunnel_stage_resolve_ssr_server_host_done;
             return;
         }
 
@@ -428,11 +428,12 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
     }
 }
 
-static void do_resolve_ssr_server_host(struct tunnel_ctx *tunnel) {
+static void do_resolve_ssr_server_host_aftercare(struct tunnel_ctx *tunnel) {
     struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
     struct client_ctx *ctx = (struct client_ctx *) tunnel->data;
-    s5_ctx *parser = ctx->parser;
+    struct server_env_t *env = ctx->env;
+    struct server_config *config = env->config;
 
     ASSERT(incoming->rdstate == socket_stop);
     ASSERT(incoming->wrstate == socket_stop);
@@ -442,7 +443,7 @@ static void do_resolve_ssr_server_host(struct tunnel_ctx *tunnel) {
     if (outgoing->result < 0) {
         /* TODO(bnoordhuis) Escape control characters in parser->daddr. */
         pr_err("lookup error for \"%s\": %s",
-            parser->daddr,
+            config->remote_host,
             uv_strerror((int)outgoing->result));
         /* Send back a 'Host unreachable' reply. */
         socket_write(incoming, "\5\4\0\1\0\0\0\0\0\0", 10);
@@ -453,10 +454,10 @@ static void do_resolve_ssr_server_host(struct tunnel_ctx *tunnel) {
     /* Don't make assumptions about the offset of sin_port/sin6_port. */
     switch (outgoing->addr.addr.sa_family) {
     case AF_INET:
-        outgoing->addr.addr4.sin_port = htons(parser->dport);
+        outgoing->addr.addr4.sin_port = htons(config->remote_port);
         break;
     case AF_INET6:
-        outgoing->addr.addr6.sin6_port = htons(parser->dport);
+        outgoing->addr.addr6.sin6_port = htons(config->remote_port);
         break;
     default:
         UNREACHABLE();
