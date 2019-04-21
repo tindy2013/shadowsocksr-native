@@ -414,6 +414,11 @@ static void do_parse_s5_request(struct tunnel_ctx *tunnel) {
             info->head_len = (int) get_s5_head_size(ctx->init_pkg->buffer, ctx->init_pkg->len, 30);
         }
     }
+
+    if (config->over_tls_enable) {
+        tls_client_launch(tunnel, config);
+        return;
+    } else
     {
         union sockaddr_universal remote_addr = { 0 };
         if (convert_universal_address(config->remote_host, config->remote_port, &remote_addr) != 0) {
@@ -484,11 +489,6 @@ static void do_connect_ssr_server(struct tunnel_ctx *tunnel) {
         /* Send a 'Connection not allowed by ruleset' reply. */
         socket_write(incoming, "\5\2\0\1\0\0\0\0\0\0", 10);
         ctx->stage = tunnel_stage_kill;
-        return;
-    }
-
-    if (config->over_tls_enable) {
-        tls_client_launch(tunnel, config);
         return;
     }
 
