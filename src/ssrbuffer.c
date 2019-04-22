@@ -117,11 +117,13 @@ size_t buffer_realloc(struct buffer_t *ptr, size_t capacity) {
 
 size_t buffer_store(struct buffer_t *ptr, const uint8_t *data, size_t size) {
     size_t result = 0;
-    if (ptr==NULL || data==NULL || size==0) {
+    if (ptr==NULL) {
         return result;
     }
     result = buffer_realloc(ptr, size);
-    memmove(ptr->buffer, data, size);
+    if (ptr->buffer && data && size) {
+        memmove(ptr->buffer, data, size);
+    }
     ptr->len = size;
     check_memory_content(ptr);
     return min(size, result);
