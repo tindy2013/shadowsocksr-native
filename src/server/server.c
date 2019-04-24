@@ -68,7 +68,7 @@ void server_tunnel_initialize(uv_tcp_t *listener, unsigned int idle_timeout);
 void server_shutdown(struct server_env_t *env);
 
 void signal_quit_cb(uv_signal_t *handle, int signum);
-void tunnel_establish_init_cb(uv_stream_t *server, int status);
+void tunnel_incoming_connection_established_cb(uv_stream_t *server, int status);
 
 static void tunnel_dying(struct tunnel_ctx *tunnel);
 static void tunnel_timeout_expire_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -83,9 +83,9 @@ static uint8_t* tunnel_extract_data(struct socket_ctx *socket, void*(*allocator)
 static bool is_incoming_ip_legal(struct tunnel_ctx *tunnel);
 static bool is_header_complete(const struct buffer_t *buf);
 static size_t _get_read_size(struct tunnel_ctx *tunnel, struct socket_ctx *socket, size_t suggested_size);
-static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *incoming);
 static void do_prepare_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
-static void do_client_feedback(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
+static void do_client_feedback(struct tunnel_ctx *tunnel, struct socket_ctx *incoming);
 static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
 static void do_resolve_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *socket);
@@ -192,7 +192,7 @@ static int ssr_server_run_loop(struct server_config *config) {
         addr.addr4.sin_addr.s_addr = htonl(INADDR_ANY);
         uv_tcp_bind(listener, &addr.addr, 0);
 
-        error = uv_listen((uv_stream_t *)listener, SSR_MAX_CONN, tunnel_establish_init_cb);
+        error = uv_listen((uv_stream_t *)listener, SSR_MAX_CONN, tunnel_incoming_connection_established_cb);
 
         if (error != 0) {
             return fprintf(stderr, "Error on listening: %s.\n", uv_strerror(error));
@@ -331,7 +331,7 @@ void signal_quit_cb(uv_signal_t *handle, int signum) {
     }
 }
 
-void tunnel_establish_init_cb(uv_stream_t *server, int status) {
+void tunnel_incoming_connection_established_cb(uv_stream_t *server, int status) {
     uv_loop_t *loop = server->loop;
     struct server_env_t *env = (struct server_env_t *)loop->data;
 
@@ -356,29 +356,33 @@ static void do_next(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     struct socket_ctx *incoming = tunnel->incoming;
     switch (ctx->stage) {
     case tunnel_stage_initial:
+        ASSERT(incoming == socket);
         ASSERT(incoming->rdstate == socket_done);
         ASSERT(incoming->wrstate == socket_stop);
         incoming->rdstate = socket_stop;
-        do_init_package(tunnel, socket);
+        do_init_package(tunnel, incoming);
         break;
     case tunnel_stage_receipt_done:
+        ASSERT(incoming == socket);
         ASSERT(incoming->rdstate == socket_stop);
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
-        socket_read(socket);
+        socket_read(incoming);
         ctx->stage = tunnel_stage_client_feedback;
         break;
     case tunnel_stage_client_feedback:
+        ASSERT(incoming == socket);
         ASSERT(incoming->rdstate == socket_done);
         ASSERT(incoming->wrstate == socket_stop);
         incoming->rdstate = socket_stop;
-        do_client_feedback(tunnel, socket);
+        do_client_feedback(tunnel, incoming);
         break;
     case tunnel_stage_confirm_done:
+        ASSERT(incoming == socket);
         ASSERT(incoming->rdstate == socket_stop);
         ASSERT(incoming->wrstate == socket_done);
         incoming->wrstate = socket_stop;
-        do_prepare_parse(tunnel, socket);
+        do_prepare_parse(tunnel, incoming);
         break;
     case tunnel_stage_resolve_host:
         do_resolve_host_done(tunnel, socket);
@@ -504,9 +508,8 @@ static size_t _get_read_size(struct tunnel_ctx *tunnel, struct socket_ctx *socke
     return buffer_size;
 }
 
-static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *incoming) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-    struct socket_ctx *incoming = tunnel->incoming;
     struct buffer_t *receipt = NULL;
     struct buffer_t *confirm = NULL;
     struct buffer_t *result = NULL;
@@ -514,7 +517,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
         BUFFER_CONSTANT_INSTANCE(buf, incoming->buf->base, incoming->result);
         size_t tcp_mss = _update_tcp_mss(incoming);
 
-        ASSERT(socket == incoming);
+        ASSERT(incoming == tunnel->incoming);
 
         if (incoming->result < 0) {
             tunnel_shutdown(tunnel);
@@ -544,7 +547,7 @@ static void do_init_package(struct tunnel_ctx *tunnel, struct socket_ctx *socket
             break;
         }
 
-        do_prepare_parse(tunnel, socket);
+        do_prepare_parse(tunnel, incoming);
         break;
     } while (0);
 
@@ -589,15 +592,14 @@ static void do_prepare_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socke
     } while (0);
 }
 
-static void do_client_feedback(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_client_feedback(struct tunnel_ctx *tunnel, struct socket_ctx *incoming) {
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-    struct socket_ctx *incoming = tunnel->incoming;
     BUFFER_CONSTANT_INSTANCE(buf, incoming->buf->base, incoming->result);
     struct buffer_t *result = NULL;
     struct buffer_t *receipt = NULL;
     struct buffer_t *confirm = NULL;
     do {
-        ASSERT(incoming == socket);
+        ASSERT(incoming == tunnel->incoming);
 
         if (incoming->result < 0) {
             pr_err("write error: %s", uv_strerror((int)incoming->result));
@@ -620,7 +622,7 @@ static void do_client_feedback(struct tunnel_ctx *tunnel, struct socket_ctx *soc
             break;
         }
 
-        do_prepare_parse(tunnel, socket);
+        do_prepare_parse(tunnel, incoming);
         break;
     } while(0);
     buffer_release(result);
@@ -632,7 +634,7 @@ static void do_handshake(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
     UNREACHABLE();
 }
 
-static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
+static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *incoming) {
     /*
      * Shadowsocks TCP Relay Header, same as SOCKS5:
      *
@@ -654,27 +656,27 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
      */
 
     struct server_ctx *ctx = (struct server_ctx *) tunnel->data;
-    struct socket_ctx *incoming = tunnel->incoming;
     struct socket_ctx *outgoing = tunnel->outgoing;
     size_t offset     = 0;
     const char *host = NULL;
     struct socks5_address *s5addr;
     union sockaddr_universal target;
     bool ipFound = true;
+    struct buffer_t *init_pkg = ctx->init_pkg;
 
-    ASSERT(incoming == socket);
+    ASSERT(incoming == tunnel->incoming);
 
     // get remote addr and port
     s5addr = tunnel->desired_addr;
     memset(s5addr, 0, sizeof(*s5addr));
-    if (socks5_address_parse(ctx->init_pkg->buffer, ctx->init_pkg->len, s5addr) == false) {
+    if (socks5_address_parse(init_pkg->buffer, init_pkg->len, s5addr) == false) {
         // report_addr(server->fd, MALFORMED);
         tunnel_shutdown(tunnel);
         return;
     }
 
     offset = socks5_address_size(s5addr);
-    buffer_shorten(ctx->init_pkg, offset, ctx->init_pkg->len - offset);
+    buffer_shorten(init_pkg, offset, init_pkg->len - offset);
 
     host = s5addr->addr.domainname;
 
@@ -710,7 +712,7 @@ static void do_parse(struct tunnel_ctx *tunnel, struct socket_ctx *socket) {
         socket_getaddrinfo(outgoing, host);
     } else {
         outgoing->addr = target;
-        do_connect_host_start(tunnel, socket);
+        do_connect_host_start(tunnel, outgoing);
     }
 }
 
@@ -788,8 +790,9 @@ static void do_connect_host_done(struct tunnel_ctx *tunnel, struct socket_ctx *s
     ASSERT(outgoing->wrstate == socket_stop);
 
     if (outgoing->result == 0) {
-        if (ctx->init_pkg->len > 0) {
-            socket_write(outgoing, ctx->init_pkg->buffer, ctx->init_pkg->len);
+        struct buffer_t *init_pkg = ctx->init_pkg;
+        if (init_pkg->len > 0) {
+            socket_write(outgoing, init_pkg->buffer, init_pkg->len);
             ctx->stage = tunnel_stage_launch_streaming;
         } else {
             outgoing->wrstate = socket_done;
