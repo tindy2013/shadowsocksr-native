@@ -26,12 +26,12 @@ enum SOCKS5_ADDRTYPE {
 };
 
 struct socks5_address {
-    enum SOCKS5_ADDRTYPE addr_type;
     union {
         struct in_addr ipv4;
         struct in6_addr ipv6;
         char domainname[0x0100];
     } addr;
+    enum SOCKS5_ADDRTYPE addr_type;
     uint16_t port;
 };
 
