@@ -1144,7 +1144,7 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
 {
     struct cipher_wrapper *cipher;
     const digest_type_t *md;
-
+    cipher_core_t cipher_info = { MBEDTLS_CIPHER_NONE };
     if (method < ss_cipher_none || method >= ss_cipher_max) {
         LOGE("enc_key_init(): Illegal method");
         return;
@@ -1173,7 +1173,6 @@ enc_key_init(struct cipher_env_t *env, enum ss_cipher_type method, const char *p
 #if defined(USE_CRYPTO_MBEDTLS)
         // XXX: key_length changed to key_bitlen in mbed TLS 2.0.0
 
-        cipher_core_t cipher_info = { MBEDTLS_CIPHER_NONE };
         cipher_info.base = NULL;
         cipher_info.key_bitlen = (unsigned int)ss_cipher_key_size(method) * 8;
         cipher_info.iv_size = (unsigned int)ss_cipher_iv_size(method);
